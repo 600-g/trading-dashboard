@@ -10,7 +10,7 @@
  * Firebase: datemap-759bf, 컬렉션 trading_status / trading_commands
  */
 
-const APP_VERSION = 'v1.4';
+const APP_VERSION = 'v1.5';
 const IS_FILE = location.protocol === 'file:';
 const ORIGIN = IS_FILE ? '' : location.origin;
 
@@ -91,6 +91,16 @@ function subscribeFirestore() {
       if (upd) {
         document.getElementById('upd-time').textContent =
           '🌐 ' + new Date(upd).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+      }
+
+      // Firebase 모드 캐시 저장 (다음 페이지 로드 시 0초 표시)
+      const c = STATE.coin.status, s = STATE.stock.status;
+      if (c || s) {
+        saveCache({
+          coinH: STATE.coin.bot_mode ? {bot_mode: STATE.coin.bot_mode, trade_mode: STATE.coin.trade_mode} : null,
+          stockH: STATE.stock.bot_mode ? {bot_mode: STATE.stock.bot_mode, trade_mode: STATE.stock.trade_mode} : null,
+          coinS: c, stockS: s,
+        });
       }
     }, err => console.warn(`[FS] ${bot} 구독 오류:`, err));
   });
@@ -913,30 +923,70 @@ async function fetchMarketCached() {
   return m;
 }
 
+/* sessionStorage 캐시 → 페이지 진입 즉시 이전 데이터 표시 (0초) */
+const CACHE_KEY = 'doogeun_dash_cache_v2';
+
+function saveCache(snapshot) {
+  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({...snapshot, _ts: Date.now()})); }
+  catch {}
+}
+
+function loadCache() {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    // 5분 이내 캐시만
+    if (Date.now() - (data._ts || 0) > 300000) return null;
+    return data;
+  } catch { return null; }
+}
+
+function applySnapshot(s) {
+  if (!s) return;
+  if (s.coinH) applyHealthUI('coin', s.coinH);
+  if (s.stockH) applyHealthUI('stock', s.stockH);
+  if (s.coinS) applyStatusUI('coin', s.coinS);
+  if (s.stockS) applyStatusUI('stock', s.stockS);
+  if (s.stockS) renderReviews(s.stockS);
+  renderHomeOverview();
+  if (s.tokens) renderTokens(s.tokens);
+  if (s.market) renderMarket(s.market);
+  if (s.insights) renderInsights(s.insights);
+}
+
 async function loadAll(force = false) {
-  if (force) _marketCache.ts = 0;  // 강제 새로고침 시 캐시 무효
-  const [coinH, coinS, stockH, stockS, tokens, market, insights] = await Promise.all([
+  if (force) _marketCache.ts = 0;
+
+  // 1) 빠른 데이터 먼저 (health + status 병렬)
+  const fastResults = await Promise.all([
     fetchHealth('coin'), fetchStatus('coin'),
     fetchHealth('stock'), fetchStatus('stock'),
-    fetchTokens(), fetchMarketCached(), fetchInsights(),
+    fetchTokens(), fetchInsights(),
   ]);
+  const [coinH, coinS, stockH, stockS, tokens, insights] = fastResults;
+
   applyHealthUI('coin', coinH);
   applyHealthUI('stock', stockH);
   applyStatusUI('coin', coinS);
   applyStatusUI('stock', stockS);
-  // 자체평가/반복실수: 주식봇 status에서만 가져옴 (코인봇은 별개 시스템)
   renderReviews(stockS);
   renderHomeOverview();
   renderTokens(tokens);
-  renderMarket(market);
   renderInsights(insights);
+
+  document.getElementById('upd-time').textContent =
+    new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+
+  // 2) 시장 데이터는 별도 비동기 (외부 API 호출이라 느림 — UI 블록 X)
+  fetchMarketCached().then(market => {
+    if (market) renderMarket(market);
+    saveCache({coinH, coinS, stockH, stockS, tokens, insights, market});
+  });
 
   if (document.getElementById('view-system').classList.contains('active')) {
     loadSystemView();
   }
-
-  document.getElementById('upd-time').textContent =
-    new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 
   if (force) toast('🔄 새로고침 완료');
 }
@@ -1211,12 +1261,18 @@ function simulateWhatIf(tune, bot) {
 }
 
 /* ─── 시작 ────────────────────────────────────────── */
+// 페이지 로드 즉시 캐시 표시 (0초 보임)
+const cached = loadCache();
+if (cached) {
+  console.log('[캐시] 즉시 표시 후 백그라운드 갱신');
+  applySnapshot(cached);
+  document.getElementById('upd-time').textContent = '⚡ 캐시 (갱신 중...)';
+}
+
 if (!FIREBASE_MODE) {
   loadAll();
-  setInterval(loadAll, 30000);
+  setInterval(loadAll, 5000);  // 5초 폴링 (로컬 부담 없음)
 } else {
-  // Firebase 모드: Firestore 실시간 구독으로 status 자동 업데이트
-  // 시장/인사이트는 system_api 없으면 빈 값 (혹은 별도 API 추가 가능)
   console.log('[모드] Firebase Firestore (외부)');
-  toast('🌐 Firebase 모드 - 실시간 동기화');
+  if (!cached) toast('🌐 Firebase 모드 - 실시간 동기화');
 }
