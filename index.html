@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0d1117" />
+<title>두근 트레이딩</title>
+<link rel="manifest" href="manifest.json" />
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --line:#30363d;
+    --text:#e6edf3; --muted:#8b949e;
+    --up:#ff5252; --down:#2196f3; --warn:#ffb74d;
+    --coin:#f7931a; --stock:#3fb950;
+    --ok:#3fb950; --danger:#ff6b6b; --info:#58a6ff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent}
+  html, body{overflow-x:hidden; height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Apple SD Gothic Neo",sans-serif;
+    min-height:100vh;
+  }
+
+  /* ── 앱 셸 ─────────────────────────────────────── */
+  .app{display:grid; grid-template-rows:auto 1fr; min-height:100vh}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+    background:rgba(13,17,23,.92); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar h1{font-size:17px; font-weight:700; display:flex; align-items:center; gap:8px}
+  .menu-btn{
+    background:none; border:none; color:var(--text);
+    width:38px; height:38px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:background .15s;
+  }
+  .menu-btn:active{background:#30363d}
+
+  .updated{font-size:10px; color:var(--muted); display:flex; align-items:center; gap:4px}
+
+  .main{
+    padding: 14px 16px max(20px, env(safe-area-inset-bottom));
+    max-width:1100px; margin:0 auto; width:100%;
+  }
+
+  /* ── 사이드 메뉴 ───────────────────────────────── */
+  .menu-bg{
+    position:fixed; inset:0; background:rgba(0,0,0,.6);
+    z-index:99; opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .menu-bg.show{opacity:1; pointer-events:auto}
+
+  .menu{
+    position:fixed; top:0; right:0; bottom:0;
+    width:min(320px, 88vw);
+    background:var(--card); border-left:1px solid var(--line);
+    z-index:100; transform:translateX(100%); transition:transform .25s;
+    display:flex; flex-direction:column;
+    padding-top: env(safe-area-inset-top);
+  }
+  .menu.show{transform:translateX(0)}
+  .menu-head{
+    padding:16px 18px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .menu-head h2{font-size:15px; font-weight:600}
+  .menu-list{flex:1; overflow-y:auto; padding:8px}
+  .menu-section{margin-bottom:14px}
+  .menu-section-title{
+    font-size:10px; color:var(--muted); font-weight:700; letter-spacing:.5px;
+    text-transform:uppercase; padding:8px 12px;
+  }
+  .menu-item{
+    display:flex; align-items:center; gap:10px;
+    padding:11px 12px; border-radius:8px; cursor:pointer;
+    color:var(--text); font-size:14px; transition:background .15s;
+    user-select:none;
+  }
+  .menu-item:active{background:#30363d}
+  .menu-item.active{background:#1f6feb22; color:var(--info)}
+  .menu-item .arrow{margin-left:auto; color:var(--muted); font-size:11px}
+  .menu-item.danger{color:var(--danger)}
+  .menu-item .led{margin-left:auto}
+
+  /* ── 뷰 (페이지) ─────────────────────────────── */
+  .view{display:none}
+  .view.active{display:block; animation:fadeIn .2s}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  /* SVG 아이콘 */
+  svg.ic{width:18px; height:18px; display:inline-block; vertical-align:middle; flex-shrink:0}
+  svg.ic-lg{width:22px; height:22px}
+  svg.ic-sm{width:14px; height:14px}
+  svg.ic-xs{width:11px; height:11px}
+
+  /* 카드/그리드 */
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px}
+  .card-title{
+    font-size:12px; color:var(--muted); font-weight:600; margin-bottom:10px;
+    text-transform:uppercase; letter-spacing:.5px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .card-title .right{margin-left:auto; color:var(--text); font-size:11px}
+
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .grid-4{display:grid; grid-template-columns:repeat(2,1fr); gap:8px}
+  @media(min-width:720px){.grid-4{grid-template-columns:repeat(4,1fr)}}
+
+  /* ── 매출 카드 (메인 화면) ───────────────────── */
+  .hero{
+    background:linear-gradient(135deg, #161b22 0%, #1c2230 100%);
+    border:1px solid var(--line); border-radius:16px;
+    padding:18px; margin-bottom:14px;
+  }
+  .hero.hero-compact{padding:12px 14px; margin-bottom:10px}
+  .hero-row{display:flex; justify-content:space-between; align-items:center; gap:12px}
+  .hero-label{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px}
+  .hero-value{font-size:24px; font-weight:800; font-variant-numeric:tabular-nums; margin-top:2px; letter-spacing:-.5px}
+  .hero-sub{font-size:13px; color:var(--muted); margin-top:6px; display:flex; gap:14px; flex-wrap:wrap}
+  .hero-sub b{color:var(--text); font-weight:600}
+
+  /* 컴팩트 카드 */
+  .card.compact{padding:10px 12px; margin-bottom:10px}
+  .card.compact .card-title{margin-bottom:6px; font-size:10px}
+
+  /* 시장 그리드 */
+  .market-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
+  @media(min-width:600px){.market-grid{grid-template-columns:repeat(6,1fr)}}
+  .mkt-cell{background:#0d1117; border:1px solid var(--line); border-radius:8px; padding:7px 8px}
+  .mkt-label{font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .mkt-value{font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .mkt-chg{font-size:10px; margin-top:1px; font-variant-numeric:tabular-nums}
+
+  /* KPI 리스트 */
+  .kpi-list{display:flex; flex-direction:column; gap:6px}
+  .kpi{display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:4px 0; border-bottom:1px dotted #1f2937}
+  .kpi:last-child{border-bottom:none}
+  .kpi-label{color:var(--muted)}
+  .kpi-value{font-weight:700; font-variant-numeric:tabular-nums; font-size:13px}
+
+  /* 시간대 히트맵 */
+  .hourly-grid{display:grid; grid-template-columns:repeat(24,1fr); gap:2px; height:60px}
+  .hourly-cell{background:#1f2937; border-radius:2px; transition:background .2s}
+  .hourly-cell.h-1{background:#1f6feb33}
+  .hourly-cell.h-2{background:#1f6feb66}
+  .hourly-cell.h-3{background:#1f6feb}
+  .hourly-cell.h-4{background:#3fb950}
+
+  /* 페르소나 리스트 */
+  .persona-row{display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px dotted #1f2937}
+  .persona-row:last-child{border-bottom:none}
+  .persona-name{font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px}
+  .persona-stats{font-size:10px; color:var(--muted)}
+  .persona-pnl{font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; margin-left:6px}
+
+  /* 봇별 카드 */
+  .bot-card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px;
+    transition:transform .12s, border-color .15s;
+  }
+  .bot-card:active{transform:scale(.98)}
+  .bot-card.coin{border-left:3px solid var(--coin)}
+  .bot-card.stock{border-left:3px solid var(--stock)}
+  .bot-card .top{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px}
+  .bot-card .name{font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px}
+  .bot-card .pnl{font-size:18px; font-weight:700; font-variant-numeric:tabular-nums}
+  .bot-card .meta{font-size:11px; color:var(--muted); margin-top:4px; display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+
+  /* 통계 셀 */
+  .stat{background:#0d1117; border:1px solid var(--line); border-radius:10px; padding:11px 12px}
+  .stat-label{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px}
+  .stat-value{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums}
+  .up{color:var(--up)} .down{color:var(--down)} .warn{color:var(--warn)} .info{color:var(--info)}
+
+  /* 뱃지 */
+  .badge{
+    display:inline-flex; align-items:center; gap:4px;
+    padding:3px 8px; border-radius:6px; font-size:10px; font-weight:700;
+  }
+  .b-demo{background:#1f6feb33; color:#58a6ff}
+  .b-real{background:#dc262633; color:#ff6b6b}
+  .b-running{background:#23863633; color:#3fb950}
+  .b-soft{background:#ffb74d33; color:var(--warn)}
+  .b-stopped{background:#ff525233; color:#ff6b6b}
+  .b-offline{background:#30363d; color:var(--muted)}
+  .led{width:6px; height:6px; border-radius:50%; display:inline-block; flex-shrink:0}
+  .led.on{background:#3fb950; box-shadow:0 0 5px #3fb95088}
+  .led.off{background:#8b949e}
+  .led.warn{background:var(--warn); box-shadow:0 0 5px #ffb74d88}
+  .led.err{background:#ff5252; box-shadow:0 0 5px #ff525288}
+
+  /* 차트 컨테이너 */
+  .chart-wrap{position:relative; height:160px}
+
+  /* 컨트롤 (각 봇 상세 뷰에서 사용) */
+  .ctl-section{background:#0d1117; border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px}
+  .ctl-label{font-size:11px; color:var(--muted); margin-bottom:8px; font-weight:600; text-transform:uppercase; letter-spacing:.5px}
+  .seg{display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; background:#161b22; border:1px solid var(--line); border-radius:10px; padding:4px}
+  .seg-btn{
+    padding:9px 6px; cursor:pointer; text-align:center;
+    color:var(--muted); border-radius:6px; font-size:12px; font-weight:600;
+    display:flex; align-items:center; justify-content:center; gap:5px; transition:all .15s;
+    user-select:none;
+  }
+  .seg-btn:active{transform:scale(.97)}
+  .seg-btn.run{color:#3fb950}
+  .seg-btn.soft{color:var(--warn)}
+  .seg-btn.stop{color:#ff6b6b}
+  .seg-btn.run.active{background:#3fb95033}
+  .seg-btn.soft.active{background:#ffb74d33}
+  .seg-btn.stop.active{background:#ff525233}
+
+  .switch-row{display:flex; align-items:center; justify-content:space-between; gap:12px}
+  .switch-label{display:flex; flex-direction:column; gap:2px}
+  .switch-name{font-size:13px; font-weight:600}
+  .switch-mode{font-size:11px; color:var(--muted)}
+  .switch{position:relative; width:74px; height:32px; background:#1f6feb33; border-radius:32px; cursor:pointer; transition:background .25s; flex-shrink:0; border:1px solid var(--line)}
+  .switch.on{background:#dc262633}
+  .switch::after{content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; background:#58a6ff; border-radius:50%; transition:all .25s; box-shadow:0 2px 4px rgba(0,0,0,.3)}
+  .switch.on::after{left:43px; background:#ff6b6b}
+  .switch-text{position:absolute; top:50%; transform:translateY(-50%); font-size:9px; font-weight:800; color:#fff; letter-spacing:.5px}
+  .switch-text.demo{right:8px}
+  .switch-text.real{left:8px; opacity:0}
+  .switch.on .switch-text.demo{opacity:0}
+  .switch.on .switch-text.real{opacity:1}
+
+  .emergency-btn{width:100%; padding:13px; border-radius:10px; background:#dc262633; border:1px solid #ff6b6b; color:#ff6b6b; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .15s}
+  .emergency-btn:active{transform:scale(.98); background:#dc262655}
+
+  .ctl-msg{font-size:11px; color:var(--muted); margin-top:8px; min-height:16px}
+  .ctl-msg.ok{color:var(--ok)} .ctl-msg.err{color:var(--danger)}
+
+  /* 시스템 뷰 */
+  .sys-row{display:flex; align-items:center; justify-content:space-between; padding:11px 12px; border-bottom:1px solid var(--line)}
+  .sys-row:last-child{border-bottom:none}
+  .sys-info{flex:1; min-width:0}
+  .sys-name{font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px}
+  .sys-meta{font-size:11px; color:var(--muted); margin-top:2px; display:flex; gap:8px; flex-wrap:wrap}
+  .sys-actions{display:flex; gap:4px}
+  .sys-btn{
+    padding:6px 10px; border-radius:6px; border:1px solid var(--line);
+    background:#0d1117; color:var(--text); font-size:11px; cursor:pointer; font-weight:600;
+    display:flex; align-items:center; gap:4px;
+  }
+  .sys-btn.primary{border-color:var(--info); color:var(--info)}
+  .sys-btn.danger{border-color:var(--danger); color:var(--danger)}
+  .sys-btn.ok{border-color:var(--ok); color:var(--ok)}
+
+  .big-action{
+    width:100%; padding:14px; border-radius:10px;
+    border:1px solid var(--line); background:#0d1117; color:var(--text);
+    font-size:13px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    margin-bottom:8px; transition:all .15s;
+  }
+  .big-action:active{transform:scale(.98)}
+  .big-action.start{border-color:var(--ok); color:var(--ok)}
+  .big-action.stop{border-color:var(--danger); color:var(--danger)}
+  .big-action.restart{border-color:var(--warn); color:var(--warn)}
+
+  /* 캘린더 */
+  .cal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px}
+  .cal-nav{display:flex; gap:6px}
+  .cal-nav-btn{
+    background:#0d1117; border:1px solid var(--line); color:var(--text);
+    padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px;
+  }
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
+  .cal-dow{font-size:10px; color:var(--muted); text-align:center; padding:4px 0; font-weight:600}
+  .cal-cell{
+    aspect-ratio:1; background:#0d1117; border:1px solid var(--line); border-radius:6px;
+    padding:4px; font-size:10px; cursor:pointer;
+    display:flex; flex-direction:column; transition:all .15s; position:relative;
+  }
+  .cal-cell:hover{border-color:var(--info)}
+  .cal-cell.empty{visibility:hidden}
+  .cal-cell.has-tune{border-color:var(--warn); background:#ffb74d11}
+  .cal-cell.has-trade{background:#3fb95011}
+  .cal-day{font-weight:600; color:var(--muted)}
+  .cal-cell.today .cal-day{color:var(--info); font-weight:700}
+  .cal-pnl{font-size:9px; margin-top:auto; font-weight:700; font-variant-numeric:tabular-nums}
+  .cal-dot{position:absolute; top:3px; right:3px; width:5px; height:5px; border-radius:50%; background:var(--warn)}
+
+  .cal-detail{margin-top:12px; padding:12px; background:#0d1117; border:1px solid var(--line); border-radius:10px; min-height:80px}
+  .cal-detail h4{font-size:13px; margin-bottom:8px; display:flex; gap:6px; align-items:center}
+  .tune-item{font-size:12px; padding:6px 0; border-bottom:1px solid #1f2937}
+  .tune-item:last-child{border-bottom:none}
+  .whatif{margin-top:10px; padding:10px; background:#1c2230; border-left:3px solid var(--info); border-radius:6px; font-size:12px}
+  .whatif-title{color:var(--info); font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:5px}
+  .whatif-row{display:flex; justify-content:space-between; padding:2px 0}
+
+  /* 테이블 */
+  .table-wrap{overflow-x:auto; margin:0 -2px}
+  table{width:100%; border-collapse:collapse}
+  th,td{text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); font-size:12px}
+  th{color:var(--muted); font-weight:500; font-size:10px; text-transform:uppercase; letter-spacing:.4px}
+  td.num{text-align:right; font-variant-numeric:tabular-nums}
+  th.num{text-align:right}
+  .empty{text-align:center; color:var(--muted); padding:20px 0; font-size:12px}
+
+  /* 모달 */
+  .modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:center; justify-content:center; z-index:200; padding:20px}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; max-width:340px; width:100%}
+  .modal-title{display:flex; align-items:center; gap:8px; font-size:15px; font-weight:700; margin-bottom:8px}
+  .modal-desc{font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.5}
+  .modal input{width:100%; padding:12px; border-radius:8px; background:#0d1117; border:1px solid var(--line); color:var(--text); font-size:15px; font-family:inherit}
+  .modal input:focus{outline:none; border-color:var(--stock)}
+  .modal-err{color:var(--danger); font-size:11px; margin-top:6px; min-height:14px}
+  .modal-actions{display:flex; gap:8px; margin-top:14px}
+  .modal-btn{flex:1; padding:11px; border-radius:8px; border:1px solid var(--line); background:#0d1117; color:var(--text); font-weight:600; cursor:pointer; font-size:13px}
+  .modal-btn.primary{background:var(--stock); color:#0d1117; border-color:var(--stock)}
+
+  /* 토스트 */
+  .toast{position:fixed; bottom:max(20px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%) translateY(20px); background:#161b22; border:1px solid var(--line); padding:10px 18px; border-radius:10px; font-size:13px; opacity:0; transition:all .25s; z-index:300; max-width:90vw}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  .footer{color:var(--muted); font-size:10px; text-align:center; margin:20px 0 10px; opacity:.6}
+
+  @media(max-width:480px){
+    .topbar h1{font-size:15px}
+    .hero-value{font-size:28px}
+    .stat-value{font-size:14px}
+  }
+</style>
+</head>
+<body>
+
+<!-- SVG 정의 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9h4.5a1.5 1.5 0 010 3H9m0 0h5a1.5 1.5 0 010 3H9m0-6v6m3-9v2m0 7v2"/></symbol>
+    <symbol id="i-stock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10"/><path d="M5.6 5.6a9 9 0 1012.8 0"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 22h20L12 2z"/><path d="M12 9v5"/><circle cx="12" cy="18" r=".5" fill="currentColor"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0115.5-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 01-15.5 6.4L3 16"/><path d="M3 21v-5h5"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14l-1.5 13a2 2 0 01-2 1.8h-7a2 2 0 01-2-1.8L5 7z"/><path d="M9 7V5a3 3 0 016 0v2"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-7H10v7H5a1 1 0 01-1-1v-9z"/></symbol>
+    <symbol id="i-sys" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-mode" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></symbol>
+  </defs>
+</svg>
+
+<div class="app">
+
+  <!-- 상단바 -->
+  <div class="topbar">
+    <h1 id="topbar-title" onclick="goView('home')" style="cursor:pointer; user-select:none">📊 두근 트레이딩</h1>
+    <div style="display:flex; gap:10px; align-items:center">
+      <span class="updated"><svg class="ic ic-xs"><use href="#i-clock"/></svg><span id="upd-time">-</span></span>
+      <button class="menu-btn" onclick="loadAll(true)" aria-label="새로고침" title="새로고침">
+        <svg class="ic"><use href="#i-refresh"/></svg>
+      </button>
+      <button class="menu-btn" onclick="openMenu()" aria-label="메뉴">
+        <svg class="ic ic-lg"><use href="#i-menu"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Pull-to-refresh 인디케이터 -->
+  <div id="ptr" style="position:fixed; top:0; left:50%; transform:translate(-50%, -100%); z-index:60; background:var(--card); border:1px solid var(--line); border-radius:0 0 12px 12px; padding:10px 18px; font-size:12px; color:var(--info); display:flex; align-items:center; gap:6px; transition:transform .25s">
+    <svg class="ic ic-sm" id="ptr-icon"><use href="#i-refresh"/></svg>
+    <span id="ptr-text">당겨서 새로고침</span>
+  </div>
+
+  <div class="main">
+
+    <!-- ─── 메인 뷰: 종합 대시보드 (컴팩트 + 위젯) ────── -->
+    <div class="view active" id="view-home">
+
+      <!-- HERO: 합산 P&L (작아짐) -->
+      <div class="hero hero-compact">
+        <div class="hero-row">
+          <div>
+            <div class="hero-label">오늘 합산 P&amp;L</div>
+            <div class="hero-value" id="total_today_pnl">-</div>
+          </div>
+          <div style="text-align:right; font-size:11px; color:var(--muted)">
+            <div>오늘 <b id="total_today_pct" style="color:var(--text); font-size:13px">-</b></div>
+            <div style="margin-top:2px">누적 <b id="total_total_pct" style="color:var(--text); font-size:13px">-</b></div>
+            <div style="margin-top:2px">잔고 <b id="total_balance" style="color:var(--text); font-size:13px">-</b></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 봇 카드 (컴팩트) -->
+      <div class="grid-2" style="margin-bottom:10px; gap:8px">
+        <div class="bot-card coin" onclick="goView('coin')">
+          <div class="top">
+            <div class="name" style="color:var(--coin); font-size:12px">
+              <svg class="ic ic-sm"><use href="#i-coin"/></svg>코인봇
+            </div>
+            <div class="pnl" id="coin_card_pnl" style="font-size:15px">-</div>
+          </div>
+          <div class="meta" id="coin_card_meta" style="margin-top:2px">
+            <span class="badge b-offline"><span class="led off"></span>OFFLINE</span>
+          </div>
+        </div>
+        <div class="bot-card stock" onclick="goView('stock')">
+          <div class="top">
+            <div class="name" style="color:var(--stock); font-size:12px">
+              <svg class="ic ic-sm"><use href="#i-stock"/></svg>주식봇
+            </div>
+            <div class="pnl" id="stock_card_pnl" style="font-size:15px">-</div>
+          </div>
+          <div class="meta" id="stock_card_meta" style="margin-top:2px">
+            <span class="badge b-offline"><span class="led off"></span>OFFLINE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 시장 현황: 코인(비트/알트/공탐) + 거시(KOSPI/NASDAQ/환율) -->
+      <div class="card compact">
+        <div class="card-title"><svg class="ic" style="color:var(--coin)"><use href="#i-coin"/></svg>코인 시장</div>
+        <div class="market-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="mkt-cell"><div class="mkt-label">비트 (BTC)</div><div class="mkt-value" id="mkt_btc">-</div><div class="mkt-chg" id="mkt_btc_chg">-</div></div>
+          <div class="mkt-cell"><div class="mkt-label">알트 평균</div><div class="mkt-value" id="mkt_alt">-</div><div class="mkt-chg" id="mkt_alt_chg">-</div></div>
+          <div class="mkt-cell"><div class="mkt-label">공포탐욕</div><div class="mkt-value" id="mkt_fng">-</div><div class="mkt-chg" id="mkt_fng_lbl">-</div></div>
+        </div>
+      </div>
+
+      <div class="card compact">
+        <div class="card-title"><svg class="ic" style="color:var(--stock)"><use href="#i-stock"/></svg>주식/거시 시장</div>
+        <div class="market-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="mkt-cell"><div class="mkt-label">KOSPI</div><div class="mkt-value" id="mkt_kospi">-</div><div class="mkt-chg" id="mkt_kospi_chg">-</div></div>
+          <div class="mkt-cell"><div class="mkt-label">NASDAQ</div><div class="mkt-value" id="mkt_nasdaq">-</div><div class="mkt-chg" id="mkt_nasdaq_chg">-</div></div>
+          <div class="mkt-cell"><div class="mkt-label">USD/KRW</div><div class="mkt-value" id="mkt_usdkrw">-</div></div>
+        </div>
+      </div>
+
+      <!-- 인사이트: 승률/RR/MDD 게이지 + LLM 토큰 -->
+      <div class="grid-2" style="margin-bottom:10px; gap:10px">
+        <div class="card compact">
+          <div class="card-title"><svg class="ic"><use href="#i-bolt"/></svg>성과 지표</div>
+          <div class="kpi-list">
+            <div class="kpi"><span class="kpi-label">승률</span><span class="kpi-value" id="kpi_winrate">-</span></div>
+            <div class="kpi"><span class="kpi-label">평균 R:R</span><span class="kpi-value" id="kpi_rr">-</span></div>
+            <div class="kpi"><span class="kpi-label">최대 낙폭</span><span class="kpi-value" id="kpi_mdd">-</span></div>
+            <div class="kpi"><span class="kpi-label">총 거래</span><span class="kpi-value" id="kpi_trades">-</span></div>
+          </div>
+        </div>
+
+        <div class="card compact">
+          <div class="card-title"><svg class="ic"><use href="#i-bolt"/></svg>LLM 사용량 <span class="right" id="token_pct_label">-</span></div>
+          <div class="kpi-list">
+            <div class="kpi"><span class="kpi-label">오늘 호출</span><span class="kpi-value" id="token_calls">-</span></div>
+            <div class="kpi"><span class="kpi-label">DENY</span><span class="kpi-value" id="token_denied">-</span></div>
+            <div class="kpi"><span class="kpi-label">예상 토큰</span><span class="kpi-value" id="token_tokens">-</span></div>
+            <div class="kpi"><span class="kpi-label">Max 5x</span><span class="kpi-value" id="token_max_pct">-</span></div>
+          </div>
+          <div style="font-size:10px; color:var(--muted); margin-top:6px">
+            🪙<b id="token_coin_calls">-</b> · 📈<b id="token_stock_calls">-</b> · <b id="token_cost">-</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7일 P&L 차트 -->
+      <div class="card compact">
+        <div class="card-title"><svg class="ic"><use href="#i-trend"/></svg>7일 P&amp;L<span class="right" id="chart_total">-</span></div>
+        <div class="chart-wrap" style="height:140px"><canvas id="chart7d"></canvas></div>
+      </div>
+
+      <!-- 시간대별 활성도 + 페르소나 성과 -->
+      <div class="grid-2" style="margin-bottom:10px; gap:10px">
+        <div class="card compact">
+          <div class="card-title"><svg class="ic"><use href="#i-clock"/></svg>시간대별 거래</div>
+          <div class="hourly-grid" id="hourly_grid"></div>
+          <div style="font-size:10px; color:var(--muted); margin-top:6px; display:flex; justify-content:space-between">
+            <span>00시</span><span>06</span><span>12</span><span>18</span><span>24</span>
+          </div>
+        </div>
+
+        <div class="card compact">
+          <div class="card-title"><svg class="ic"><use href="#i-bag"/></svg>페르소나 성과</div>
+          <div id="persona_list" style="font-size:11px"></div>
+        </div>
+      </div>
+
+      <!-- 최근 거래 (컴팩트 테이블) -->
+      <div class="card compact">
+        <div class="card-title"><svg class="ic"><use href="#i-refresh"/></svg>최근 거래</div>
+        <div class="table-wrap">
+          <table style="font-size:11px">
+            <thead><tr><th>시각</th><th>봇</th><th>심볼</th><th>매매</th><th class="num">P&amp;L</th></tr></thead>
+            <tbody id="all_recent_trades"><tr><td colspan="5" class="empty">로딩...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 코인봇 상세 뷰 ─────────────── -->
+    <div class="view" id="view-coin">
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-mode"/></svg>코인봇 컨트롤</div>
+        <div class="ctl-section">
+          <div class="ctl-label">운영 모드</div>
+          <div class="seg" id="coin_seg">
+            <div class="seg-btn run"  data-mode="run"  onclick="ctrl('coin','mode/run')"><svg class="ic"><use href="#i-play"/></svg><span>러닝</span></div>
+            <div class="seg-btn soft" data-mode="soft" onclick="ctrl('coin','mode/soft')"><svg class="ic"><use href="#i-pause"/></svg><span>정리중지</span></div>
+            <div class="seg-btn stop" data-mode="stop" onclick="ctrl('coin','mode/stop',{confirm:'봇 완전 종료?'})"><svg class="ic"><use href="#i-stop"/></svg><span>완전종료</span></div>
+          </div>
+        </div>
+        <div class="ctl-section">
+          <div class="ctl-label">거래 모드</div>
+          <div class="switch-row">
+            <div class="switch-label">
+              <div class="switch-name" id="coin_trade_name">DEMO</div>
+              <div class="switch-mode" id="coin_trade_desc">시뮬레이션</div>
+            </div>
+            <div class="switch" id="coin_switch" onclick="toggleTrade('coin')">
+              <span class="switch-text demo">DEMO</span>
+              <span class="switch-text real">REAL</span>
+            </div>
+          </div>
+        </div>
+        <button class="emergency-btn" onclick="ctrl('coin','emergency',{confirm:'🚨 보유 전량 즉시 청산. 진행?', auth:true})">
+          <svg class="ic"><use href="#i-power"/></svg>긴급청산
+        </button>
+        <div class="ctl-msg" id="coin_msg"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 현황</div>
+        <div class="grid-4">
+          <div class="stat"><div class="stat-label">오늘 수익률</div><div class="stat-value" id="coin_today_pct">-</div></div>
+          <div class="stat"><div class="stat-label">오늘 P&L</div><div class="stat-value" id="coin_today_pnl">-</div></div>
+          <div class="stat"><div class="stat-label">누적</div><div class="stat-value" id="coin_total_pct">-</div></div>
+          <div class="stat"><div class="stat-label">잔고</div><div class="stat-value" id="coin_balance">-</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-bag"/></svg>보유 포지션</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>코인</th><th>페르소나</th><th class="num">수량</th><th class="num">평단</th><th class="num">투자금</th></tr></thead>
+            <tbody id="coin_positions"><tr><td colspan="5" class="empty">로딩...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 주식봇 상세 뷰 ─────────────── -->
+    <div class="view" id="view-stock">
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-mode"/></svg>주식봇 컨트롤</div>
+        <div class="ctl-section">
+          <div class="ctl-label">운영 모드</div>
+          <div class="seg" id="stock_seg">
+            <div class="seg-btn run"  data-mode="run"  onclick="ctrl('stock','mode/run')"><svg class="ic"><use href="#i-play"/></svg><span>러닝</span></div>
+            <div class="seg-btn soft" data-mode="soft" onclick="ctrl('stock','mode/soft')"><svg class="ic"><use href="#i-pause"/></svg><span>정리중지</span></div>
+            <div class="seg-btn stop" data-mode="stop" onclick="ctrl('stock','mode/stop',{confirm:'봇 완전 종료?'})"><svg class="ic"><use href="#i-stop"/></svg><span>완전종료</span></div>
+          </div>
+        </div>
+        <div class="ctl-section">
+          <div class="ctl-label">거래 모드</div>
+          <div class="switch-row">
+            <div class="switch-label">
+              <div class="switch-name" id="stock_trade_name">DEMO</div>
+              <div class="switch-mode" id="stock_trade_desc">시뮬레이션</div>
+            </div>
+            <div class="switch" id="stock_switch" onclick="toggleTrade('stock')">
+              <span class="switch-text demo">DEMO</span>
+              <span class="switch-text real">REAL</span>
+            </div>
+          </div>
+        </div>
+        <button class="emergency-btn" onclick="ctrl('stock','emergency',{confirm:'🚨 보유 전량 즉시 청산. 진행?', auth:true})">
+          <svg class="ic"><use href="#i-power"/></svg>긴급청산
+        </button>
+        <div class="ctl-msg" id="stock_msg"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 현황</div>
+        <div class="grid-4">
+          <div class="stat"><div class="stat-label">오늘 수익률</div><div class="stat-value" id="stock_today_pct">-</div></div>
+          <div class="stat"><div class="stat-label">오늘 P&L</div><div class="stat-value" id="stock_today_pnl">-</div></div>
+          <div class="stat"><div class="stat-label">누적</div><div class="stat-value" id="stock_total_pct">-</div></div>
+          <div class="stat"><div class="stat-label">잔고</div><div class="stat-value" id="stock_balance">-</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-bag"/></svg>보유 종목</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>종목</th><th>시장</th><th class="num">수량</th><th class="num">평단</th><th>프로파일</th></tr></thead>
+            <tbody id="stock_positions"><tr><td colspan="5" class="empty">로딩...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 시스템 뷰 ─────────────── -->
+    <div class="view" id="view-system">
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-sys"/></svg>봇 프로세스</div>
+        <div id="sys_processes"><div class="empty">로딩...</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-bolt"/></svg>일괄 제어</div>
+        <button class="big-action start" onclick="sysCall('start','전체 시작', {auth:true})">
+          <svg class="ic"><use href="#i-play"/></svg>전체 시작
+        </button>
+        <button class="big-action restart" onclick="sysCall('restart','전체 재시작', {auth:true})">
+          <svg class="ic"><use href="#i-refresh"/></svg>전체 재시작
+        </button>
+        <button class="big-action stop" onclick="sysCall('stop','전체 종료', {auth:true, confirm:'⚠️ 양쪽 봇 + API 모두 종료. 진행?'})">
+          <svg class="ic"><use href="#i-stop"/></svg>전체 종료
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-clock"/></svg>자동 시작 (Mac 부팅 시)</div>
+        <div class="switch-row" style="padding:8px 4px">
+          <div class="switch-label">
+            <div class="switch-name">launchd 자동 시작</div>
+            <div class="switch-mode" id="autoload_desc">로딩...</div>
+          </div>
+          <div class="switch" id="autoload_switch" onclick="toggleAutoload()">
+            <span class="switch-text demo">OFF</span>
+            <span class="switch-text real">ON</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-doc"/></svg>로그 보기</div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:10px">
+          <button class="sys-btn" onclick="loadLog('coinbot-main')">코인봇 메인</button>
+          <button class="sys-btn" onclick="loadLog('coinbot-api')">코인봇 API</button>
+          <button class="sys-btn" onclick="loadLog('stockbot-main')">주식봇 메인</button>
+          <button class="sys-btn" onclick="loadLog('stockbot-api')">주식봇 API</button>
+        </div>
+        <pre id="log_view" style="background:#0d1117; padding:10px; border-radius:8px; font-size:10px; max-height:300px; overflow:auto; color:var(--muted); border:1px solid var(--line); white-space:pre-wrap; word-break:break-all">로그 버튼 클릭</pre>
+      </div>
+    </div>
+
+    <!-- ─── 자가개선 캘린더 뷰 ─────────────── -->
+    <div class="view" id="view-tune">
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-cal"/></svg>자가개선 캘린더
+          <span class="right">
+            <span style="color:var(--warn)">●</span> 튜닝 발생일
+          </span>
+        </div>
+        <div class="cal-head">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="calNav(-1)">◀</button>
+            <button class="cal-nav-btn" onclick="calNav(0)">오늘</button>
+            <button class="cal-nav-btn" onclick="calNav(1)">▶</button>
+          </div>
+          <div id="cal_month" style="font-size:14px; font-weight:600">-</div>
+          <div style="display:flex; gap:6px">
+            <button class="cal-nav-btn" onclick="calBot('coin')" id="calbtn_coin">코인</button>
+            <button class="cal-nav-btn" onclick="calBot('stock')" id="calbtn_stock">주식</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal_grid"></div>
+        <div class="cal-detail" id="cal_detail">
+          <div class="empty">날짜를 선택하세요</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-bolt"/></svg>What-If 시뮬레이션 안내</div>
+        <div style="font-size:12px; color:var(--muted); line-height:1.7">
+          캘린더에서 <span style="color:var(--warn)">●</span> 표시된 날짜를 클릭하면
+          그 날 발생한 자가개선 튜닝과
+          <b style="color:var(--info)">"이 튜닝을 이전 데이터에 적용했다면 어땠을까?"</b>
+          시뮬레이션 결과를 볼 수 있습니다.
+          <br><br>
+          비교 항목: 누적 P&amp;L 차이 / 승률 변동 / 거래수 / 최대낙폭(MDD).
+          <br><br>
+          <span style="color:var(--warn)">⚠ 시뮬레이션 결과 ≠ 미래 보장.</span> 과거 데이터 기반 추정치.
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 설정 뷰 ─────────────── -->
+    <div class="view" id="view-settings">
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-lock"/></svg>관리자 비밀번호</div>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:10px">
+          REAL 전환, 봇 종료, 긴급청산 시 요구. SHA-256 해시 로컬 저장.
+        </div>
+        <div style="display:flex; gap:8px">
+          <button class="sys-btn primary" onclick="changePw()">비밀번호 변경</button>
+          <button class="sys-btn danger" onclick="resetPw()">비밀번호 초기화</button>
+          <button class="sys-btn" onclick="logoutAuth()">인증 만료</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📡 API 엔드포인트</div>
+        <table style="font-size:11px">
+          <tr><td>시스템</td><td><code>http://127.0.0.1:9000</code></td></tr>
+          <tr><td>코인봇</td><td><code>http://127.0.0.1:9001</code></td></tr>
+          <tr><td>주식봇</td><td><code>http://127.0.0.1:9002</code></td></tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 메뉴 -->
+<div class="menu-bg" id="menuBg" onclick="closeMenu()"></div>
+<aside class="menu" id="menu">
+  <div class="menu-head">
+    <h2>두근 트레이딩</h2>
+    <button class="menu-btn" onclick="closeMenu()"><svg class="ic ic-lg"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="menu-list">
+
+    <div class="menu-section">
+      <div class="menu-section-title">메인</div>
+      <div class="menu-item" data-view="home" onclick="goView('home')">
+        <svg class="ic"><use href="#i-home"/></svg>시장 현황
+        <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-section-title">봇</div>
+      <div class="menu-item" data-view="coin" onclick="goView('coin')">
+        <svg class="ic" style="color:var(--coin)"><use href="#i-coin"/></svg>코인봇
+        <span class="led" id="menu_coin_led"></span>
+      </div>
+      <div class="menu-item" data-view="stock" onclick="goView('stock')">
+        <svg class="ic" style="color:var(--stock)"><use href="#i-stock"/></svg>주식봇
+        <span class="led" id="menu_stock_led"></span>
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-section-title">관리</div>
+      <div class="menu-item" data-view="system" onclick="goView('system')">
+        <svg class="ic"><use href="#i-sys"/></svg>시스템 / 자동시작 / 로그
+        <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
+      </div>
+      <div class="menu-item" data-view="tune" onclick="goView('tune')">
+        <svg class="ic"><use href="#i-cal"/></svg>자가개선 캘린더
+        <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
+      </div>
+      <div class="menu-item" data-view="settings" onclick="goView('settings')">
+        <svg class="ic"><use href="#i-lock"/></svg>설정 / 비밀번호
+        <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- 비밀번호 모달 -->
+<div class="modal-bg" id="pwModal">
+  <div class="modal">
+    <div class="modal-title">
+      <svg class="ic ic-lg" style="color:var(--warn)"><use href="#i-lock"/></svg>
+      <span id="pwTitle">관리자 인증</span>
+    </div>
+    <div class="modal-desc" id="pwDesc">위험한 작업입니다. 비밀번호 입력.</div>
+    <input type="password" id="pwInput" autocomplete="off" inputmode="numeric" placeholder="비밀번호" />
+    <div class="modal-err" id="pwErr"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closePw()">취소</button>
+      <button class="modal-btn primary" onclick="submitPw()">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer">두근 트레이딩 v1.1 · 코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

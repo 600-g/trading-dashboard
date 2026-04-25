@@ -1,0 +1,9 @@
+{
+  "name": "두근 트레이딩 통합 대시보드",
+  "short_name": "두근트레이딩",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#3fb950",
+  "icons": []
+}
