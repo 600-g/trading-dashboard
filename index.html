@@ -329,6 +329,91 @@
     .hero-value{font-size:28px}
     .stat-value{font-size:14px}
   }
+
+  /* ─── 모바일 (640px 이하) 최적화 ─────────────────── */
+  @media(max-width:640px){
+    /* 모든 좌우 분할은 위아래로 */
+    .grid-2{grid-template-columns:1fr !important; gap:8px}
+    .row2{grid-template-columns:1fr}
+    .overview{grid-template-columns:1fr}
+
+    /* 카드 패딩 줄임 */
+    .card{padding:10px 12px; margin-bottom:8px; border-radius:10px}
+    .card.compact{padding:8px 10px; margin-bottom:8px}
+
+    /* 시장 그리드 3 → 3 그대로 (좁아도 가능) */
+    .market-grid{gap:4px !important}
+    .mkt-cell{padding:6px 6px}
+    .mkt-label{font-size:8px}
+    .mkt-value{font-size:11px}
+    .mkt-chg{font-size:9px}
+
+    /* 통계 그리드 4 → 2 */
+    .stat-grid{grid-template-columns:repeat(2,1fr); gap:6px}
+    .stat{padding:8px 10px}
+    .stat-label{font-size:9px}
+    .stat-value{font-size:14px}
+
+    /* HERO */
+    .hero{padding:12px 14px}
+    .hero.hero-compact{padding:10px 12px}
+    .hero-value{font-size:22px}
+    .hero-label{font-size:9px}
+
+    /* 봇 카드 */
+    .bot-card{padding:9px 10px; border-radius:10px}
+    .bot-card .name{font-size:11px}
+    .bot-card .pnl{font-size:14px}
+    .bot-card .meta{font-size:10px}
+
+    /* 헤더 */
+    body{padding:max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom))}
+    .topbar{padding:max(10px, env(safe-area-inset-top)) 12px 10px}
+    .topbar h1{font-size:14px}
+    .topbar h1 span{display:none}  /* 이모지 숨김 */
+    .menu-btn{width:34px; height:34px}
+
+    /* 컨트롤 버튼 */
+    .seg-btn{padding:8px 4px; font-size:11px}
+    .seg-btn span{font-size:11px}
+    .switch{width:64px; height:30px}
+    .switch::after{width:22px; height:22px}
+    .switch.on::after{left:39px}
+    .emergency-btn{padding:11px; font-size:12px}
+
+    /* 차트 */
+    .chart-wrap{height:120px !important}
+
+    /* 시간대 히트맵 */
+    .hourly-grid{height:40px}
+
+    /* 카드 타이틀 */
+    .card-title{font-size:10px; margin-bottom:6px}
+
+    /* KPI 리스트 */
+    .kpi-label{font-size:10px}
+    .kpi-value{font-size:12px}
+
+    /* 테이블 컴팩트 */
+    table{font-size:10px}
+    th,td{padding:5px 5px; font-size:10px}
+
+    /* 메뉴 너비 */
+    .menu{width:88vw}
+
+    /* 캘린더 셀 작게 */
+    .cal-cell{padding:2px; font-size:9px}
+    .cal-pnl{font-size:8px}
+    .cal-day{font-size:9px}
+  }
+
+  /* 아주 작은 폰 (375px 이하 - iPhone SE 등) */
+  @media(max-width:380px){
+    .hero-value{font-size:18px}
+    .topbar h1{font-size:13px}
+    .market-grid{grid-template-columns:repeat(3,1fr) !important}
+    .mkt-value{font-size:10px}
+  }
 </style>
 </head>
 <body>
