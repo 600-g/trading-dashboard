@@ -173,6 +173,17 @@
   .bot-card .pnl{font-size:18px; font-weight:700; font-variant-numeric:tabular-nums}
   .bot-card .meta{font-size:11px; color:var(--muted); margin-top:4px; display:flex; gap:6px; flex-wrap:wrap; align-items:center}
 
+  /* 봇 카드 잔고/시드 */
+  .bot-balance{margin-top:6px; padding-top:6px; border-top:1px dotted var(--line)}
+  .bal-row{display:flex; justify-content:space-between; align-items:baseline; padding:1px 0}
+  .bal-label{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.3px}
+  .bal-value{font-size:14px; font-weight:700; font-variant-numeric:tabular-nums}
+  .bal-seed{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
+  .bal-bar{height:4px; background:#0d1117; border:1px solid var(--line); border-radius:3px; margin-top:5px; overflow:hidden; position:relative}
+  .bal-bar-fill{height:100%; background:linear-gradient(90deg,var(--ok),var(--info)); transition:width .35s; width:50%; position:absolute; left:0; top:0}
+  .bal-bar-fill.down{background:linear-gradient(90deg,var(--down),var(--down))}
+  .bal-bar-fill.up{background:linear-gradient(90deg,var(--ok),var(--up))}
+
   /* 통계 셀 */
   .stat{background:#0d1117; border:1px solid var(--line); border-radius:10px; padding:11px 12px}
   .stat-label{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px}
@@ -472,22 +483,28 @@
     <!-- ─── 메인 뷰: 종합 대시보드 (컴팩트 + 위젯) ────── -->
     <div class="view active" id="view-home">
 
-      <!-- HERO: 합산 P&L (작아짐) -->
+      <!-- HERO: 잔고 (메인) + 시드 + 누적 P&L -->
       <div class="hero hero-compact">
         <div class="hero-row">
           <div>
-            <div class="hero-label">오늘 합산 P&amp;L</div>
-            <div class="hero-value" id="total_today_pnl">-</div>
+            <div class="hero-label">합산 잔고 (현재)</div>
+            <div class="hero-value" id="total_balance">-</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">
+              시드 <b id="total_seed" style="color:var(--text)">-</b>
+              · 누적 <b id="total_total_pct" style="color:var(--text)">-</b>
+            </div>
           </div>
-          <div style="text-align:right; font-size:11px; color:var(--muted)">
-            <div>오늘 <b id="total_today_pct" style="color:var(--text); font-size:13px">-</b></div>
-            <div style="margin-top:2px">누적 <b id="total_total_pct" style="color:var(--text); font-size:13px">-</b></div>
-            <div style="margin-top:2px">잔고 <b id="total_balance" style="color:var(--text); font-size:13px">-</b></div>
+          <div style="text-align:right">
+            <div class="hero-label">오늘 P&amp;L</div>
+            <div class="hero-value" id="total_today_pnl" style="font-size:20px">-</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">
+              <b id="total_today_pct" style="color:var(--text)">-</b>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 봇 카드 (컴팩트) -->
+      <!-- 봇 카드 (잔고 + 시드 + 변동 직관 표시) -->
       <div class="grid-2" style="margin-bottom:10px; gap:8px">
         <div class="bot-card coin" onclick="goView('coin')">
           <div class="top">
@@ -496,10 +513,22 @@
             </div>
             <div class="pnl" id="coin_card_pnl" style="font-size:15px">-</div>
           </div>
-          <div class="meta" id="coin_card_meta" style="margin-top:2px">
+          <div class="bot-balance">
+            <div class="bal-row">
+              <span class="bal-label">잔고</span>
+              <span class="bal-value" id="coin_card_balance">-</span>
+            </div>
+            <div class="bal-row">
+              <span class="bal-label">시드</span>
+              <span class="bal-seed" id="coin_card_seed">-</span>
+            </div>
+            <div class="bal-bar"><div class="bal-bar-fill" id="coin_card_bar"></div></div>
+          </div>
+          <div class="meta" id="coin_card_meta" style="margin-top:6px">
             <span class="badge b-offline"><span class="led off"></span>OFFLINE</span>
           </div>
         </div>
+
         <div class="bot-card stock" onclick="goView('stock')">
           <div class="top">
             <div class="name" style="color:var(--stock); font-size:12px">
@@ -507,7 +536,18 @@
             </div>
             <div class="pnl" id="stock_card_pnl" style="font-size:15px">-</div>
           </div>
-          <div class="meta" id="stock_card_meta" style="margin-top:2px">
+          <div class="bot-balance">
+            <div class="bal-row">
+              <span class="bal-label">잔고</span>
+              <span class="bal-value" id="stock_card_balance">-</span>
+            </div>
+            <div class="bal-row">
+              <span class="bal-label">시드</span>
+              <span class="bal-seed" id="stock_card_seed">-</span>
+            </div>
+            <div class="bal-bar"><div class="bal-bar-fill" id="stock_card_bar"></div></div>
+          </div>
+          <div class="meta" id="stock_card_meta" style="margin-top:6px">
             <span class="badge b-offline"><span class="led off"></span>OFFLINE</span>
           </div>
         </div>
@@ -910,6 +950,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=1.5" defer></script>
+<script src="app.js?v=1.6" defer></script>
 </body>
 </html>

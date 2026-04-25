@@ -10,7 +10,7 @@
  * Firebase: datemap-759bf, 컬렉션 trading_status / trading_commands
  */
 
-const APP_VERSION = 'v1.5';
+const APP_VERSION = 'v1.6';
 const IS_FILE = location.protocol === 'file:';
 const ORIGIN = IS_FILE ? '' : location.origin;
 
@@ -672,7 +672,37 @@ function renderHomeOverview() {
   ttEl.textContent = pct(totalPct);
   colorize(ttEl, totalPct);
 
-  document.getElementById('total_balance').textContent = fmt(balance) + '원';
+  // HERO 메인: 합산 잔고 + 시드
+  const balEl = document.getElementById('total_balance');
+  balEl.textContent = fmt(balance) + '원';
+  if (initialBal > 0 && balance > initialBal) balEl.classList.add('up');
+  else if (initialBal > 0 && balance < initialBal) balEl.classList.add('down');
+  document.getElementById('total_seed').textContent = fmt(initialBal) + '원';
+
+  // 봇 카드별 잔고/시드/진행바
+  ['coin', 'stock'].forEach(bot => {
+    const st = STATE[bot].status;
+    const balCardEl = document.getElementById(`${bot}_card_balance`);
+    const seedEl = document.getElementById(`${bot}_card_seed`);
+    const barEl = document.getElementById(`${bot}_card_bar`);
+    if (!balCardEl || !st) return;
+
+    const seed = st.initial_balance || 0;
+    const bal = st.balance || 0;
+    balCardEl.textContent = fmt(bal) + '원';
+    seedEl.textContent = fmt(seed) + '원';
+    balCardEl.classList.remove('up', 'down');
+    if (seed > 0 && bal > seed) balCardEl.classList.add('up');
+    else if (seed > 0 && bal < seed) balCardEl.classList.add('down');
+
+    // 진행바: 50% 기준 시드 위/아래
+    if (barEl && seed > 0) {
+      const ratio = bal / seed;
+      const pct = Math.min(Math.max(ratio * 50, 0), 100);
+      barEl.style.width = pct + '%';
+      barEl.className = 'bal-bar-fill' + (bal > seed ? ' up' : bal < seed ? ' down' : '');
+    }
+  });
 
   // 통합 최근 거래
   const all = [];
