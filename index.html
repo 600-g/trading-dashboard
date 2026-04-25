@@ -428,22 +428,24 @@
         </div>
       </div>
 
-      <!-- 시장 현황: 코인(비트/알트/공탐) + 거시(KOSPI/NASDAQ/환율) -->
-      <div class="card compact">
-        <div class="card-title"><svg class="ic" style="color:var(--coin)"><use href="#i-coin"/></svg>코인 시장</div>
-        <div class="market-grid" style="grid-template-columns:repeat(3,1fr)">
-          <div class="mkt-cell"><div class="mkt-label">비트 (BTC)</div><div class="mkt-value" id="mkt_btc">-</div><div class="mkt-chg" id="mkt_btc_chg">-</div></div>
-          <div class="mkt-cell"><div class="mkt-label">알트 평균</div><div class="mkt-value" id="mkt_alt">-</div><div class="mkt-chg" id="mkt_alt_chg">-</div></div>
-          <div class="mkt-cell"><div class="mkt-label">공포탐욕</div><div class="mkt-value" id="mkt_fng">-</div><div class="mkt-chg" id="mkt_fng_lbl">-</div></div>
+      <!-- 시장 현황: 좌(코인) + 우(주식/거시) - 데스크탑 좌우, 모바일 위아래 -->
+      <div class="grid-2" style="margin-bottom:10px; gap:10px">
+        <div class="card compact">
+          <div class="card-title"><svg class="ic" style="color:var(--coin)"><use href="#i-coin"/></svg>코인 시장</div>
+          <div class="market-grid" style="grid-template-columns:repeat(3,1fr)">
+            <div class="mkt-cell"><div class="mkt-label">비트 (BTC)</div><div class="mkt-value" id="mkt_btc">-</div><div class="mkt-chg" id="mkt_btc_chg">-</div></div>
+            <div class="mkt-cell"><div class="mkt-label">알트 평균</div><div class="mkt-value" id="mkt_alt">-</div><div class="mkt-chg" id="mkt_alt_chg">-</div></div>
+            <div class="mkt-cell"><div class="mkt-label">공포탐욕</div><div class="mkt-value" id="mkt_fng">-</div><div class="mkt-chg" id="mkt_fng_lbl">-</div></div>
+          </div>
         </div>
-      </div>
 
-      <div class="card compact">
-        <div class="card-title"><svg class="ic" style="color:var(--stock)"><use href="#i-stock"/></svg>주식/거시 시장</div>
-        <div class="market-grid" style="grid-template-columns:repeat(3,1fr)">
-          <div class="mkt-cell"><div class="mkt-label">KOSPI</div><div class="mkt-value" id="mkt_kospi">-</div><div class="mkt-chg" id="mkt_kospi_chg">-</div></div>
-          <div class="mkt-cell"><div class="mkt-label">NASDAQ</div><div class="mkt-value" id="mkt_nasdaq">-</div><div class="mkt-chg" id="mkt_nasdaq_chg">-</div></div>
-          <div class="mkt-cell"><div class="mkt-label">USD/KRW</div><div class="mkt-value" id="mkt_usdkrw">-</div></div>
+        <div class="card compact">
+          <div class="card-title"><svg class="ic" style="color:var(--stock)"><use href="#i-stock"/></svg>주식/거시 시장</div>
+          <div class="market-grid" style="grid-template-columns:repeat(3,1fr)">
+            <div class="mkt-cell"><div class="mkt-label">KOSPI</div><div class="mkt-value" id="mkt_kospi">-</div><div class="mkt-chg" id="mkt_kospi_chg">-</div></div>
+            <div class="mkt-cell"><div class="mkt-label">NASDAQ</div><div class="mkt-value" id="mkt_nasdaq">-</div><div class="mkt-chg" id="mkt_nasdaq_chg">-</div></div>
+            <div class="mkt-cell"><div class="mkt-label">USD/KRW</div><div class="mkt-value" id="mkt_usdkrw">-</div></div>
+          </div>
         </div>
       </div>
 
