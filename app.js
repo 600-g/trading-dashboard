@@ -517,6 +517,77 @@ function applyHealthUI(bot, health) {
   }
 }
 
+function renderReviews(status) {
+  if (!status) return;
+
+  // 자체평가 통계 (14일)
+  const summary = status.review_summary || {};
+  const sumEl = document.getElementById('review_summary');
+  if (sumEl) {
+    if (!summary.count) {
+      sumEl.innerHTML = '<div class="empty" style="padding:8px 0">평가 누적 중...</div>';
+    } else {
+      const v = summary.by_verdict || {};
+      const total = summary.count;
+      const eff_e = summary.avg_entry_eff != null ? (summary.avg_entry_eff * 100).toFixed(0) + '%' : '-';
+      const eff_x = summary.avg_exit_eff != null ? (summary.avg_exit_eff * 100).toFixed(0) + '%' : '-';
+      const missed = summary.avg_missed_pct != null ? (summary.avg_missed_pct * 100).toFixed(2) + '%' : '-';
+      sumEl.innerHTML = `
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--muted)">총 평가</span><b>${total}건</b></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="up">🏆 최선</span><b>${v['최선']||0}건</b></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--ok)">✅ 양호</span><b>${v['양호']||0}건</b></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="warn">💡 개선가능</span><b>${v['개선가능']||0}건</b></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="down">⚠️ 재학습</span><b>${v['재학습필요']||0}건</b></div>
+        <div style="border-top:1px solid var(--line);margin-top:5px;padding-top:5px;color:var(--muted);font-size:10px">
+          진입 효율 ${eff_e} · 청산 효율 ${eff_x}<br>
+          베스트 대비 평균 ${missed} 놓침
+        </div>
+      `;
+    }
+  }
+
+  // 반복 실수
+  const repeats = status.repeated_mistakes || [];
+  const repEl = document.getElementById('repeated_mistakes');
+  if (repEl) {
+    if (repeats.length === 0) {
+      repEl.innerHTML = '<div class="empty" style="padding:8px 0">감지된 패턴 없음 ✅</div>';
+    } else {
+      repEl.innerHTML = repeats.slice(0, 5).map(p => `
+        <div style="padding:5px 0;border-bottom:1px dotted #1f2937">
+          <div style="font-weight:600">${p.pattern} <span style="color:var(--warn)">${p.count}회</span></div>
+          <div style="color:var(--muted);font-size:10px;margin-top:2px">→ ${p.suggestion}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // 최근 평가 테이블
+  const reviews = status.reviews || [];
+  const tb = document.getElementById('reviews_table');
+  if (tb) {
+    if (reviews.length === 0) {
+      tb.innerHTML = '<tr><td colspan="6" class="empty">평가 누적 시 표시</td></tr>';
+    } else {
+      tb.innerHTML = reviews.slice(0, 10).map(r => {
+        const ts = (r.reviewed_at || '').slice(11, 16);
+        const eff_e = r.entry_eff != null ? (r.entry_eff * 100).toFixed(0) + '%' : '-';
+        const eff_x = r.exit_eff != null ? (r.exit_eff * 100).toFixed(0) + '%' : '-';
+        const verdictColor = r.verdict === '최선' ? 'up'
+                           : r.verdict === '양호' ? 'info'
+                           : r.verdict === '개선가능' ? 'warn'
+                           : r.verdict === '재학습필요' ? 'down' : '';
+        return `<tr>
+          <td>${ts}</td><td>${r.stock}</td>
+          <td class="${verdictColor}">${r.verdict || '-'}</td>
+          <td class="num">${eff_e}</td><td class="num">${eff_x}</td>
+          <td style="color:var(--muted);font-size:10px">${(r.lesson || '').slice(0,40)}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+}
+
 function applyStatusUI(bot, status) {
   STATE[bot].status = status;
   const prefix = bot;
@@ -853,6 +924,8 @@ async function loadAll(force = false) {
   applyHealthUI('stock', stockH);
   applyStatusUI('coin', coinS);
   applyStatusUI('stock', stockS);
+  // 자체평가/반복실수: 주식봇 status에서만 가져옴 (코인봇은 별개 시스템)
+  renderReviews(stockS);
   renderHomeOverview();
   renderTokens(tokens);
   renderMarket(market);

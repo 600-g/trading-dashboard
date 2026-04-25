@@ -582,6 +582,29 @@
         </div>
       </div>
 
+      <!-- 자체평가 + 반복 실수 (트레이더 학습) -->
+      <div class="grid-2" style="margin-bottom:10px; gap:10px">
+        <div class="card compact">
+          <div class="card-title"><svg class="ic"><use href="#i-bolt"/></svg>자체평가 (14일)</div>
+          <div id="review_summary" style="font-size:11px"><div class="empty">데이터 없음</div></div>
+        </div>
+        <div class="card compact">
+          <div class="card-title"><svg class="ic" style="color:var(--warn)"><use href="#i-warn"/></svg>반복 실수 감지</div>
+          <div id="repeated_mistakes" style="font-size:11px"><div class="empty">감지된 패턴 없음</div></div>
+        </div>
+      </div>
+
+      <!-- 최근 자체평가 (종목별) -->
+      <div class="card compact">
+        <div class="card-title"><svg class="ic"><use href="#i-doc"/></svg>최근 거래 자체평가</div>
+        <div class="table-wrap">
+          <table style="font-size:10px">
+            <thead><tr><th>시각</th><th>종목</th><th>평가</th><th class="num">진입</th><th class="num">청산</th><th>교훈</th></tr></thead>
+            <tbody id="reviews_table"><tr><td colspan="6" class="empty">평가 누적 시 표시</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- 최근 거래 (컴팩트 테이블) -->
       <div class="card compact">
         <div class="card-title"><svg class="ic"><use href="#i-refresh"/></svg>최근 거래</div>
