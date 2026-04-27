@@ -848,6 +848,44 @@
       </div>
     </div>
 
+    <!-- ─── 알림 뷰 ─────────────── -->
+    <div class="view" id="view-alerts">
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-warn"/></svg>알림 설정
+          <span class="right" id="alert_perm_status">-</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="sys-btn primary" onclick="enableNotifications()">
+            🔔 푸시 알림 활성화
+          </button>
+          <button class="sys-btn" onclick="testNotification()">테스트 알림</button>
+          <button class="sys-btn" onclick="markAllRead()">모두 읽음 처리</button>
+          <button class="sys-btn danger" onclick="clearAllAlerts()">전체 삭제</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">
+          매수/매도/손절/긴급청산 발생 시 OS 푸시 알림 + 아래 리스트에 누적.
+          iOS PWA는 홈화면 추가 후 알림 권한 별도 필요.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><svg class="ic"><use href="#i-doc"/></svg>알림 리스트
+          <span class="right" id="alert_count_badge">총 0건</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="cal-nav-btn" onclick="filterAlerts('all')">전체</button>
+          <button class="cal-nav-btn" onclick="filterAlerts('buy')">매수</button>
+          <button class="cal-nav-btn" onclick="filterAlerts('sell')">매도</button>
+          <button class="cal-nav-btn" onclick="filterAlerts('danger')">⚠ 위험</button>
+          <button class="cal-nav-btn" onclick="filterAlerts('coin')">🪙 코인</button>
+          <button class="cal-nav-btn" onclick="filterAlerts('stock')">📈 주식</button>
+        </div>
+        <div id="alerts_list" style="max-height:600px; overflow-y:auto">
+          <div class="empty">알림 없음 (거래 발생시 자동 표시)</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── 설정 뷰 ─────────────── -->
     <div class="view" id="view-settings">
       <div class="card">
@@ -914,6 +952,10 @@
         <svg class="ic"><use href="#i-cal"/></svg>자가개선 캘린더
         <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
       </div>
+      <div class="menu-item" data-view="alerts" onclick="goView('alerts')">
+        <svg class="ic"><use href="#i-warn"/></svg>알림
+        <span id="menu_alert_count" style="margin-left:auto; background:var(--danger); color:#fff; font-size:10px; padding:2px 7px; border-radius:10px; display:none">0</span>
+      </div>
       <div class="menu-item" data-view="settings" onclick="goView('settings')">
         <svg class="ic"><use href="#i-lock"/></svg>설정 / 비밀번호
         <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
@@ -950,6 +992,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=1.6" defer></script>
+<script src="app.js?v=1.7" defer></script>
 </body>
 </html>

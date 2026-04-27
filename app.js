@@ -10,7 +10,7 @@
  * Firebase: datemap-759bf, 컬렉션 trading_status / trading_commands
  */
 
-const APP_VERSION = 'v1.6';
+const APP_VERSION = 'v1.7';
 const IS_FILE = location.protocol === 'file:';
 const ORIGIN = IS_FILE ? '' : location.origin;
 
@@ -300,8 +300,149 @@ const VIEW_TITLES = {
   stock:'📈 주식봇',
   system:'⚙️ 시스템',
   tune: '📅 자가개선',
+  alerts:'🔔 알림',
   settings:'🔐 설정',
 };
+
+/* ─── 푸시 알림 시스템 ───────────────────────────── */
+const SEEN_KEY = 'doogeun_seen_alert_ids';
+let _alertFilter = 'all';
+
+function getSeenIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+
+function saveSeenIds(set) {
+  localStorage.setItem(SEEN_KEY, JSON.stringify([...set].slice(-500)));  // 최근 500개만
+}
+
+async function enableNotifications() {
+  if (!('Notification' in window)) { toast('❌ 브라우저가 푸시 알림 미지원'); return; }
+  const perm = await Notification.requestPermission();
+  document.getElementById('alert_perm_status').textContent =
+    perm === 'granted' ? '✅ 활성화됨' : perm === 'denied' ? '❌ 거부됨' : '대기';
+  if (perm === 'granted') toast('🔔 푸시 알림 활성화');
+}
+
+function testNotification() {
+  if (Notification.permission !== 'granted') {
+    toast('먼저 알림 권한 활성화'); enableNotifications(); return;
+  }
+  new Notification('🔔 두근 트레이딩 테스트', {
+    body: '알림이 정상적으로 작동합니다.',
+    icon: '/favicon.ico',
+  });
+}
+
+function pushOSNotification(alert) {
+  if (Notification.permission !== 'granted') return;
+  const icon = alert.severity === 'danger' ? '⚠️'
+             : alert.severity === 'warn' ? '💡' : '✅';
+  const botEmoji = alert.bot === 'coin' ? '🪙' : '📈';
+  new Notification(`${icon} ${botEmoji} ${alert.title}`, {
+    body: alert.body || '',
+    tag: `alert-${alert.id}`,
+    requireInteraction: alert.severity === 'danger',
+  });
+}
+
+function checkNewAlerts(alerts) {
+  if (!alerts || !alerts.length) return;
+  const seen = getSeenIds();
+  let newCount = 0;
+  for (const a of alerts) {
+    const aid = `${a.bot}-${a.id}`;
+    if (!seen.has(aid)) {
+      pushOSNotification(a);
+      seen.add(aid);
+      newCount++;
+    }
+  }
+  if (newCount > 0) {
+    saveSeenIds(seen);
+    if (newCount > 1) toast(`🔔 ${newCount}건 신규 알림`);
+  }
+}
+
+function markAllRead() {
+  const seen = getSeenIds();
+  const all = collectAllAlerts();
+  for (const a of all) seen.add(`${a.bot}-${a.id}`);
+  saveSeenIds(seen);
+  document.getElementById('menu_alert_count').style.display = 'none';
+  toast('✅ 모두 읽음');
+  renderAlerts(all);
+}
+
+function clearAllAlerts() {
+  if (!confirm('알림 리스트 전체 삭제? (DB는 유지, localStorage만)')) return;
+  saveSeenIds(new Set());
+  toast('전체 삭제');
+}
+
+function collectAllAlerts() {
+  const c = STATE.coin.status?.alerts || [];
+  const s = STATE.stock.status?.alerts || [];
+  const all = [
+    ...c.map(a => ({...a, bot: a.bot || 'coin'})),
+    ...s.map(a => ({...a, bot: a.bot || 'stock'})),
+  ];
+  return all.sort((a,b) => (b.ts || '').localeCompare(a.ts || ''));
+}
+
+function filterAlerts(type) {
+  _alertFilter = type;
+  renderAlerts(collectAllAlerts());
+}
+
+function renderAlerts(all) {
+  const list = document.getElementById('alerts_list');
+  if (!list) return;
+
+  let filtered = all;
+  if (_alertFilter === 'buy') filtered = all.filter(a => a.type === 'buy');
+  else if (_alertFilter === 'sell') filtered = all.filter(a => a.type === 'sell');
+  else if (_alertFilter === 'danger') filtered = all.filter(a => a.severity === 'danger' || a.severity === 'warn');
+  else if (_alertFilter === 'coin') filtered = all.filter(a => a.bot === 'coin');
+  else if (_alertFilter === 'stock') filtered = all.filter(a => a.bot === 'stock');
+
+  document.getElementById('alert_count_badge').textContent = `총 ${all.length}건 (필터 ${filtered.length})`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty">알림 없음</div>';
+    return;
+  }
+
+  const seen = getSeenIds();
+  list.innerHTML = filtered.map(a => {
+    const aid = `${a.bot}-${a.id}`;
+    const isNew = !seen.has(aid);
+    const sevColor = a.severity === 'danger' ? 'var(--danger)'
+                  : a.severity === 'warn' ? 'var(--warn)' : 'var(--ok)';
+    const botEmoji = a.bot === 'coin' ? '🪙' : '📈';
+    const ts = (a.ts || '').slice(11, 19);
+    return `<div style="padding:10px; border-left:3px solid ${sevColor}; background:${isNew?'#1f6feb11':'transparent'}; margin-bottom:6px; border-radius:6px">
+      <div style="display:flex; justify-content:space-between; align-items:center">
+        <div style="font-weight:600; font-size:13px">${botEmoji} ${a.title}${isNew?' <span style="color:var(--info)">●</span>':''}</div>
+        <div style="font-size:10px; color:var(--muted)">${ts}</div>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin-top:3px">${a.body || ''}</div>
+    </div>`;
+  }).join('');
+
+  // 메뉴 카운트 갱신
+  const newCount = filtered.filter(a => !seen.has(`${a.bot}-${a.id}`)).length;
+  const badge = document.getElementById('menu_alert_count');
+  if (badge) {
+    if (newCount > 0) {
+      badge.textContent = newCount;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
 
 function goView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -312,6 +453,12 @@ function goView(view) {
   closeMenu();
   if (view === 'system') loadSystemView();
   if (view === 'tune') initCalendar();
+  if (view === 'alerts') {
+    const perm = ('Notification' in window) ? Notification.permission : 'X';
+    document.getElementById('alert_perm_status').textContent =
+      perm === 'granted' ? '✅ 활성화됨' : perm === 'denied' ? '❌ 거부됨' : '⏸ 대기';
+    renderAlerts(collectAllAlerts());
+  }
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
@@ -1016,6 +1163,22 @@ async function loadAll(force = false) {
 
   if (document.getElementById('view-system').classList.contains('active')) {
     loadSystemView();
+  }
+
+  // 알림 처리
+  const allAlerts = collectAllAlerts();
+  checkNewAlerts(allAlerts);
+  if (document.getElementById('view-alerts')?.classList.contains('active')) {
+    renderAlerts(allAlerts);
+  } else {
+    // 메뉴 배지만 갱신
+    const seen = getSeenIds();
+    const unread = allAlerts.filter(a => !seen.has(`${a.bot}-${a.id}`)).length;
+    const badge = document.getElementById('menu_alert_count');
+    if (badge) {
+      if (unread > 0) { badge.textContent = unread; badge.style.display = 'inline-block'; }
+      else badge.style.display = 'none';
+    }
   }
 
   if (force) toast('🔄 새로고침 완료');
