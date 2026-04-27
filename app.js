@@ -10,7 +10,7 @@
  * Firebase: datemap-759bf, 컬렉션 trading_status / trading_commands
  */
 
-const APP_VERSION = 'v2.0';
+const APP_VERSION = 'v2.1';
 const IS_FILE = location.protocol === 'file:';
 const ORIGIN = IS_FILE ? '' : location.origin;
 
@@ -1580,7 +1580,7 @@ if (cached) {
 
 if (!FIREBASE_MODE) {
   loadAll();
-  setInterval(loadAll, 5000);  // 5초 폴링 (로컬 부담 없음)
+  setInterval(loadAll, 30000);  // 30초 폴링 (CPU 부담 감소)
 } else {
   console.log('[모드] Firebase Firestore (외부)');
   if (!cached) toast('🌐 Firebase 모드 - 실시간 동기화');
