@@ -10,7 +10,7 @@
  * Firebase: datemap-759bf, 컬렉션 trading_status / trading_commands
  */
 
-const APP_VERSION = 'v1.9';
+const APP_VERSION = 'v2.0';
 const IS_FILE = location.protocol === 'file:';
 const ORIGIN = IS_FILE ? '' : location.origin;
 
@@ -951,12 +951,19 @@ function renderHomeOverview() {
     if (seed > 0 && bal > seed) balCardEl.classList.add('up');
     else if (seed > 0 && bal < seed) balCardEl.classList.add('down');
 
-    // 진행바: 50% 기준 시드 위/아래
+    // 진행바: 같은 값이면 스킵 (CSS transition 재시작 = 깜빡임 방지)
     if (barEl && seed > 0) {
       const ratio = bal / seed;
       const pct = Math.min(Math.max(ratio * 50, 0), 100);
-      barEl.style.width = pct + '%';
-      barEl.className = 'bal-bar-fill' + (bal > seed ? ' up' : bal < seed ? ' down' : '');
+      const newWidth = pct.toFixed(2) + '%';
+      const newClass = 'bal-bar-fill' + (bal > seed ? ' up' : bal < seed ? ' down' : '');
+      if (barEl.dataset.lastWidth !== newWidth) {
+        barEl.style.width = newWidth;
+        barEl.dataset.lastWidth = newWidth;
+      }
+      if (barEl.className !== newClass) {
+        barEl.className = newClass;
+      }
     }
   });
 
