@@ -10,7 +10,7 @@
  * Firebase: datemap-759bf, 컬렉션 trading_status / trading_commands
  */
 
-const APP_VERSION = 'v1.7';
+const APP_VERSION = 'v1.8';
 const IS_FILE = location.protocol === 'file:';
 const ORIGIN = IS_FILE ? '' : location.origin;
 
@@ -540,7 +540,43 @@ async function restartOne(name) {
   }
 }
 
+async function loadHealthcheck() {
+  try {
+    const r = await fetch(`${APIS.system}/system/healthcheck`, { signal:AbortSignal.timeout(8000) });
+    if (!r.ok) return;
+    const h = await r.json();
+    const grid = document.getElementById('health_grid');
+    if (!grid) return;
+    const items = [
+      {key:'kis', label:'KIS (주식)'},
+      {key:'upbit', label:'Upbit (코인)'},
+      {key:'ollama', label:'Ollama (로컬 LLM)'},
+      {key:'gemini', label:'Gemini API'},
+      {key:'firestore', label:'Firestore (외부)'},
+      {key:'github_pages', label:'GitHub Pages'},
+    ];
+    grid.innerHTML = items.map(it => {
+      const v = h[it.key];
+      if (!v) return '';
+      const led = v.ok ? '<span style="color:var(--ok)">●</span>' : '<span style="color:var(--danger)">●</span>';
+      const cls = v.ok ? 'up' : 'down';
+      return `<div style="display:flex;justify-content:space-between;padding:5px 8px;border-bottom:1px dotted var(--line);font-size:12px">
+        <span>${led} ${it.label}</span>
+        <span class="${cls}">${v.note || (v.ok ? 'OK' : 'FAIL')} <span style="color:var(--muted)">${v.ms}ms</span></span>
+      </div>`;
+    }).join('');
+    const ovr = document.getElementById('health_overall');
+    if (ovr) ovr.innerHTML = h.all_ok
+      ? '<span class="up">✅ 전체 정상</span>'
+      : '<span class="down">⚠️ 일부 막힘</span>';
+  } catch (e) {
+    const grid = document.getElementById('health_grid');
+    if (grid) grid.innerHTML = `<div class="empty">헬스체크 실패</div>`;
+  }
+}
+
 async function loadSystemView() {
+  loadHealthcheck();
   try {
     const r = await fetch(`${APIS.system}/system/status`, { signal:AbortSignal.timeout(2500) });
     if (!r.ok) throw new Error('offline');

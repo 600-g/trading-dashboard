@@ -764,6 +764,17 @@
     <!-- ─── 시스템 뷰 ─────────────── -->
     <div class="view" id="view-system">
       <div class="card">
+        <div class="card-title">
+          <svg class="ic"><use href="#i-warn"/></svg>외부 의존 헬스체크
+          <span class="right" id="health_overall">-</span>
+        </div>
+        <div id="health_grid"><div class="empty">로딩...</div></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px">
+          KIS / Upbit / Ollama / Gemini / Firestore / GitHub Pages — 30초마다 갱신
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-title"><svg class="ic"><use href="#i-sys"/></svg>봇 프로세스</div>
         <div id="sys_processes"><div class="empty">로딩...</div></div>
       </div>
@@ -992,6 +1003,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=1.7" defer></script>
+<script src="app.js?v=1.8" defer></script>
 </body>
 </html>
