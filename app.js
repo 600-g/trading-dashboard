@@ -10,7 +10,7 @@
  * Firebase: datemap-759bf, 컬렉션 trading_status / trading_commands
  */
 
-const APP_VERSION = 'v1.8';
+const APP_VERSION = 'v1.9';
 const IS_FILE = location.protocol === 'file:';
 const ORIGIN = IS_FILE ? '' : location.origin;
 
@@ -114,6 +114,19 @@ function subscribeFirestore() {
   });
   firestore.collection('trading_status').doc('tokens').onSnapshot(snap => {
     if (snap.exists) renderTokens(snap.data());
+  });
+
+  // 시스템 + 헬스체크 (외부 모드)
+  firestore.collection('trading_status').doc('system_status').onSnapshot(snap => {
+    if (snap.exists) {
+      STATE.system = snap.data();
+      if (document.getElementById('view-system')?.classList.contains('active')) {
+        renderSystemFromCache(snap.data());
+      }
+    }
+  });
+  firestore.collection('trading_status').doc('healthcheck').onSnapshot(snap => {
+    if (snap.exists) renderHealthcheckData(snap.data());
   });
 
   // 명령 처리 결과 모니터
@@ -540,6 +553,61 @@ async function restartOne(name) {
   }
 }
 
+/* 외부 모드(Firebase) — Firestore 캐시 데이터로 시스템 뷰 렌더 */
+function renderSystemFromCache(data) {
+  const list = document.getElementById('sys_processes');
+  if (list && data.processes) {
+    list.innerHTML = data.processes.map(p => {
+      const led = p.alive ? '<span class="led on"></span>' : '<span class="led off"></span>';
+      const meta = p.alive
+        ? `PID ${p.pid} · ${p.etime || '-'} · ${p.rss_kb ? Math.round(p.rss_kb/1024) + 'MB' : ''}`
+        : '종료됨';
+      return `<div class="sys-row"><div class="sys-info">
+        <div class="sys-name">${led} ${p.name}</div>
+        <div class="sys-meta">${meta}</div>
+      </div></div>`;
+    }).join('');
+  }
+  const sw = document.getElementById('autoload_switch');
+  const desc = document.getElementById('autoload_desc');
+  if (sw && desc) {
+    if (data.autoload) {
+      sw.classList.add('on');
+      desc.textContent = '✅ Mac 부팅 시 자동 시작';
+    } else {
+      sw.classList.remove('on');
+      desc.textContent = '❌ 수동으로 시작 필요';
+    }
+  }
+}
+
+function renderHealthcheckData(h) {
+  const grid = document.getElementById('health_grid');
+  if (!grid || !h) return;
+  const items = [
+    {key:'kis', label:'KIS (주식)'},
+    {key:'upbit', label:'Upbit (코인)'},
+    {key:'ollama', label:'Ollama (로컬 LLM)'},
+    {key:'gemini', label:'Gemini API'},
+    {key:'firestore', label:'Firestore'},
+    {key:'github_pages', label:'GitHub Pages'},
+  ];
+  grid.innerHTML = items.map(it => {
+    const v = h[it.key];
+    if (!v) return '';
+    const led = v.ok ? '<span style="color:var(--ok)">●</span>' : '<span style="color:var(--danger)">●</span>';
+    const cls = v.ok ? 'up' : 'down';
+    return `<div style="display:flex;justify-content:space-between;padding:5px 8px;border-bottom:1px dotted var(--line);font-size:12px">
+      <span>${led} ${it.label}</span>
+      <span class="${cls}">${v.note || (v.ok ? 'OK' : 'FAIL')} <span style="color:var(--muted)">${v.ms||0}ms</span></span>
+    </div>`;
+  }).join('');
+  const ovr = document.getElementById('health_overall');
+  if (ovr) ovr.innerHTML = h.all_ok
+    ? '<span class="up">✅ 전체 정상</span>'
+    : '<span class="down">⚠️ 일부 막힘</span>';
+}
+
 async function loadHealthcheck() {
   try {
     const r = await fetch(`${APIS.system}/system/healthcheck`, { signal:AbortSignal.timeout(8000) });
@@ -576,6 +644,11 @@ async function loadHealthcheck() {
 }
 
 async function loadSystemView() {
+  // Firebase 모드: Firestore 캐시 사용 (system_api 직접 호출 불가)
+  if (FIREBASE_MODE) {
+    if (STATE.system?.processes) renderSystemFromCache(STATE.system);
+    return;  // healthcheck도 Firestore에서 자동 구독 중
+  }
   loadHealthcheck();
   try {
     const r = await fetch(`${APIS.system}/system/status`, { signal:AbortSignal.timeout(2500) });
@@ -824,7 +897,7 @@ function applyStatusUI(bot, status) {
       ).join('');
     } else {
       posTb.innerHTML = positions.map(p =>
-        `<tr><td>${p.stock}</td><td>${p.market}</td>` +
+        `<tr><td>${p.stock_name || p.stock}<div style="color:var(--muted);font-size:9px">${p.stock}</div></td><td>${p.market}</td>` +
         `<td class="num">${p.amount}</td>` +
         `<td class="num">${fmt(p.avg_price)}</td>` +
         `<td>${p.profile || '-'}</td></tr>`
@@ -900,7 +973,7 @@ function renderHomeOverview() {
     trBody.innerHTML = all.slice(0,10).map(t => {
       const cls = (t.pnl || 0) > 0 ? 'up' : (t.pnl || 0) < 0 ? 'down' : '';
       const ts = (t.created_at || t.ts || '').slice(11, 16);
-      const sym = t.coin || t.stock || '-';
+      const sym = t.coin || t.stock_name || t.stock || '-';
       const botBadge = t._bot === 'coin'
         ? '<span style="color:var(--coin)">🪙</span>'
         : '<span style="color:var(--stock)">📈</span>';
