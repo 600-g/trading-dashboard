@@ -1002,36 +1002,54 @@ function applyStatusUI(bot, status) {
       posTb.innerHTML = `<tr><td colspan="5" class="empty">${all.length === 0 ? '보유 없음' : '필터 결과 없음'}</td></tr>`;
     } else if (bot === 'coin') {
       posTb.innerHTML = positions.map(p => {
-        const pct = p.pnl_pct != null ? p.pnl_pct : 0;
-        const pctCls = pct > 0 ? 'up' : pct < 0 ? 'down' : '';
-        const sign = pct >= 0 ? '+' : '';
-        const notional = p.notional_krw != null ? fmt(p.notional_krw) + '원' : '-';
-        const amount = p.amount != null ? (+p.amount).toFixed(4) : '-';
-        const entry = p.entry_price != null ? fmt(p.entry_price) : '-';
+        const amount = p.amount != null ? +p.amount : 0;
+        const avg = p.entry_price != null ? +p.entry_price : 0;
+        const cur = p.current_price != null ? +p.current_price : 0;
+        const invested = p.krw_invested != null ? +p.krw_invested : (avg * amount);
+        const currentValue = cur > 0 ? cur * amount : invested;
+        const pnl = currentValue - invested;
+        const pct = p.pnl_pct != null ? +p.pnl_pct : (invested > 0 ? (pnl / invested * 100) : 0);
+        const pctCls = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
+        const sign = pnl >= 0 ? '+' : '';
         return `<tr class="row-coin"><td><b>${p.coin}</b>${personaBadge(p.persona)}</td>` +
-               `<td class="num">${amount}</td>` +
-               `<td class="num">${entry}</td>` +
-               `<td class="num">${notional}</td>` +
-               `<td class="num ${pctCls}"><b>${sign}${pct.toFixed(2)}%</b></td></tr>`;
+               `<td class="num">${avg > 0 ? fmt(avg) : '-'}</td>` +
+               `<td class="num">${amount.toFixed(4)}</td>` +
+               `<td class="num">${fmt(invested)}원</td>` +
+               `<td class="num ${pctCls}"><b>${fmt(currentValue)}원</b>` +
+                 `<div style="font-size:10px;font-weight:600;opacity:0.9">${sign}${fmt(pnl)}원 (${sign}${pct.toFixed(2)}%)</div></td></tr>`;
       }).join('');
     } else {
       posTb.innerHTML = positions.map(p => {
         const cur = p.current_price || 0;
         const avg = +p.avg_price || 0;
+        const avgKrw = +(p.avg_price_krw || avg) || 0;
+        const amount = +p.amount || 0;
+        const fx = +p.fx_rate || 1;
+        const isUsd = p.currency === 'USD';
+        // 투자금 (KRW 환산 평단 × 수량)
+        const invested = avgKrw * amount;
+        // 현재금액 (KRW 환산)
+        const curKrw = isUsd ? cur * fx : cur;
+        const currentValue = curKrw > 0 ? curKrw * amount : invested;
+        const pnl = currentValue - invested;
         const pct = avg > 0 && cur > 0 ? ((cur - avg) / avg * 100) : 0;
-        const pctCls = pct > 0 ? 'up' : pct < 0 ? 'down' : '';
-        const sign = pct >= 0 ? '+' : '';
-        const notional = p.notional_krw != null ? fmt(p.notional_krw) + '원' : '-';
+        const pctCls = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
+        const sign = pnl >= 0 ? '+' : '';
         const mk = (p.market || 'KR').toUpperCase();
         const rowCls = mk === 'US' ? 'row-us' : 'row-kr';
         const mkBadge = mk === 'US' ? '<span class="badge b-us" style="font-size:9px;padding:1px 5px">US</span>' :
                                        '<span class="badge b-kr" style="font-size:9px;padding:1px 5px">KR</span>';
-        const priceUsd = p.currency === 'USD' ? ` <span style="opacity:0.6">($${(+p.avg_price).toFixed(2)})</span>` : '';
+        const priceUsd = isUsd ? ` <span style="opacity:0.6;font-size:10px">($${avg.toFixed(2)})</span>` : '';
+        const noPnl = !(cur > 0);
         return `<tr class="${rowCls}"><td>${mkBadge} <b>${p.stock_name || p.stock}</b> <span style="color:var(--muted);font-size:9px">${p.stock}</span>${personaBadge(p.profile)}</td>` +
-               `<td class="num">${p.amount}</td>` +
-               `<td class="num">${fmt(p.avg_price_krw || p.avg_price)}${priceUsd}</td>` +
-               `<td class="num">${notional}</td>` +
-               `<td class="num ${pctCls}"><b>${cur>0?sign+pct.toFixed(2)+'%':'-'}</b></td></tr>`;
+               `<td class="num">${fmt(avgKrw)}${priceUsd}</td>` +
+               `<td class="num">${amount}</td>` +
+               `<td class="num">${fmt(invested)}원</td>` +
+               (noPnl
+                 ? `<td class="num">-</td>`
+                 : `<td class="num ${pctCls}"><b>${fmt(currentValue)}원</b>` +
+                   `<div style="font-size:10px;font-weight:600;opacity:0.9">${sign}${fmt(pnl)}원 (${sign}${pct.toFixed(2)}%)</div></td>`) +
+               `</tr>`;
       }).join('');
     }
   }
