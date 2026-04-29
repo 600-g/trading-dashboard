@@ -394,6 +394,102 @@ function clearAllAlerts() {
   toast('전체 삭제');
 }
 
+// ─── 페르소나 / 카테고리 메타 ─────────────────────────────────────
+// trait = 한글 특성 (이모지로는 안 보이는 핵심 행동 요약)
+const PERSONA_META = {
+  // 코인봇
+  '박단타':       {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'초단타·빠른회전'},
+  '최모멘텀':     {icon:'🚀', cls:'p-momentum', group:'momentum', trait:'급등추격·돌파매수'},
+  '이패턴':       {icon:'📊', cls:'p-pattern',  group:'pattern',  trait:'차트패턴·기술적'},
+  '김리스크':     {icon:'🛡', cls:'p-risk',     group:'risk',     trait:'보수적·저변동'},
+  // 주식봇 KR
+  '단타':         {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'당일청산·빠른익절'},
+  '중타':         {icon:'🎯', cls:'p-midta',    group:'midta',    trait:'1~3일·스윙'},
+  '장기':         {icon:'🌳', cls:'p-long',     group:'long',     trait:'주단위·트렌드라이딩'},
+  // 주식봇 US
+  '나스닥단타':   {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'나스닥·당일'},
+  'S&P안정형':    {icon:'🛡', cls:'p-snp',      group:'risk',     trait:'대형주·저변동'},
+  '기술주모멘텀': {icon:'🚀', cls:'p-tech',     group:'momentum', trait:'테크주·돌파'},
+};
+
+function personaBadge(name, opts = {}) {
+  if (!name || name === '-') return '';
+  const meta = PERSONA_META[name] || {icon:'•', cls:'p-default', group:'', trait:''};
+  const showTrait = opts.trait !== false && meta.trait;
+  const traitHtml = showTrait
+    ? ` <span class="p-trait">· ${meta.trait}</span>`
+    : '';
+  return `<span class="p-badge ${meta.cls}" title="${meta.trait || name}">${meta.icon} ${name}${traitHtml}</span>`;
+}
+
+function personaGroup(name) {
+  return PERSONA_META[name]?.group || '';
+}
+
+// 마켓 분류: bot 이름 + market 필드 → 'coin' / 'kr' / 'us'
+function marketKind(bot, market) {
+  if (bot === 'coin') return 'coin';
+  return (market || 'KR').toLowerCase() === 'us' ? 'us' : 'kr';
+}
+
+function marketBadge(kind) {
+  if (kind === 'coin') return '<span class="badge b-coin">🪙 COIN</span>';
+  if (kind === 'us')   return '<span class="badge b-us">📈 US</span>';
+  return '<span class="badge b-kr">📈 KR</span>';
+}
+
+// 거래 reason/extra에서 페르소나 추출 (주식봇 trades.extra_json 에 reason 포함)
+function tradePersona(t) {
+  if (t.persona) return t.persona;
+  let extra = t.extra;
+  if (typeof extra === 'string') {
+    try { extra = JSON.parse(extra); } catch { extra = null; }
+  }
+  if (!extra) return '';
+  if (extra.persona) return extra.persona;
+  const r = extra.reason || '';
+  // "박단타_1차" / "중타_1차" → 페르소나명만
+  const m = r.match(/^([가-힣A-Za-z&]+)/);
+  return m ? m[1] : '';
+}
+
+// ─── 필터 상태 (localStorage 영속) ──────────────────────────────
+let _tradeFilter = localStorage.getItem('tradeFilter') || 'all';
+let _coinPosFilter = localStorage.getItem('coinPosFilter') || 'all';
+let _stockPosFilter = localStorage.getItem('stockPosFilter') || 'all';
+
+function setTradeFilter(f) {
+  _tradeFilter = f;
+  localStorage.setItem('tradeFilter', f);
+  document.querySelectorAll('#trade_filter_bar .filter-chip').forEach(el => {
+    const active = el.dataset.tf === f;
+    el.classList.toggle('active', active);
+    el.classList.toggle('coin', active && f === 'coin');
+    el.classList.toggle('kr', active && f === 'kr');
+    el.classList.toggle('us', active && f === 'us');
+  });
+  renderHomeOverview();
+}
+
+function setPosFilter(bot, f) {
+  if (bot === 'coin') { _coinPosFilter = f; localStorage.setItem('coinPosFilter', f); }
+  else { _stockPosFilter = f; localStorage.setItem('stockPosFilter', f); }
+  document.querySelectorAll(`#${bot}_pos_filter_bar .filter-chip`).forEach(el => {
+    const active = el.dataset.pf === f;
+    el.classList.toggle('active', active);
+    el.classList.toggle('kr', active && f === 'kr');
+    el.classList.toggle('us', active && f === 'us');
+  });
+  renderBotPanel(bot);
+}
+
+// 초기 active 상태 동기화 (DOM 준비 후 호출)
+function _syncFilterChips() {
+  ['trade'].forEach(() => setTradeFilter(_tradeFilter));
+  setPosFilter('coin', _coinPosFilter);
+  setPosFilter('stock', _stockPosFilter);
+}
+
 function collectAllAlerts() {
   const c = STATE.coin.status?.alerts || [];
   const s = STATE.stock.status?.alerts || [];
@@ -882,26 +978,61 @@ function applyStatusUI(bot, status) {
   setStat('total_pct', status.total_pct, 'pct');
   setStat('balance', status.balance, 'fmt');
 
-  // 포지션
+  // 포지션 — 평단/수량/총액/현재수익률 (필터 적용)
   const posTb = document.getElementById(`${prefix}_positions`);
   if (posTb) {
-    const positions = status.positions || [];
+    const all = (bot === 'coin' ? (status.current_positions || status.positions || []) : (status.positions || []));
+    const filter = bot === 'coin' ? _coinPosFilter : _stockPosFilter;
+    const positions = all.filter(p => {
+      if (filter === 'all') return true;
+      const persona = bot === 'coin' ? (p.persona || '') : (p.profile || '');
+      const market = (p.market || 'KR').toLowerCase();
+      if (filter === 'kr') return market === 'kr';
+      if (filter === 'us') return market === 'us';
+      return personaGroup(persona) === filter;
+    });
+
+    // 카운트 업데이트
+    const cntEl = document.getElementById(`${bot}_pos_count`);
+    if (cntEl) cntEl.textContent = filter === 'all'
+      ? `총 ${all.length}건`
+      : `총 ${all.length}건 / 필터 ${positions.length}건`;
+
     if (positions.length === 0) {
-      posTb.innerHTML = '<tr><td colspan="5" class="empty">보유 없음</td></tr>';
+      posTb.innerHTML = `<tr><td colspan="5" class="empty">${all.length === 0 ? '보유 없음' : '필터 결과 없음'}</td></tr>`;
     } else if (bot === 'coin') {
-      posTb.innerHTML = positions.map(p =>
-        `<tr><td>${p.coin}</td><td>${p.persona || '-'}</td>` +
-        `<td class="num">${(+p.amount).toFixed(4)}</td>` +
-        `<td class="num">${fmt(p.entry_price)}</td>` +
-        `<td class="num">${fmt(p.krw_invested)}</td></tr>`
-      ).join('');
+      posTb.innerHTML = positions.map(p => {
+        const pct = p.pnl_pct != null ? p.pnl_pct : 0;
+        const pctCls = pct > 0 ? 'up' : pct < 0 ? 'down' : '';
+        const sign = pct >= 0 ? '+' : '';
+        const notional = p.notional_krw != null ? fmt(p.notional_krw) + '원' : '-';
+        const amount = p.amount != null ? (+p.amount).toFixed(4) : '-';
+        const entry = p.entry_price != null ? fmt(p.entry_price) : '-';
+        return `<tr class="row-coin"><td><b>${p.coin}</b>${personaBadge(p.persona)}</td>` +
+               `<td class="num">${amount}</td>` +
+               `<td class="num">${entry}</td>` +
+               `<td class="num">${notional}</td>` +
+               `<td class="num ${pctCls}"><b>${sign}${pct.toFixed(2)}%</b></td></tr>`;
+      }).join('');
     } else {
-      posTb.innerHTML = positions.map(p =>
-        `<tr><td>${p.stock_name || p.stock}<div style="color:var(--muted);font-size:9px">${p.stock}</div></td><td>${p.market}</td>` +
-        `<td class="num">${p.amount}</td>` +
-        `<td class="num">${fmt(p.avg_price)}</td>` +
-        `<td>${p.profile || '-'}</td></tr>`
-      ).join('');
+      posTb.innerHTML = positions.map(p => {
+        const cur = p.current_price || 0;
+        const avg = +p.avg_price || 0;
+        const pct = avg > 0 && cur > 0 ? ((cur - avg) / avg * 100) : 0;
+        const pctCls = pct > 0 ? 'up' : pct < 0 ? 'down' : '';
+        const sign = pct >= 0 ? '+' : '';
+        const notional = p.notional_krw != null ? fmt(p.notional_krw) + '원' : '-';
+        const mk = (p.market || 'KR').toUpperCase();
+        const rowCls = mk === 'US' ? 'row-us' : 'row-kr';
+        const mkBadge = mk === 'US' ? '<span class="badge b-us" style="font-size:9px;padding:1px 5px">US</span>' :
+                                       '<span class="badge b-kr" style="font-size:9px;padding:1px 5px">KR</span>';
+        const priceUsd = p.currency === 'USD' ? ` <span style="opacity:0.6">($${(+p.avg_price).toFixed(2)})</span>` : '';
+        return `<tr class="${rowCls}"><td>${mkBadge} <b>${p.stock_name || p.stock}</b> <span style="color:var(--muted);font-size:9px">${p.stock}</span>${personaBadge(p.profile)}</td>` +
+               `<td class="num">${p.amount}</td>` +
+               `<td class="num">${fmt(p.avg_price_krw || p.avg_price)}${priceUsd}</td>` +
+               `<td class="num">${notional}</td>` +
+               `<td class="num ${pctCls}"><b>${cur>0?sign+pct.toFixed(2)+'%':'-'}</b></td></tr>`;
+      }).join('');
     }
   }
 }
@@ -967,25 +1098,55 @@ function renderHomeOverview() {
     }
   });
 
-  // 통합 최근 거래
+  // 통합 최근 거래 (필터 적용)
   const all = [];
-  (c?.recent_trades || []).slice(0,10).forEach(t => all.push({...t, _bot:'coin'}));
-  (s?.recent_trades || []).slice(0,10).forEach(t => all.push({...t, _bot:'stock'}));
+  (c?.recent_trades || []).slice(0,20).forEach(t => all.push({...t, _bot:'coin'}));
+  (s?.recent_trades || []).slice(0,20).forEach(t => all.push({...t, _bot:'stock'}));
   all.sort((a,b) => (b.created_at || b.ts || '').localeCompare(a.created_at || a.ts || ''));
 
+  // 페르소나/마켓 필터
+  const filtered = all.filter(t => {
+    if (_tradeFilter === 'all') return true;
+    const kind = marketKind(t._bot, t.market);
+    if (_tradeFilter === 'coin') return kind === 'coin';
+    if (_tradeFilter === 'kr')   return kind === 'kr';
+    if (_tradeFilter === 'us')   return kind === 'us';
+    // 페르소나 그룹 필터
+    return personaGroup(tradePersona(t)) === _tradeFilter;
+  });
+
+  // 카운트
+  const cntEl = document.getElementById('trade_filter_count');
+  if (cntEl) cntEl.textContent = _tradeFilter === 'all'
+    ? `총 ${all.length}건`
+    : `총 ${all.length}건 / 필터 ${filtered.length}건`;
+
   const trBody = document.getElementById('all_recent_trades');
-  if (all.length === 0) {
-    trBody.innerHTML = '<tr><td colspan="5" class="empty">거래 없음</td></tr>';
+  if (filtered.length === 0) {
+    trBody.innerHTML = `<tr><td colspan="6" class="empty">${all.length === 0 ? '거래 없음' : '필터 결과 없음'}</td></tr>`;
   } else {
-    trBody.innerHTML = all.slice(0,10).map(t => {
+    trBody.innerHTML = filtered.slice(0,15).map(t => {
       const cls = (t.pnl || 0) > 0 ? 'up' : (t.pnl || 0) < 0 ? 'down' : '';
       const ts = (t.created_at || t.ts || '').slice(11, 16);
       const sym = t.coin || t.stock_name || t.stock || '-';
-      const botBadge = t._bot === 'coin'
-        ? '<span style="color:var(--coin)">🪙</span>'
-        : '<span style="color:var(--stock)">📈</span>';
-      return `<tr><td>${ts}</td><td>${botBadge}</td><td>${sym}</td><td>${t.side}</td>` +
-             `<td class="num ${cls}">${t.pnl != null ? fmtSign(t.pnl) : '-'}</td></tr>`;
+      const kind = marketKind(t._bot, t.market);
+      const rowCls = kind === 'coin' ? 'row-coin' : kind === 'us' ? 'row-us' : 'row-kr';
+      const persona = tradePersona(t);
+      // SELL 일 때 % 수익률 표시. pnl_pct 가 소수(0.05)/퍼센트(5) 모두 처리.
+      let pnlText = t.pnl != null ? fmtSign(t.pnl) : '-';
+      if ((t.side === 'SELL' || t.side === 'sell') && t.pnl != null) {
+        let pct = t.pnl_pct;
+        if (pct == null && t.pnl_percent != null) pct = t.pnl_percent;
+        if (pct != null) {
+          if (Math.abs(pct) < 1.0) pct = pct * 100;
+          const sign = pct >= 0 ? '+' : '';
+          pnlText += ` <span style="opacity:0.75">(${sign}${pct.toFixed(2)}%)</span>`;
+        }
+      }
+      return `<tr class="${rowCls}"><td>${ts}</td><td>${marketBadge(kind)}</td><td><b>${sym}</b></td>` +
+             `<td>${persona ? personaBadge(persona) : '<span style="color:var(--muted);font-size:10px">-</span>'}</td>` +
+             `<td>${t.side}</td>` +
+             `<td class="num ${cls}">${pnlText}</td></tr>`;
     }).join('');
   }
 
@@ -1585,3 +1746,7 @@ if (!FIREBASE_MODE) {
   console.log('[모드] Firebase Firestore (외부)');
   if (!cached) toast('🌐 Firebase 모드 - 실시간 동기화');
 }
+
+// 필터 칩 초기 active 상태 복원 (localStorage)
+document.addEventListener('DOMContentLoaded', _syncFilterChips);
+if (document.readyState !== 'loading') _syncFilterChips();

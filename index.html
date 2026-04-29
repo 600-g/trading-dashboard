@@ -201,6 +201,52 @@
   .b-soft{background:#ffb74d33; color:var(--warn)}
   .b-stopped{background:#ff525233; color:#ff6b6b}
   .b-offline{background:#30363d; color:var(--muted)}
+
+  /* 마켓 카테고리 배지 */
+  .b-coin{background:#f7931a26; color:var(--coin); border:1px solid #f7931a55}
+  .b-kr{background:#dc262633; color:#ff7b7b; border:1px solid #dc262655}
+  .b-us{background:#1f6feb33; color:#58a6ff; border:1px solid #1f6feb55}
+
+  /* 페르소나 배지 */
+  .p-badge{
+    display:inline-flex; align-items:center; gap:3px;
+    padding:2px 7px; border-radius:5px; font-size:10px; font-weight:600;
+    margin-left:5px; white-space:nowrap;
+  }
+  .p-badge .p-trait{font-weight:500; opacity:0.78; font-size:9.5px}
+  .p-dayta{background:#ff950026; color:#ffb84d; border:1px solid #ff950055}     /* 단타 ⚡ */
+  .p-midta{background:#0dd1c026; color:#3fdfd0; border:1px solid #0dd1c055}     /* 중타 🎯 */
+  .p-long{background:#3fb95026; color:#5dd17a; border:1px solid #3fb95055}      /* 장기 🌳 */
+  .p-risk{background:#8b949e26; color:#c4cad1; border:1px solid #8b949e55}      /* 리스크 🛡 */
+  .p-pattern{background:#a371f726; color:#bfa4f9; border:1px solid #a371f755}   /* 패턴 📊 */
+  .p-momentum{background:#0dd1c026; color:#3fdfd0; border:1px solid #0dd1c055}  /* 모멘텀 🚀 */
+  .p-snp{background:#3fb95026; color:#5dd17a; border:1px solid #3fb95055}       /* S&P안정형 */
+  .p-tech{background:#a371f726; color:#bfa4f9; border:1px solid #a371f755}      /* 기술주 */
+  .p-default{background:#30363d; color:var(--muted); border:1px solid #484f58}
+
+  /* 필터바 */
+  .filter-bar{
+    display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    padding:8px 0 10px; border-bottom:1px solid var(--line); margin-bottom:8px;
+  }
+  .filter-bar .sep{width:1px; height:18px; background:var(--line); margin:0 4px}
+  .filter-chip{
+    padding:5px 11px; border-radius:14px; font-size:11px; font-weight:600;
+    background:#0d1117; border:1px solid var(--line); color:var(--muted);
+    cursor:pointer; user-select:none; transition:all 0.15s;
+  }
+  .filter-chip:hover{border-color:#484f58; color:#c4cad1}
+  .filter-chip.active{background:var(--stock); color:#0d1117; border-color:var(--stock)}
+  .filter-chip.active.coin{background:var(--coin); border-color:var(--coin)}
+  .filter-chip.active.kr{background:#dc2626; color:#fff; border-color:#dc2626}
+  .filter-chip.active.us{background:#1f6feb; color:#fff; border-color:#1f6feb}
+  .filter-count{font-size:10px; color:var(--muted); margin-left:auto; padding-right:4px}
+
+  /* 행 좌측 마켓 컬러 보더 */
+  tr.row-coin td:first-child{box-shadow:inset 3px 0 0 var(--coin)}
+  tr.row-kr td:first-child{box-shadow:inset 3px 0 0 #ff5252}
+  tr.row-us td:first-child{box-shadow:inset 3px 0 0 #1f6feb}
+
   .led{width:6px; height:6px; border-radius:50%; display:inline-block; flex-shrink:0}
   .led.on{background:#3fb950; box-shadow:0 0 5px #3fb95088}
   .led.off{background:#8b949e}
@@ -648,10 +694,22 @@
       <!-- 최근 거래 (컴팩트 테이블) -->
       <div class="card compact">
         <div class="card-title"><svg class="ic"><use href="#i-refresh"/></svg>최근 거래</div>
+        <div class="filter-bar" id="trade_filter_bar">
+          <div class="filter-chip active" data-tf="all" onclick="setTradeFilter('all')">전체</div>
+          <div class="filter-chip" data-tf="coin" onclick="setTradeFilter('coin')" title="암호화폐 (Upbit, 24/7)">🪙 코인</div>
+          <div class="filter-chip" data-tf="kr" onclick="setTradeFilter('kr')" title="한국 주식 (KOSPI/KOSDAQ)">📈 한국주식</div>
+          <div class="filter-chip" data-tf="us" onclick="setTradeFilter('us')" title="미국 주식 (NASDAQ/NYSE)">📈 미국주식</div>
+          <div class="sep"></div>
+          <div class="filter-chip" data-tf="dayta" onclick="setTradeFilter('dayta')" title="당일 매수·청산, 빠른 회전">⚡ 단타 (당일청산)</div>
+          <div class="filter-chip" data-tf="midta" onclick="setTradeFilter('midta')" title="1~3일 보유, 스윙">🎯 중타 (스윙)</div>
+          <div class="filter-chip" data-tf="momentum" onclick="setTradeFilter('momentum')" title="급등주 추격, 돌파매수">🚀 모멘텀 (급등추격)</div>
+          <div class="filter-chip" data-tf="risk" onclick="setTradeFilter('risk')" title="대형/저변동, 보수적">🛡 리스크 (보수적)</div>
+          <span class="filter-count" id="trade_filter_count"></span>
+        </div>
         <div class="table-wrap">
           <table style="font-size:11px">
-            <thead><tr><th>시각</th><th>봇</th><th>심볼</th><th>매매</th><th class="num">P&amp;L</th></tr></thead>
-            <tbody id="all_recent_trades"><tr><td colspan="5" class="empty">로딩...</td></tr></tbody>
+            <thead><tr><th>시각</th><th>분류</th><th>심볼</th><th>전략</th><th>매매</th><th class="num">P&amp;L</th></tr></thead>
+            <tbody id="all_recent_trades"><tr><td colspan="6" class="empty">로딩...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -700,9 +758,17 @@
 
       <div class="card">
         <div class="card-title"><svg class="ic"><use href="#i-bag"/></svg>보유 포지션</div>
+        <div class="filter-bar" id="coin_pos_filter_bar">
+          <div class="filter-chip active" data-pf="all" onclick="setPosFilter('coin','all')">전체</div>
+          <div class="filter-chip" data-pf="dayta" onclick="setPosFilter('coin','dayta')" title="박단타 — 초단타·빠른회전">⚡ 박단타 (초단타)</div>
+          <div class="filter-chip" data-pf="momentum" onclick="setPosFilter('coin','momentum')" title="최모멘텀 — 급등추격·돌파매수">🚀 최모멘텀 (급등추격)</div>
+          <div class="filter-chip" data-pf="pattern" onclick="setPosFilter('coin','pattern')" title="이패턴 — 차트패턴·기술적">📊 이패턴 (차트패턴)</div>
+          <div class="filter-chip" data-pf="risk" onclick="setPosFilter('coin','risk')" title="김리스크 — 보수적·저변동">🛡 김리스크 (보수적)</div>
+          <span class="filter-count" id="coin_pos_count"></span>
+        </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>코인</th><th>페르소나</th><th class="num">수량</th><th class="num">평단</th><th class="num">투자금</th></tr></thead>
+            <thead><tr><th>코인 / 전략</th><th class="num">수량</th><th class="num">평단</th><th class="num">투자금</th><th class="num">수익률</th></tr></thead>
             <tbody id="coin_positions"><tr><td colspan="5" class="empty">로딩...</td></tr></tbody>
           </table>
         </div>
@@ -752,9 +818,19 @@
 
       <div class="card">
         <div class="card-title"><svg class="ic"><use href="#i-bag"/></svg>보유 종목</div>
+        <div class="filter-bar" id="stock_pos_filter_bar">
+          <div class="filter-chip active" data-pf="all" onclick="setPosFilter('stock','all')">전체</div>
+          <div class="filter-chip" data-pf="kr" onclick="setPosFilter('stock','kr')" title="한국 주식만">📈 한국주식</div>
+          <div class="filter-chip" data-pf="us" onclick="setPosFilter('stock','us')" title="미국 주식만">📈 미국주식</div>
+          <div class="sep"></div>
+          <div class="filter-chip" data-pf="dayta" onclick="setPosFilter('stock','dayta')" title="당일 매수·청산">⚡ 단타 (당일청산)</div>
+          <div class="filter-chip" data-pf="midta" onclick="setPosFilter('stock','midta')" title="1~3일 보유 스윙">🎯 중타 (1~3일)</div>
+          <div class="filter-chip" data-pf="long" onclick="setPosFilter('stock','long')" title="주단위 트렌드">🌳 장기 (주단위)</div>
+          <span class="filter-count" id="stock_pos_count"></span>
+        </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>종목</th><th>시장</th><th class="num">수량</th><th class="num">평단</th><th>프로파일</th></tr></thead>
+            <thead><tr><th>종목 / 전략</th><th class="num">수량</th><th class="num">평단</th><th class="num">투자금</th><th class="num">수익률</th></tr></thead>
             <tbody id="stock_positions"><tr><td colspan="5" class="empty">로딩...</td></tr></tbody>
           </table>
         </div>
@@ -1003,6 +1079,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=2.1" defer></script>
+<script src="app.js?v=2.3-traits" defer></script>
 </body>
 </html>
