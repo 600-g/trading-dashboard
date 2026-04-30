@@ -668,78 +668,16 @@
         </div>
       </div>
 
-      <!-- 자체평가 + 반복 실수 (트레이더 학습) -->
-      <div class="grid-2" style="margin-bottom:10px; gap:10px">
-        <div class="card compact">
-          <div class="card-title"><svg class="ic"><use href="#i-bolt"/></svg>자체평가 (14일)</div>
-          <div id="review_summary" style="font-size:11px"><div class="empty">데이터 없음</div></div>
+      <!-- 빠른 진입 (분석/자가개선) -->
+      <div class="grid-2" style="gap:10px;margin-bottom:10px">
+        <div class="card compact" onclick="goView('analytics')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--info)'" onmouseout="this.style.borderColor='var(--line)'">
+          <div class="card-title">📊 종목/사유/시간 분석 →</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.6">종목 톱5 손익 · Qullamaggie 룰별 검증 · 시간대별 성과 · 페르소나 × 사유 매트릭스</div>
         </div>
-        <div class="card compact">
-          <div class="card-title"><svg class="ic" style="color:var(--warn)"><use href="#i-warn"/></svg>반복 실수 감지</div>
-          <div id="repeated_mistakes" style="font-size:11px"><div class="empty">감지된 패턴 없음</div></div>
+        <div class="card compact" onclick="goView('improvement')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--info)'" onmouseout="this.style.borderColor='var(--line)'">
+          <div class="card-title">🎭 페르소나/자가개선 →</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.6">페르소나 누적 성과 · 위원회 토론 · 후회분석 · 자체평가 · 반복 실수</div>
         </div>
-      </div>
-
-      <!-- 최근 자체평가 (종목별) -->
-      <div class="card compact">
-        <div class="card-title"><svg class="ic"><use href="#i-doc"/></svg>최근 거래 자체평가</div>
-        <div class="table-wrap">
-          <table style="font-size:10px">
-            <thead><tr><th>시각</th><th>종목</th><th>평가</th><th class="num">진입</th><th class="num">청산</th><th>교훈</th></tr></thead>
-            <tbody id="reviews_table"><tr><td colspan="6" class="empty">평가 누적 시 표시</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 종목별 손익 랭킹 -->
-      <div class="card compact">
-        <div class="card-title">🏆 종목별 손익 랭킹 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div>
-            <div style="font-size:11px;color:var(--up);font-weight:700;margin-bottom:4px">🟢 수익 톱</div>
-            <div id="all_pnl_winners" style="display:flex;flex-direction:column;gap:4px"><div class="empty">로딩...</div></div>
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--down);font-weight:700;margin-bottom:4px">🔴 손실 톱</div>
-            <div id="all_pnl_losers" style="display:flex;flex-direction:column;gap:4px"><div class="empty">로딩...</div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 사유별 분석 (어떤 룰이 돈 벌고 있나) -->
-      <div class="card compact">
-        <div class="card-title">📐 사유별 룰 검증 (Qullamaggie 룰별 손익)</div>
-        <div id="all_reason_stats"><div class="empty">로딩...</div></div>
-      </div>
-
-      <!-- 시간대별 성과 -->
-      <div class="card compact">
-        <div class="card-title">⏰ 시간대별 성과</div>
-        <div id="all_time_slots"><div class="empty">로딩...</div></div>
-      </div>
-
-      <!-- 페르소나 × 사유 매트릭스 -->
-      <div class="card compact">
-        <div class="card-title">🎭 페르소나 × 사유 매트릭스 (강/약점)</div>
-        <div id="all_persona_matrix" style="overflow-x:auto"><div class="empty">로딩...</div></div>
-      </div>
-
-      <!-- 페르소나별 누적 성과 (클릭 시 상세 모달) -->
-      <div class="card compact">
-        <div class="card-title"><svg class="ic"><use href="#i-bag"/></svg>페르소나별 누적 성과 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
-        <div id="all_persona_stats" style="display:flex;flex-direction:column;gap:6px"><div class="empty">로딩...</div></div>
-      </div>
-
-      <!-- 위원회 토론 결과 -->
-      <div class="card compact">
-        <div class="card-title"><svg class="ic"><use href="#i-doc"/></svg>위원회 토론 (자동 복기 합의)</div>
-        <div id="all_council_log" style="font-size:11px"><div class="empty">아직 토론 기록 없음 (코인 자정 / KR 15:35 / US 05:10)</div></div>
-      </div>
-
-      <!-- 후회분석 / 보수성 진단 -->
-      <div class="card compact">
-        <div class="card-title"><svg class="ic" style="color:var(--warn)"><use href="#i-warn"/></svg>후회분석 (Qullamaggie 자가검증)</div>
-        <div id="all_hindsight" style="font-size:11px"><div class="empty">데이터 누적 중</div></div>
       </div>
 
       <!-- 최근 거래 (컴팩트 테이블) -->
@@ -766,8 +704,95 @@
       </div>
     </div>
 
-    <!-- ─── 코인봇 상세 뷰 ─────────────── -->
+    <!-- ─── 분석 뷰 (사각 배치) ─────────────── -->
+    <div class="view" id="view-analytics">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;padding-left:4px">📊 종목/사유/시간 분석</div>
+      <div class="grid-2" style="gap:10px">
+        <!-- 좌상: 종목 랭킹 -->
+        <div class="card compact">
+          <div class="card-title">🏆 종목별 손익 랭킹 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <div style="font-size:11px;color:var(--up);font-weight:700;margin-bottom:4px">🟢 수익 톱</div>
+              <div id="all_pnl_winners" style="display:flex;flex-direction:column;gap:4px"><div class="empty">로딩...</div></div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--down);font-weight:700;margin-bottom:4px">🔴 손실 톱</div>
+              <div id="all_pnl_losers" style="display:flex;flex-direction:column;gap:4px"><div class="empty">로딩...</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 우상: 사유별 룰 -->
+        <div class="card compact">
+          <div class="card-title">📐 사유별 룰 검증 (Qullamaggie)</div>
+          <div id="all_reason_stats"><div class="empty">로딩...</div></div>
+        </div>
+
+        <!-- 좌하: 시간대 -->
+        <div class="card compact">
+          <div class="card-title">⏰ 시간대별 성과</div>
+          <div id="all_time_slots"><div class="empty">로딩...</div></div>
+        </div>
+
+        <!-- 우하: 페르소나 매트릭스 -->
+        <div class="card compact">
+          <div class="card-title">🎭 페르소나 × 사유 매트릭스</div>
+          <div id="all_persona_matrix" style="overflow-x:auto"><div class="empty">로딩...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 자가개선 뷰 (사각 배치) ─────────────── -->
+    <div class="view" id="view-improvement">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;padding-left:4px">🎭 페르소나 / 위원회 / 후회분석</div>
+      <div class="grid-2" style="gap:10px">
+        <!-- 좌상: 페르소나 누적성과 (전폭) -->
+        <div class="card compact" style="grid-column:1 / -1">
+          <div class="card-title"><svg class="ic"><use href="#i-bag"/></svg>페르소나별 누적 성과 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
+          <div id="all_persona_stats" style="display:flex;flex-direction:column;gap:6px"><div class="empty">로딩...</div></div>
+        </div>
+
+        <!-- 좌중: 위원회 -->
+        <div class="card compact">
+          <div class="card-title"><svg class="ic"><use href="#i-doc"/></svg>위원회 토론 (자동복기)</div>
+          <div id="all_council_log" style="font-size:11px"><div class="empty">아직 토론 기록 없음 (코인 자정 / KR 15:35 / US 05:10)</div></div>
+        </div>
+
+        <!-- 우중: 후회분석 -->
+        <div class="card compact">
+          <div class="card-title"><svg class="ic" style="color:var(--warn)"><use href="#i-warn"/></svg>후회분석 (Qullamaggie 자가검증)</div>
+          <div id="all_hindsight" style="font-size:11px"><div class="empty">데이터 누적 중</div></div>
+        </div>
+
+        <!-- 좌하: 자체평가 14일 -->
+        <div class="card compact">
+          <div class="card-title"><svg class="ic"><use href="#i-bolt"/></svg>자체평가 (14일)</div>
+          <div id="review_summary" style="font-size:11px"><div class="empty">데이터 없음</div></div>
+        </div>
+
+        <!-- 우하: 반복 실수 -->
+        <div class="card compact">
+          <div class="card-title"><svg class="ic" style="color:var(--warn)"><use href="#i-warn"/></svg>반복 실수 감지</div>
+          <div id="repeated_mistakes" style="font-size:11px"><div class="empty">감지된 패턴 없음</div></div>
+        </div>
+
+        <!-- 전폭: 최근 자체평가 -->
+        <div class="card compact" style="grid-column:1 / -1">
+          <div class="card-title"><svg class="ic"><use href="#i-doc"/></svg>최근 거래 자체평가</div>
+          <div class="table-wrap">
+            <table style="font-size:10px">
+              <thead><tr><th>시각</th><th>종목</th><th>평가</th><th class="num">진입</th><th class="num">청산</th><th>교훈</th></tr></thead>
+              <tbody id="reviews_table"><tr><td colspan="6" class="empty">평가 누적 시 표시</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 코인봇 상세 뷰 (사각 그리드) ─────────────── -->
     <div class="view" id="view-coin">
+      <div class="grid-2" style="gap:10px">
       <div class="card">
         <div class="card-title"><svg class="ic"><use href="#i-mode"/></svg>코인봇 컨트롤</div>
         <div class="ctl-section">
@@ -824,10 +849,12 @@
           </table>
         </div>
       </div>
+      </div><!-- /grid-2 coin -->
     </div>
 
-    <!-- ─── 주식봇 상세 뷰 ─────────────── -->
+    <!-- ─── 주식봇 상세 뷰 (사각 그리드) ─────────────── -->
     <div class="view" id="view-stock">
+      <div class="grid-2" style="gap:10px">
       <div class="card">
         <div class="card-title"><svg class="ic"><use href="#i-mode"/></svg>주식봇 컨트롤</div>
         <div class="ctl-section">
@@ -886,6 +913,7 @@
           </table>
         </div>
       </div>
+      </div><!-- /grid-2 stock -->
     </div>
 
     <!-- ─── 시스템 뷰 ─────────────── -->
@@ -1081,6 +1109,18 @@
     </div>
 
     <div class="menu-section">
+      <div class="menu-section-title">분석</div>
+      <div class="menu-item" data-view="analytics" onclick="goView('analytics')">
+        <svg class="ic"><use href="#i-bag"/></svg>📊 종목/사유/시간 분석
+        <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
+      </div>
+      <div class="menu-item" data-view="improvement" onclick="goView('improvement')">
+        <svg class="ic"><use href="#i-doc"/></svg>🎭 페르소나/자가개선
+        <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
+      </div>
+    </div>
+
+    <div class="menu-section">
       <div class="menu-section-title">관리</div>
       <div class="menu-item" data-view="system" onclick="goView('system')">
         <svg class="ic"><use href="#i-sys"/></svg>시스템 / 자동시작 / 로그
@@ -1163,6 +1203,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=2.6-analytics" defer></script>
+<script src="app.js?v=2.7-tabs" defer></script>
 </body>
 </html>
