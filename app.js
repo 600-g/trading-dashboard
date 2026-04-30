@@ -483,6 +483,189 @@ function setPosFilter(bot, f) {
   renderBotPanel(bot);
 }
 
+// ─── 포지션 상세 모달 ─────────────────────────────────────
+function openPosModal(bot, key) {
+  const status = STATE[bot]?.status;
+  if (!status) return;
+  const all = bot === 'coin' ? (status.current_positions || status.positions || []) : (status.positions || []);
+  const p = all.find(x => (x.coin || x.stock) === key);
+  if (!p) return;
+  const isCoin = bot === 'coin';
+  const sym = isCoin ? p.coin : `${p.stock_name || p.stock} (${p.stock})`;
+  const persona = isCoin ? p.persona : p.profile;
+  const market = isCoin ? '코인 (Upbit)' : (p.market === 'US' ? '미국 (NASDAQ/NYSE)' : '한국 (KOSPI/KOSDAQ)');
+  const avg = isCoin ? p.entry_price : (p.avg_price_krw || p.avg_price);
+  const cur = p.current_price || 0;
+  const amt = isCoin ? (+p.amount).toFixed(6) : p.amount;
+  const invested = isCoin ? (p.krw_invested || avg * +p.amount) : (avg * +p.amount);
+  const fx = +p.fx_rate || 1;
+  const isUsd = p.currency === 'USD';
+  const curKrw = isUsd ? cur * fx : cur;
+  const currentValue = curKrw > 0 ? curKrw * +p.amount : invested;
+  const pnl = currentValue - invested;
+  const pct = avg > 0 && cur > 0 ? ((cur - avg) / avg * 100) : (p.pnl_pct || 0);
+  const pctCls = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
+  const sign = pnl >= 0 ? '+' : '';
+  const enteredAt = (p.entered_at || p.entry_ts || '').slice(0, 16).replace('T', ' ');
+  const stopLoss = p.stop_loss_pct != null ? (p.stop_loss_pct * 100).toFixed(2) + '%' :
+                   p.stop_loss != null ? p.stop_loss : '-';
+  const takeProfit = p.take_profit_pct != null ? (p.take_profit_pct * 100).toFixed(2) + '%' :
+                     p.take_profit != null ? p.take_profit : '-';
+  let extra = p.extra_json || p.extra;
+  if (typeof extra === 'string') { try { extra = JSON.parse(extra); } catch { extra = null; } }
+  const beActive = extra?.be_done || p.trailing_active === 1;
+  const trailingHigh = p.trailing_high || extra?.trailing_high;
+
+  document.getElementById('posModalTitle').innerHTML =
+    `${isCoin ? '🪙' : '📈'} ${sym} ${personaBadge(persona)}`;
+
+  const rows = [
+    ['시장', market],
+    ['진입 시각', enteredAt || '-'],
+    ['전략', persona || '-'],
+    ['', ''],
+    ['평단', `<b>${fmt(avg)}원</b>${isUsd ? ` ($${(+p.avg_price).toFixed(2)})` : ''}`],
+    ['수량', amt],
+    ['투자금', `<b>${fmt(invested)}원</b>`],
+    ['현재가', cur > 0 ? `${fmt(curKrw)}원` : '-'],
+    ['현재금액', `<b class="${pctCls}">${fmt(currentValue)}원</b>`],
+    ['평가손익', `<b class="${pctCls}">${sign}${fmt(pnl)}원 (${sign}${pct.toFixed(2)}%)</b>`],
+    ['', ''],
+    ['손절선', stopLoss],
+    ['익절선', takeProfit],
+    ['BE/트레일링', beActive ? '🟢 활성 (부분익절 후 잔량 라이딩)' : '⚪ 미활성'],
+    ['트레일링 최고가', trailingHigh ? fmt(trailingHigh) + '원' : '-'],
+  ];
+  const html = rows.map(([k, v]) => k === '' ? '<div style="height:6px"></div>' :
+    `<div style="display:flex;justify-content:space-between;gap:8px"><span style="color:var(--muted);min-width:100px">${k}</span><span style="text-align:right">${v}</span></div>`).join('');
+  document.getElementById('posModalBody').innerHTML = html;
+  document.getElementById('posModal').classList.add('show');
+}
+
+function closePosModal() { document.getElementById('posModal').classList.remove('show'); }
+
+// ─── 페르소나 상세 모달 ───────────────────────────────────
+function openPersonaModal(bot, persona) {
+  const status = STATE[bot]?.status;
+  if (!status) return;
+  const stats = (status.persona_stats || []).find(p => p.persona === persona);
+  if (!stats) return;
+  const trades = (status.recent_trades || []).filter(t => {
+    const tp = tradePersona(t);
+    return tp === persona || (tp && PERSONA_META[tp]?.group === PERSONA_META[persona]?.group);
+  }).slice(0, 30);
+  const meta = PERSONA_META[persona] || {icon:'•', trait:''};
+  const winrateCls = stats.winrate >= 60 ? 'up' : stats.winrate < 40 ? 'down' : '';
+  const pnlCls = stats.total_pnl > 0 ? 'up' : stats.total_pnl < 0 ? 'down' : '';
+
+  document.getElementById('personaModalTitle').innerHTML =
+    `${meta.icon} ${persona} <span style="font-weight:400;font-size:11px;color:var(--muted)">${meta.trait || ''}</span>`;
+
+  const summary = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;font-size:11px">
+      <div class="stat" style="padding:8px"><div class="stat-label">거래수</div><div style="font-size:14px;font-weight:700">${stats.trades}건</div></div>
+      <div class="stat" style="padding:8px"><div class="stat-label">승률</div><div class="${winrateCls}" style="font-size:14px;font-weight:700">${stats.winrate.toFixed(1)}%</div></div>
+      <div class="stat" style="padding:8px"><div class="stat-label">승/패</div><div style="font-size:14px;font-weight:700">${stats.wins}/${stats.losses}</div></div>
+      <div class="stat" style="padding:8px"><div class="stat-label">누적P&L</div><div class="${pnlCls}" style="font-size:14px;font-weight:700">${fmtSign(stats.total_pnl)}</div></div>
+    </div>
+  `;
+  const tradesHtml = trades.length === 0
+    ? '<div class="empty">최근 거래 없음</div>'
+    : '<table style="width:100%;font-size:10.5px"><thead><tr><th>시각</th><th>심볼</th><th>매매</th><th class="num">P&L</th></tr></thead><tbody>' +
+      trades.map(t => {
+        const ts = (t.ts || t.created_at || '').slice(5, 16).replace('T', ' ');
+        const sym = t.coin || t.stock_name || t.stock || '-';
+        const cls = (t.pnl || 0) > 0 ? 'up' : (t.pnl || 0) < 0 ? 'down' : '';
+        return `<tr><td>${ts}</td><td>${sym}</td><td>${t.side}</td><td class="num ${cls}">${fmtSign(t.pnl || 0)}</td></tr>`;
+      }).join('') + '</tbody></table>';
+  document.getElementById('personaModalBody').innerHTML = summary + tradesHtml;
+  document.getElementById('personaModal').classList.add('show');
+}
+
+function closePersonaModal() { document.getElementById('personaModal').classList.remove('show'); }
+
+// ─── 통합: 페르소나별 성과 / 위원회 / 후회분석 렌더 ─────────
+function renderImprovementCards() {
+  const c = STATE.coin.status, s = STATE.stock.status;
+
+  // 페르소나별 성과
+  const personas = [];
+  (c?.persona_stats || []).forEach(p => personas.push({...p, _bot:'coin'}));
+  (s?.persona_stats || []).forEach(p => personas.push({...p, _bot:'stock'}));
+  const psBox = document.getElementById('all_persona_stats');
+  if (psBox) {
+    if (personas.length === 0) {
+      psBox.innerHTML = '<div class="empty">페르소나 거래 누적 시 표시</div>';
+    } else {
+      personas.sort((a,b) => (b.total_pnl||0) - (a.total_pnl||0));
+      psBox.innerHTML = personas.map(p => {
+        const meta = PERSONA_META[p.persona] || {icon:'•', cls:'p-default', trait:''};
+        const wr = p.winrate || 0;
+        const wrCls = wr >= 60 ? 'up' : wr < 40 ? 'down' : '';
+        const pnlCls = p.total_pnl > 0 ? 'up' : p.total_pnl < 0 ? 'down' : '';
+        const botIcon = p._bot === 'coin' ? '🪙' : '📈';
+        return `<div onclick="openPersonaModal('${p._bot}','${p.persona}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0d1117;border:1px solid var(--line);border-radius:8px;transition:border-color .15s" onmouseover="this.style.borderColor='#484f58'" onmouseout="this.style.borderColor='var(--line)'">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:11px">${botIcon}</span>
+            <span class="p-badge ${meta.cls}">${meta.icon} ${p.persona}</span>
+            <span style="font-size:10px;color:var(--muted)">${meta.trait || ''}</span>
+          </div>
+          <div style="display:flex;gap:14px;font-size:11px;font-variant-numeric:tabular-nums">
+            <span>${p.trades}건</span>
+            <span class="${wrCls}">${wr.toFixed(1)}%</span>
+            <span class="${pnlCls}" style="font-weight:700">${fmtSign(p.total_pnl)}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // 위원회 토론
+  const councils = [];
+  (c?.council_log || []).forEach(x => councils.push({...x, _bot:'coin'}));
+  (s?.council_log || []).forEach(x => councils.push({...x, _bot:'stock'}));
+  const cBox = document.getElementById('all_council_log');
+  if (cBox) {
+    if (councils.length === 0) {
+      cBox.innerHTML = '<div class="empty">아직 토론 기록 없음 (코인 자정 / KR 15:35 / US 05:10 자동 발동)</div>';
+    } else {
+      cBox.innerHTML = councils.map(d => {
+        const consensus = d['합의'] || d.consensus || {};
+        const market = d.market || (d._bot === 'coin' ? '🪙 코인' : '📈 주식');
+        const personas = Object.keys(d).filter(k => k !== '합의' && k !== 'market' && k !== '_bot' && k !== 'consensus');
+        const personaHtml = personas.slice(0, 4).map(name => {
+          const op = d[name] || {};
+          return `<div style="padding:4px 0"><span class="p-badge p-default" style="margin-left:0">${name}</span> <b>th=${op.threshold || '?'}</b> ${(op.opinion || '').slice(0, 50)}</div>`;
+        }).join('');
+        return `<div style="padding:8px;background:#0d1117;border:1px solid var(--line);border-radius:8px;margin-bottom:6px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${market}</div>
+          ${personaHtml}
+          <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--line)"><b>합의:</b> th=${consensus.threshold || '?'} — ${(consensus.reason || '').slice(0, 80)}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // 후회분석
+  const hindsight = c?.hindsight || s?.hindsight || {};
+  const hBox = document.getElementById('all_hindsight');
+  if (hBox) {
+    const conserv = hindsight.hindsight_conserv;
+    const calib = hindsight.hindsight_calib;
+    if (!conserv && !calib) {
+      hBox.innerHTML = '<div class="empty">데이터 누적 중 (자정 자동 분석)</div>';
+    } else {
+      const v = conserv?.verdict || '데이터 부족';
+      const vCls = v === '과보수' ? 'down' : v === '균형' ? 'up' : 'warn';
+      hBox.innerHTML = `
+        <div style="padding:6px 0"><b class="${vCls}">${v}</b> · ${conserv?.regret || ''}</div>
+        ${calib?.need_calibration ? `<div class="warn" style="padding:6px 0">⚠️ 모멘텀 교정 필요: ${calib.reason}</div>` : ''}
+        ${conserv?.suggestion?.threshold_offset != null ? `<div style="padding:6px 0;color:var(--muted)">제안 임계값 조정: ${conserv.suggestion.threshold_offset > 0 ? '+' : ''}${conserv.suggestion.threshold_offset}</div>` : ''}
+      `;
+    }
+  }
+}
+
 // 초기 active 상태 동기화 (DOM 준비 후 호출)
 function _syncFilterChips() {
   ['trade'].forEach(() => setTradeFilter(_tradeFilter));
@@ -1011,7 +1194,7 @@ function applyStatusUI(bot, status) {
         const pct = p.pnl_pct != null ? +p.pnl_pct : (invested > 0 ? (pnl / invested * 100) : 0);
         const pctCls = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
         const sign = pnl >= 0 ? '+' : '';
-        return `<tr class="row-coin"><td><b>${p.coin}</b>${personaBadge(p.persona)}</td>` +
+        return `<tr class="row-coin" onclick="openPosModal('coin','${p.coin}')" style="cursor:pointer"><td><b>${p.coin}</b>${personaBadge(p.persona)}</td>` +
                `<td class="num">${avg > 0 ? fmt(avg) : '-'}</td>` +
                `<td class="num">${amount.toFixed(4)}</td>` +
                `<td class="num">${fmt(invested)}원</td>` +
@@ -1041,7 +1224,7 @@ function applyStatusUI(bot, status) {
                                        '<span class="badge b-kr" style="font-size:9px;padding:1px 5px">KR</span>';
         const priceUsd = isUsd ? ` <span style="opacity:0.6;font-size:10px">($${avg.toFixed(2)})</span>` : '';
         const noPnl = !(cur > 0);
-        return `<tr class="${rowCls}"><td>${mkBadge} <b>${p.stock_name || p.stock}</b> <span style="color:var(--muted);font-size:9px">${p.stock}</span>${personaBadge(p.profile)}</td>` +
+        return `<tr class="${rowCls}" onclick="openPosModal('stock','${p.stock}')" style="cursor:pointer"><td>${mkBadge} <b>${p.stock_name || p.stock}</b> <span style="color:var(--muted);font-size:9px">${p.stock}</span>${personaBadge(p.profile)}</td>` +
                `<td class="num">${fmt(avgKrw)}${priceUsd}</td>` +
                `<td class="num">${amount}</td>` +
                `<td class="num">${fmt(invested)}원</td>` +
@@ -1169,6 +1352,7 @@ function renderHomeOverview() {
   }
 
   renderChart7d();
+  renderImprovementCards();
 }
 
 function renderChart7d() {

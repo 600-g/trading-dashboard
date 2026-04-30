@@ -691,6 +691,24 @@
         </div>
       </div>
 
+      <!-- 페르소나별 누적 성과 (클릭 시 상세 모달) -->
+      <div class="card compact">
+        <div class="card-title"><svg class="ic"><use href="#i-bag"/></svg>페르소나별 누적 성과 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
+        <div id="all_persona_stats" style="display:flex;flex-direction:column;gap:6px"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 위원회 토론 결과 -->
+      <div class="card compact">
+        <div class="card-title"><svg class="ic"><use href="#i-doc"/></svg>위원회 토론 (자동 복기 합의)</div>
+        <div id="all_council_log" style="font-size:11px"><div class="empty">아직 토론 기록 없음 (코인 자정 / KR 15:35 / US 05:10)</div></div>
+      </div>
+
+      <!-- 후회분석 / 보수성 진단 -->
+      <div class="card compact">
+        <div class="card-title"><svg class="ic" style="color:var(--warn)"><use href="#i-warn"/></svg>후회분석 (Qullamaggie 자가검증)</div>
+        <div id="all_hindsight" style="font-size:11px"><div class="empty">데이터 누적 중</div></div>
+      </div>
+
       <!-- 최근 거래 (컴팩트 테이블) -->
       <div class="card compact">
         <div class="card-title"><svg class="ic"><use href="#i-refresh"/></svg>최근 거래</div>
@@ -1069,6 +1087,28 @@
   </div>
 </div>
 
+<!-- 포지션 상세 모달 -->
+<div class="modal-bg" id="posModal" onclick="if(event.target===this)closePosModal()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title" id="posModalTitle">포지션 상세</div>
+    <div id="posModalBody" style="font-size:12px;line-height:1.7"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closePosModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 페르소나별 거래내역 모달 -->
+<div class="modal-bg" id="personaModal" onclick="if(event.target===this)closePersonaModal()">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title" id="personaModalTitle">페르소나 상세</div>
+    <div id="personaModalBody" style="font-size:11px;max-height:400px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closePersonaModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div class="footer">두근 트레이딩 v1.1 · 코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
 <div class="toast" id="toast"></div>
 
@@ -1079,6 +1119,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=2.4-pnl-cols" defer></script>
+<script src="app.js?v=2.5-detail-modals" defer></script>
 </body>
 </html>
