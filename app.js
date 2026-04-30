@@ -584,6 +584,205 @@ function openPersonaModal(bot, persona) {
 
 function closePersonaModal() { document.getElementById('personaModal').classList.remove('show'); }
 
+// ─── 사유별 라벨/색 매핑 ──────────────────────────────────
+const REASON_META = {
+  '부분익절+BE': {icon:'🎯', cls:'up',   desc:'Qullamaggie 부분익절 후 BE 라이딩'},
+  'MA트레일링': {icon:'📈', cls:'up',   desc:'BE 후 MA 깨질 때 청산 (잔량)'},
+  '매도패턴':   {icon:'⚠️', cls:'warn', desc:'쌍봉/헤드앤숄더 즉시청산'},
+  '손절':       {icon:'🛑', cls:'down', desc:'ADR 동적 손절 / 긴급'},
+  '강제청산':   {icon:'⏰', cls:'',     desc:'한국장/미장 마감 강제'},
+  '익절':       {icon:'💰', cls:'up',   desc:'고/중 익절 (전량)'},
+  '횡보청산':   {icon:'😴', cls:'',     desc:'2시간+ 횡보 강제'},
+  '기타':       {icon:'•',  cls:'',     desc:''},
+};
+
+// ─── 종목별 거래 라이프사이클 모달 ────────────────────────
+function openStockModal(bot, stock) {
+  // 백엔드에 종목 거래내역 endpoint가 있으면 fetch, 없으면 status에서 필터
+  const status = STATE[bot]?.status;
+  if (!status) return;
+  const trades = (status.recent_trades || []).filter(t =>
+    (t.coin || t.stock) === stock
+  ).slice(0, 30);
+  const ranking = (status.stock_pnl_ranking || {});
+  const stat = [...(ranking.winners || []), ...(ranking.losers || [])].find(s => s.stock === stock);
+  const name = stat?.stock_name || stock;
+  const totalPnl = stat?.total_pnl || 0;
+  const totalCls = totalPnl > 0 ? 'up' : totalPnl < 0 ? 'down' : '';
+
+  document.getElementById('stockModalTitle').innerHTML =
+    `${bot === 'coin' ? '🪙' : '📈'} ${name} <span style="font-size:11px;color:var(--muted)">${stock}</span>`;
+
+  const summary = stat ? `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;font-size:11px">
+      <div class="stat" style="padding:8px"><div class="stat-label">거래수</div><div style="font-size:14px;font-weight:700">${stat.trades}건</div></div>
+      <div class="stat" style="padding:8px"><div class="stat-label">승률</div><div style="font-size:14px;font-weight:700">${stat.winrate}%</div></div>
+      <div class="stat" style="padding:8px"><div class="stat-label">최고/최악</div><div style="font-size:11px;font-weight:700"><span class="up">${fmtSign(stat.best_pnl||0)}</span> / <span class="down">${fmtSign(stat.worst_pnl||0)}</span></div></div>
+      <div class="stat" style="padding:8px"><div class="stat-label">누적P&L</div><div class="${totalCls}" style="font-size:14px;font-weight:700">${fmtSign(totalPnl)}</div></div>
+    </div>
+  ` : '';
+
+  const tradesHtml = trades.length === 0
+    ? '<div class="empty">최근 거래 데이터 없음 (recent_trades 50건 윈도우 밖)</div>'
+    : '<table style="width:100%;font-size:10.5px"><thead><tr><th>시각</th><th>매매</th><th class="num">수량</th><th class="num">가격</th><th>사유</th><th class="num">P&L</th></tr></thead><tbody>' +
+      trades.map(t => {
+        const ts = (t.ts || t.created_at || '').slice(5, 16).replace('T', ' ');
+        const cls = (t.pnl || 0) > 0 ? 'up' : (t.pnl || 0) < 0 ? 'down' : '';
+        const sideEmoji = (t.side || '').toUpperCase().startsWith('B') ? '🟢' : '🔴';
+        const reason = (t.reason || '').slice(0, 16);
+        return `<tr><td>${ts}</td><td>${sideEmoji} ${t.side}</td><td class="num">${t.amount || '-'}</td><td class="num">${fmt(t.price || 0)}</td><td style="font-size:9.5px;color:var(--muted)">${reason}</td><td class="num ${cls}">${fmtSign(t.pnl || 0)}</td></tr>`;
+      }).join('') + '</tbody></table>';
+
+  document.getElementById('stockModalBody').innerHTML = summary + tradesHtml;
+  document.getElementById('stockModal').classList.add('show');
+}
+
+function closeStockModal() { document.getElementById('stockModal').classList.remove('show'); }
+
+// ─── 종목 랭킹 / 사유 / 시간대 / 매트릭스 렌더 ────────────
+function renderAnalyticsCards() {
+  const c = STATE.coin.status, s = STATE.stock.status;
+
+  // 종목 랭킹 (양봇 합산, 절대값 기준 톱)
+  const winnersAll = [];
+  (c?.stock_pnl_ranking?.winners || []).forEach(w => winnersAll.push({...w, _bot:'coin'}));
+  (s?.stock_pnl_ranking?.winners || []).forEach(w => winnersAll.push({...w, _bot:'stock'}));
+  winnersAll.sort((a,b) => b.total_pnl - a.total_pnl);
+
+  const losersAll = [];
+  (c?.stock_pnl_ranking?.losers || []).forEach(l => losersAll.push({...l, _bot:'coin'}));
+  (s?.stock_pnl_ranking?.losers || []).forEach(l => losersAll.push({...l, _bot:'stock'}));
+  losersAll.sort((a,b) => a.total_pnl - b.total_pnl);
+
+  const renderRankRow = (r) => {
+    const bot = r._bot;
+    const icon = bot === 'coin' ? '🪙' : '📈';
+    const cls = r.total_pnl > 0 ? 'up' : 'down';
+    return `<div onclick="openStockModal('${bot}','${r.stock}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#0d1117;border:1px solid var(--line);border-radius:6px;font-size:11px" onmouseover="this.style.borderColor='#484f58'" onmouseout="this.style.borderColor='var(--line)'">
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-size:10px">${icon}</span> <b>${r.stock_name || r.stock}</b> <span style="color:var(--muted);font-size:9.5px">${r.trades}건 ${r.winrate}%</span></div>
+      <span class="${cls}" style="font-weight:700;white-space:nowrap;font-size:11px">${fmtSign(r.total_pnl)}</span>
+    </div>`;
+  };
+
+  const wBox = document.getElementById('all_pnl_winners');
+  if (wBox) wBox.innerHTML = winnersAll.length === 0 ? '<div class="empty" style="font-size:10px">데이터 누적 중</div>' :
+    winnersAll.slice(0, 6).map(renderRankRow).join('');
+  const lBox = document.getElementById('all_pnl_losers');
+  if (lBox) lBox.innerHTML = losersAll.length === 0 ? '<div class="empty" style="font-size:10px">데이터 누적 중</div>' :
+    losersAll.slice(0, 6).map(renderRankRow).join('');
+
+  // 사유별 (양봇 합산)
+  const reasonMap = {};
+  [...(c?.reason_stats || []), ...(s?.reason_stats || [])].forEach(r => {
+    if (!reasonMap[r.rule_kind]) reasonMap[r.rule_kind] = {trades:0, total_pnl:0, wins:0};
+    reasonMap[r.rule_kind].trades += r.trades;
+    reasonMap[r.rule_kind].total_pnl += r.total_pnl;
+    reasonMap[r.rule_kind].wins += Math.round(r.trades * r.winrate / 100);
+  });
+  const reasons = Object.entries(reasonMap).map(([k,v]) => ({
+    rule_kind: k, ...v,
+    winrate: v.trades ? +(v.wins / v.trades * 100).toFixed(1) : 0,
+  })).sort((a,b) => b.total_pnl - a.total_pnl);
+
+  const rBox = document.getElementById('all_reason_stats');
+  if (rBox) {
+    rBox.innerHTML = reasons.length === 0 ? '<div class="empty">SELL 거래 누적 시 표시</div>' :
+      reasons.map(r => {
+        const meta = REASON_META[r.rule_kind] || {icon:'•', cls:'', desc:''};
+        const cls = r.total_pnl > 0 ? 'up' : r.total_pnl < 0 ? 'down' : '';
+        const wrCls = r.winrate >= 60 ? 'up' : r.winrate < 40 ? 'down' : '';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0d1117;border:1px solid var(--line);border-radius:8px;margin-bottom:4px">
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600">${meta.icon} ${r.rule_kind}</div>
+            <div style="font-size:10px;color:var(--muted)">${meta.desc}</div>
+          </div>
+          <div style="display:flex;gap:14px;font-size:11px;font-variant-numeric:tabular-nums;align-items:center">
+            <span>${r.trades}건</span>
+            <span class="${wrCls}">${r.winrate}%</span>
+            <span class="${cls}" style="font-weight:700;min-width:80px;text-align:right">${fmtSign(r.total_pnl)}</span>
+          </div>
+        </div>`;
+      }).join('');
+  }
+
+  // 시간대 (양봇 합산)
+  const slotMap = {};
+  [...(c?.time_slot_stats || []), ...(s?.time_slot_stats || [])].forEach(r => {
+    const k = r.slot;
+    if (!slotMap[k]) slotMap[k] = {trades:0, total_pnl:0, wins:0};
+    slotMap[k].trades += r.trades;
+    slotMap[k].total_pnl += r.total_pnl;
+    slotMap[k].wins += Math.round(r.trades * r.winrate / 100);
+  });
+  const slots = Object.entries(slotMap).map(([k,v]) => ({
+    slot: k, ...v,
+    winrate: v.trades ? +(v.wins / v.trades * 100).toFixed(1) : 0,
+  })).sort((a,b) => b.total_pnl - a.total_pnl);
+
+  const tBox = document.getElementById('all_time_slots');
+  if (tBox) {
+    tBox.innerHTML = slots.length === 0 ? '<div class="empty">데이터 누적 중</div>' :
+      slots.map(sl => {
+        const cls = sl.total_pnl > 0 ? 'up' : sl.total_pnl < 0 ? 'down' : '';
+        const wrCls = sl.winrate >= 60 ? 'up' : sl.winrate < 40 ? 'down' : '';
+        const star = sl === slots[0] && sl.total_pnl > 0 ? ' ⭐' : '';
+        return `<div style="display:flex;justify-content:space-between;padding:6px 8px;background:#0d1117;border:1px solid var(--line);border-radius:6px;margin-bottom:3px;font-size:11px">
+          <span><b>${sl.slot}</b>${star}</span>
+          <div style="display:flex;gap:12px;font-variant-numeric:tabular-nums">
+            <span>${sl.trades}건</span>
+            <span class="${wrCls}">${sl.winrate}%</span>
+            <span class="${cls}" style="font-weight:700;min-width:80px;text-align:right">${fmtSign(sl.total_pnl)}</span>
+          </div>
+        </div>`;
+      }).join('');
+  }
+
+  // 페르소나 × 사유 매트릭스 (양봇 합산)
+  const matrix = {};
+  [c?.persona_reason_matrix, s?.persona_reason_matrix].forEach(m => {
+    if (!m) return;
+    Object.entries(m).forEach(([persona, rules]) => {
+      if (!matrix[persona]) matrix[persona] = {};
+      Object.entries(rules).forEach(([rule, v]) => {
+        if (!matrix[persona][rule]) matrix[persona][rule] = {trades:0, pnl:0};
+        matrix[persona][rule].trades += v.trades;
+        matrix[persona][rule].pnl += v.pnl;
+      });
+    });
+  });
+  const allRules = [...new Set(Object.values(matrix).flatMap(r => Object.keys(r)))];
+  const personas = Object.keys(matrix);
+  const mBox = document.getElementById('all_persona_matrix');
+  if (mBox) {
+    if (personas.length === 0) {
+      mBox.innerHTML = '<div class="empty">매트릭스 데이터 누적 중</div>';
+    } else {
+      let html = '<table style="width:100%;font-size:10.5px;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:4px">페르소나</th>';
+      allRules.forEach(r => {
+        const meta = REASON_META[r] || {icon:'•'};
+        html += `<th style="padding:4px;font-size:10px" title="${r}">${meta.icon} ${r}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+      personas.forEach(p => {
+        const meta = PERSONA_META[p] || {icon:'•', cls:'p-default'};
+        html += `<tr><td style="padding:4px"><span class="p-badge ${meta.cls}">${meta.icon} ${p}</span></td>`;
+        allRules.forEach(r => {
+          const v = matrix[p][r];
+          if (!v) {
+            html += '<td style="padding:4px;text-align:center;color:var(--muted)">-</td>';
+          } else {
+            const cls = v.pnl > 0 ? 'up' : v.pnl < 0 ? 'down' : '';
+            html += `<td class="num ${cls}" style="padding:4px"><div style="font-weight:700">${fmtSign(v.pnl)}</div><div style="font-size:9px;opacity:0.7">${v.trades}건</div></td>`;
+          }
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      mBox.innerHTML = html;
+    }
+  }
+}
+
 // ─── 통합: 페르소나별 성과 / 위원회 / 후회분석 렌더 ─────────
 function renderImprovementCards() {
   const c = STATE.coin.status, s = STATE.stock.status;
@@ -1352,6 +1551,7 @@ function renderHomeOverview() {
   }
 
   renderChart7d();
+  renderAnalyticsCards();
   renderImprovementCards();
 }
 

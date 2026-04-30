@@ -691,6 +691,39 @@
         </div>
       </div>
 
+      <!-- 종목별 손익 랭킹 -->
+      <div class="card compact">
+        <div class="card-title">🏆 종목별 손익 랭킹 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div style="font-size:11px;color:var(--up);font-weight:700;margin-bottom:4px">🟢 수익 톱</div>
+            <div id="all_pnl_winners" style="display:flex;flex-direction:column;gap:4px"><div class="empty">로딩...</div></div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--down);font-weight:700;margin-bottom:4px">🔴 손실 톱</div>
+            <div id="all_pnl_losers" style="display:flex;flex-direction:column;gap:4px"><div class="empty">로딩...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 사유별 분석 (어떤 룰이 돈 벌고 있나) -->
+      <div class="card compact">
+        <div class="card-title">📐 사유별 룰 검증 (Qullamaggie 룰별 손익)</div>
+        <div id="all_reason_stats"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 시간대별 성과 -->
+      <div class="card compact">
+        <div class="card-title">⏰ 시간대별 성과</div>
+        <div id="all_time_slots"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 페르소나 × 사유 매트릭스 -->
+      <div class="card compact">
+        <div class="card-title">🎭 페르소나 × 사유 매트릭스 (강/약점)</div>
+        <div id="all_persona_matrix" style="overflow-x:auto"><div class="empty">로딩...</div></div>
+      </div>
+
       <!-- 페르소나별 누적 성과 (클릭 시 상세 모달) -->
       <div class="card compact">
         <div class="card-title"><svg class="ic"><use href="#i-bag"/></svg>페르소나별 누적 성과 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
@@ -1098,6 +1131,17 @@
   </div>
 </div>
 
+<!-- 종목별 거래 라이프사이클 모달 -->
+<div class="modal-bg" id="stockModal" onclick="if(event.target===this)closeStockModal()">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-title" id="stockModalTitle">종목 거래 내역</div>
+    <div id="stockModalBody" style="font-size:11px;max-height:480px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeStockModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 페르소나별 거래내역 모달 -->
 <div class="modal-bg" id="personaModal" onclick="if(event.target===this)closePersonaModal()">
   <div class="modal" style="max-width:560px">
@@ -1119,6 +1163,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=2.5-detail-modals" defer></script>
+<script src="app.js?v=2.6-analytics" defer></script>
 </body>
 </html>
