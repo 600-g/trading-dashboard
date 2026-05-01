@@ -639,8 +639,84 @@ function openStockModal(bot, stock) {
 
 function closeStockModal() { document.getElementById('stockModal').classList.remove('show'); }
 
+// ─── 자가 메타분석 + 보유시간 렌더 ─────────────────────
+function renderMetaDiagnosis() {
+  const c = STATE.coin.status, s = STATE.stock.status;
+
+  // 메타진단 합산
+  const allWarn = [], allWin = [], allRec = [];
+  [c, s].forEach((status, i) => {
+    const bot = i === 0 ? '🪙 코인' : '📈 주식';
+    const md = status?.meta_diagnosis || {};
+    (md.warnings || []).forEach(w => allWarn.push({...w, _bot: bot}));
+    (md.wins || []).forEach(w => allWin.push({...w, _bot: bot}));
+    (md.recommendations || []).forEach(w => allRec.push({...w, _bot: bot}));
+  });
+  const sumEl = document.getElementById('meta_diag_summary');
+  if (sumEl) {
+    const total = allWarn.length + allRec.length;
+    sumEl.innerHTML = total > 0
+      ? `<span class="warn">⚠️ ${total}건 개선포인트</span>`
+      : '<span class="up">✅ 정상</span>';
+  }
+  const box = document.getElementById('all_meta_diag');
+  if (box) {
+    let html = '';
+    if (allWin.length) {
+      html += '<div style="margin-bottom:8px"><b class="up">🟢 효자 룰 / 스윗스팟</b></div>';
+      html += allWin.map(w => `<div style="padding:6px 8px;background:#0d1117;border-left:3px solid var(--up);border-radius:4px;margin-bottom:4px">
+        <span style="font-size:10px;color:var(--muted)">${w._bot}</span> <b>${w.title || w.rule || w.type}</b><br><span style="font-size:10.5px">${w.detail || ''}</span></div>`).join('');
+    }
+    if (allWarn.length) {
+      html += '<div style="margin:8px 0 4px"><b class="warn">⚠️ 데드존 (회피 권장)</b></div>';
+      html += allWarn.map(w => `<div style="padding:6px 8px;background:#0d1117;border-left:3px solid var(--warn);border-radius:4px;margin-bottom:4px">
+        <span style="font-size:10px;color:var(--muted)">${w._bot}</span> <b>${w.title}</b><br><span style="font-size:10.5px">${w.detail}</span></div>`).join('');
+    }
+    if (allRec.length) {
+      html += '<div style="margin:8px 0 4px"><b class="down">🛠 룰 개선 권장</b></div>';
+      html += allRec.map(r => `<div style="padding:6px 8px;background:#0d1117;border-left:3px solid var(--down);border-radius:4px;margin-bottom:4px">
+        <span style="font-size:10px;color:var(--muted)">${r._bot}</span> <b>${r.rule}</b>: ${r.current}<br><span style="font-size:10.5px;opacity:0.85">${r.action}</span></div>`).join('');
+    }
+    box.innerHTML = html || '<div class="empty">데이터 누적 중 (거래 15+건 후 자동 진단)</div>';
+  }
+
+  // 보유시간 합산
+  const ht = [];
+  (c?.hold_time_stats || []).forEach(h => ht.push({...h, _bot:'🪙'}));
+  (s?.hold_time_stats || []).forEach(h => ht.push({...h, _bot:'📈'}));
+  const htBox = document.getElementById('all_hold_time');
+  if (htBox) {
+    if (ht.length === 0) {
+      htBox.innerHTML = '<div class="empty">보유시간 데이터 없음 (entry_ts 누적 시 표시)</div>';
+    } else {
+      // 최대값 기준 막대 그래프
+      const maxN = Math.max(...ht.map(h => h.trades));
+      htBox.innerHTML = ht.map(h => {
+        const cls = h.total_pnl > 0 ? 'up' : h.total_pnl < 0 ? 'down' : '';
+        const wrCls = h.winrate >= 80 ? 'up' : h.winrate < 40 ? 'down' : 'warn';
+        const barW = (h.trades / maxN * 100).toFixed(1);
+        const barColor = h.total_pnl > 0 ? 'var(--up)' : 'var(--down)';
+        return `<div style="margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+            <span>${h._bot} <b>${h.bucket}</b></span>
+            <div style="display:flex;gap:12px;font-variant-numeric:tabular-nums">
+              <span>${h.trades}건</span>
+              <span class="${wrCls}">${h.winrate}%</span>
+              <span class="${cls}" style="font-weight:700;min-width:80px;text-align:right">${fmtSign(h.total_pnl)}</span>
+            </div>
+          </div>
+          <div style="background:#0d1117;border-radius:3px;height:6px;overflow:hidden">
+            <div style="background:${barColor};opacity:0.6;width:${barW}%;height:100%"></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
 // ─── 종목 랭킹 / 사유 / 시간대 / 매트릭스 렌더 ────────────
 function renderAnalyticsCards() {
+  renderMetaDiagnosis();
   const c = STATE.coin.status, s = STATE.stock.status;
 
   // 종목 랭킹 (양봇 합산, 절대값 기준 톱)
