@@ -704,26 +704,35 @@
       </div>
     </div>
 
-    <!-- ─── 히스토리 뷰 (일별/월별/개선 캘린더) ─────────────── -->
+    <!-- ─── 히스토리 뷰 (일별/월별/종목별/개선) ─────────────── -->
     <div class="view" id="view-history">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;padding-left:4px">📅 거래 히스토리 + 자가개선 캘린더</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;padding-left:4px">📅 거래 히스토리</div>
 
-      <!-- 월별 손익 (전폭) -->
+      <!-- 종목별 전체 거래 누적 (사용자 요청 핵심) -->
+      <div class="card compact" style="margin-bottom:10px;border-left:3px solid var(--info)">
+        <div class="card-title">📦 종목별 누적 거래 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 모든 거래 내역</span></div>
+        <div class="filter-bar" id="stock_history_filter_bar">
+          <div class="filter-chip active" data-shf="all" onclick="setStockHistoryFilter('all')">전체</div>
+          <div class="filter-chip" data-shf="coin" onclick="setStockHistoryFilter('coin')">🪙 코인</div>
+          <div class="filter-chip" data-shf="stock" onclick="setStockHistoryFilter('stock')">📈 주식</div>
+          <div class="sep"></div>
+          <div class="filter-chip" data-shf="winners" onclick="setStockHistoryFilter('winners')">🟢 수익</div>
+          <div class="filter-chip" data-shf="losers" onclick="setStockHistoryFilter('losers')">🔴 손실</div>
+          <span class="filter-count" id="stock_history_count"></span>
+        </div>
+        <div id="stock_history_list" style="display:flex;flex-direction:column;gap:4px;max-height:400px;overflow-y:auto"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 월별 손익 -->
       <div class="card compact" style="margin-bottom:10px">
         <div class="card-title">📊 월별 손익 (코인 + 주식 통합)</div>
         <div id="history_monthly" style="font-size:11px"><div class="empty">로딩...</div></div>
       </div>
 
-      <!-- 일별 캘린더 (전폭) -->
-      <div class="card compact" style="margin-bottom:10px">
-        <div class="card-title">🗓 일별 손익 캘린더 (60일) <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 그날 거래 + 개선</span></div>
-        <div id="history_daily_calendar"><div class="empty">로딩...</div></div>
-      </div>
-
-      <!-- 자가개선 변경 로그 -->
+      <!-- 일별 캘린더 -->
       <div class="card compact">
-        <div class="card-title">🤖 자가개선 변경 히스토리</div>
-        <div id="history_tune_log" style="font-size:11px;max-height:300px;overflow-y:auto"><div class="empty">로딩...</div></div>
+        <div class="card-title">🗓 일별 손익 캘린더 (60일) <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 그날 거래</span></div>
+        <div id="history_daily_calendar"><div class="empty">로딩...</div></div>
       </div>
     </div>
 
@@ -738,22 +747,9 @@
       </div>
     </div>
 
-    <!-- ─── 분석 뷰 (사각 배치) ─────────────── -->
+    <!-- ─── 분석 뷰 (종목/사유/시간/매트릭스) ─────────────── -->
     <div class="view" id="view-analytics">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;padding-left:4px">📊 종목/사유/시간 분석</div>
-
-      <!-- 자가 메타분석 (전폭 강조) -->
-      <div class="card compact" style="margin-bottom:10px;border-left:3px solid var(--warn)">
-        <div class="card-title">🤖 봇 자가 메타분석 — 데드존 / 효자룰 / 개선권장 <span id="meta_diag_summary" style="margin-left:auto;font-size:11px;font-weight:400"></span></div>
-        <div id="all_meta_diag" style="font-size:11px"><div class="empty">로딩...</div></div>
-      </div>
-
-      <!-- 보유시간별 승률 (전폭) -->
-      <div class="card compact" style="margin-bottom:10px">
-        <div class="card-title">⏱ 보유시간별 승률 (스윗스팟 / 데드존 발견)</div>
-        <div id="all_hold_time" style="font-size:11px"><div class="empty">로딩...</div></div>
-      </div>
-
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;padding-left:4px">📊 종목/사유/시간 분석 <span style="opacity:0.6;font-size:10px;font-weight:400">· 메타진단/보유시간/자가개선은 🤖 자가개선 메뉴</span></div>
       <div class="grid-2" style="gap:10px">
         <!-- 좌상: 종목 랭킹 -->
         <div class="card compact">
@@ -790,47 +786,66 @@
       </div>
     </div>
 
-    <!-- ─── 자가개선 뷰 (사각 배치) ─────────────── -->
+    <!-- ─── 자가개선 통합 뷰 (모든 개선 지표 한 곳) ─────────── -->
     <div class="view" id="view-improvement">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;padding-left:4px">🎭 페르소나 / 위원회 / 후회분석</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;padding-left:4px">🤖 자가개선 통합 (메타진단 · 위원회 · 후회 · 페르소나 · 변경로그)</div>
+
+      <!-- 1. 자가 메타분석 (강조 — 데드존/효자룰/개선권장) -->
+      <div class="card compact" style="margin-bottom:10px;border-left:3px solid var(--warn)">
+        <div class="card-title">🔬 봇 자가 메타분석 <span id="meta_diag_summary" style="margin-left:auto;font-size:11px;font-weight:400"></span></div>
+        <div id="all_meta_diag" style="font-size:11px"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 2. 보유시간별 승률 -->
+      <div class="card compact" style="margin-bottom:10px">
+        <div class="card-title">⏱ 보유시간별 승률 (스윗스팟 / 데드존)</div>
+        <div id="all_hold_time" style="font-size:11px"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 3. 자가개선 변경 로그 -->
+      <div class="card compact" style="margin-bottom:10px">
+        <div class="card-title">🛠 자가개선 변경 히스토리 (자정 자동 발동)</div>
+        <div id="history_tune_log" style="font-size:11px;max-height:280px;overflow-y:auto"><div class="empty">로딩...</div></div>
+      </div>
+
       <div class="grid-2" style="gap:10px">
-        <!-- 좌상: 페르소나 누적성과 (전폭) -->
+        <!-- 4. 페르소나별 누적 성과 (전폭) -->
         <div class="card compact" style="grid-column:1 / -1">
           <div class="card-title"><svg class="ic"><use href="#i-bag"/></svg>페르소나별 누적 성과 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
           <div id="all_persona_stats" style="display:flex;flex-direction:column;gap:6px"><div class="empty">로딩...</div></div>
         </div>
 
-        <!-- 좌중: 위원회 -->
+        <!-- 5. 위원회 -->
         <div class="card compact">
           <div class="card-title"><svg class="ic"><use href="#i-doc"/></svg>위원회 토론 (자동복기)</div>
           <div id="all_council_log" style="font-size:11px"><div class="empty">아직 토론 기록 없음 (코인 자정 / KR 15:35 / US 05:10)</div></div>
         </div>
 
-        <!-- 우중: 후회분석 -->
+        <!-- 6. 후회분석 -->
         <div class="card compact">
-          <div class="card-title"><svg class="ic" style="color:var(--warn)"><use href="#i-warn"/></svg>후회분석 (Qullamaggie 자가검증)</div>
+          <div class="card-title"><svg class="ic" style="color:var(--warn)"><use href="#i-warn"/></svg>후회분석 (Qullamaggie WhatIf)</div>
           <div id="all_hindsight" style="font-size:11px"><div class="empty">데이터 누적 중</div></div>
         </div>
 
-        <!-- 좌하: 자체평가 14일 -->
+        <!-- 7. 자체평가 14일 -->
         <div class="card compact">
           <div class="card-title"><svg class="ic"><use href="#i-bolt"/></svg>자체평가 (14일)</div>
           <div id="review_summary" style="font-size:11px"><div class="empty">데이터 없음</div></div>
         </div>
 
-        <!-- 우하: 반복 실수 -->
+        <!-- 8. 반복 실수 -->
         <div class="card compact">
           <div class="card-title"><svg class="ic" style="color:var(--warn)"><use href="#i-warn"/></svg>반복 실수 감지</div>
           <div id="repeated_mistakes" style="font-size:11px"><div class="empty">감지된 패턴 없음</div></div>
         </div>
 
-        <!-- 전폭: 최근 자체평가 -->
+        <!-- 9. 최근 자체평가 (전폭) -->
         <div class="card compact" style="grid-column:1 / -1">
           <div class="card-title"><svg class="ic"><use href="#i-doc"/></svg>최근 거래 자체평가</div>
           <div class="table-wrap">
             <table style="font-size:10px">
               <thead><tr><th>시각</th><th>종목</th><th>평가</th><th class="num">진입</th><th class="num">청산</th><th>교훈</th></tr></thead>
-              <tbody id="reviews_table"><tr><td colspan="6" class="empty">평가 누적 시 표시</td></tr></tbody>
+              <tbody id="reviews_table"><tr><td colspan="6" class="empty">평가 누적 시 표시</8td></tr></tbody>
             </table>
           </div>
         </div>
@@ -1166,7 +1181,7 @@
         <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
       </div>
       <div class="menu-item" data-view="improvement" onclick="goView('improvement')">
-        <svg class="ic"><use href="#i-doc"/></svg>🎭 페르소나/자가개선
+        <svg class="ic"><use href="#i-doc"/></svg>🤖 자가개선 통합
         <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
       </div>
     </div>
@@ -1254,6 +1269,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=2.9-history" defer></script>
+<script src="app.js?v=3.0-stock-history" defer></script>
 </body>
 </html>

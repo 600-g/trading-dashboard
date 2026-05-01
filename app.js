@@ -639,8 +639,100 @@ function openStockModal(bot, stock) {
 
 function closeStockModal() { document.getElementById('stockModal').classList.remove('show'); }
 
+// ─── 종목별 누적 거래 (history 사용, 50건 윈도우 회피) ──────
+let _stockHistoryFilter = localStorage.getItem('stockHistoryFilter') || 'all';
+
+function setStockHistoryFilter(f) {
+  _stockHistoryFilter = f;
+  localStorage.setItem('stockHistoryFilter', f);
+  document.querySelectorAll('#stock_history_filter_bar .filter-chip').forEach(el => {
+    el.classList.toggle('active', el.dataset.shf === f);
+  });
+  renderStockHistoryList();
+}
+
+function renderStockHistoryList() {
+  const c = STATE.coin.status, s = STATE.stock.status;
+  const all = [];
+  ((c?.stock_pnl_ranking?.all) || []).forEach(x => all.push({...x, _bot: 'coin'}));
+  ((s?.stock_pnl_ranking?.all) || []).forEach(x => all.push({...x, _bot: 'stock'}));
+
+  let filtered = all;
+  if (_stockHistoryFilter === 'coin') filtered = all.filter(x => x._bot === 'coin');
+  else if (_stockHistoryFilter === 'stock') filtered = all.filter(x => x._bot === 'stock');
+  else if (_stockHistoryFilter === 'winners') filtered = all.filter(x => x.total_pnl > 0);
+  else if (_stockHistoryFilter === 'losers') filtered = all.filter(x => x.total_pnl < 0);
+
+  filtered.sort((a, b) => Math.abs(b.total_pnl) - Math.abs(a.total_pnl));
+
+  const cnt = document.getElementById('stock_history_count');
+  if (cnt) cnt.textContent = `${filtered.length}/${all.length} 종목`;
+
+  const box = document.getElementById('stock_history_list');
+  if (!box) return;
+  if (filtered.length === 0) {
+    box.innerHTML = '<div class="empty">데이터 없음</div>';
+    return;
+  }
+  box.innerHTML = filtered.map(s => {
+    const cls = s.total_pnl > 0 ? 'up' : s.total_pnl < 0 ? 'down' : '';
+    const wrCls = s.winrate >= 60 ? 'up' : s.winrate < 40 ? 'down' : '';
+    const icon = s._bot === 'coin' ? '🪙' : '📈';
+    const range = s.first_ts ? `${s.first_ts.slice(0,10)} ~ ${s.last_ts.slice(0,10)}` : '';
+    return `<div onclick="openStockHistoryModal('${s._bot}','${s.stock}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0d1117;border:1px solid var(--line);border-radius:6px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--info)'" onmouseout="this.style.borderColor='var(--line)'">
+      <div style="flex:1;overflow:hidden">
+        <div style="font-size:12px"><span style="font-size:11px">${icon}</span> <b>${s.stock_name || s.stock}</b> <span style="color:var(--muted);font-size:9.5px">${s.stock}</span></div>
+        <div style="font-size:9.5px;color:var(--muted)">${range}</div>
+      </div>
+      <div style="display:flex;gap:14px;font-size:11px;font-variant-numeric:tabular-nums;align-items:center">
+        <span>${s.trades}건</span>
+        <span class="${wrCls}">${s.winrate}%</span>
+        <span class="${cls}" style="font-weight:700;min-width:90px;text-align:right">${fmtSign(s.total_pnl)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// 종목별 전체 거래 모달 (history 기반, 50건 윈도우 회피)
+function openStockHistoryModal(bot, stock) {
+  const status = STATE[bot]?.status;
+  const all = ((status?.stock_pnl_ranking?.all) || []);
+  const item = all.find(x => x.stock === stock);
+  if (!item) return;
+  const trades = item.history || [];
+
+  document.getElementById('stockModalTitle').innerHTML =
+    `${bot === 'coin' ? '🪙' : '📈'} ${item.stock_name || stock} <span style="font-size:11px;color:var(--muted)">${stock}</span>`;
+
+  const totalCls = item.total_pnl > 0 ? 'up' : 'down';
+  const summary = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+      <div class="stat" style="padding:8px"><div class="stat-label">거래수</div><div style="font-size:14px;font-weight:700">${item.trades}건</div></div>
+      <div class="stat" style="padding:8px"><div class="stat-label">승률</div><div style="font-size:14px;font-weight:700">${item.winrate}%</div></div>
+      <div class="stat" style="padding:8px"><div class="stat-label">최고/최악</div><div style="font-size:11px;font-weight:700"><span class="up">${fmtSign(item.best_pnl||0)}</span><br><span class="down">${fmtSign(item.worst_pnl||0)}</span></div></div>
+      <div class="stat" style="padding:8px"><div class="stat-label">누적P&L</div><div class="${totalCls}" style="font-size:14px;font-weight:700">${fmtSign(item.total_pnl)}</div></div>
+    </div>
+  `;
+
+  const tradesHtml = trades.length === 0
+    ? '<div class="empty">거래 데이터 없음</div>'
+    : '<table style="width:100%;font-size:10.5px"><thead><tr><th>시각</th><th>매매</th><th class="num">수량</th><th class="num">가격</th><th>전략</th><th>사유</th><th class="num">P&L</th></tr></thead><tbody>' +
+      trades.map(t => {
+        const ts = (t.ts || t.created_at || '').slice(5, 16).replace('T', ' ');
+        const cls = (t.pnl || 0) > 0 ? 'up' : (t.pnl || 0) < 0 ? 'down' : '';
+        const sideEmoji = (t.side || '').toUpperCase().startsWith('B') ? '🟢' : '🔴';
+        const persona = t.persona || t.profile || '';
+        const reason = (t.reason || '').slice(0, 14);
+        return `<tr><td>${ts}</td><td>${sideEmoji}${t.side}</td><td class="num">${t.amount || '-'}</td><td class="num">${fmt(t.price || 0)}</td><td style="font-size:9.5px">${persona}</td><td style="font-size:9.5px;color:var(--muted)">${reason}</td><td class="num ${cls}">${fmtSign(t.pnl || 0)}</td></tr>`;
+      }).join('') + '</tbody></table>';
+
+  document.getElementById('stockModalBody').innerHTML = summary + `<div style="font-size:10px;color:var(--muted);margin-bottom:6px">전체 거래 ${trades.length}건 (DB 누적)</div>` + tradesHtml;
+  document.getElementById('stockModal').classList.add('show');
+}
+
 // ─── 히스토리 (일별/월별/자가개선 캘린더) ─────────────────
 function renderHistoryCards() {
+  renderStockHistoryList();
   const c = STATE.coin.status, s = STATE.stock.status;
 
   // 월별 합산 (코인 + 주식)
@@ -913,7 +1005,7 @@ function renderAnalyticsCards() {
     const bot = r._bot;
     const icon = bot === 'coin' ? '🪙' : '📈';
     const cls = r.total_pnl > 0 ? 'up' : 'down';
-    return `<div onclick="openStockModal('${bot}','${r.stock}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#0d1117;border:1px solid var(--line);border-radius:6px;font-size:11px" onmouseover="this.style.borderColor='#484f58'" onmouseout="this.style.borderColor='var(--line)'">
+    return `<div onclick="openStockHistoryModal('${bot}','${r.stock}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#0d1117;border:1px solid var(--line);border-radius:6px;font-size:11px" onmouseover="this.style.borderColor='#484f58'" onmouseout="this.style.borderColor='var(--line)'">
       <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-size:10px">${icon}</span> <b>${r.stock_name || r.stock}</b> <span style="color:var(--muted);font-size:9.5px">${r.trades}건 ${r.winrate}%</span></div>
       <span class="${cls}" style="font-weight:700;white-space:nowrap;font-size:11px">${fmtSign(r.total_pnl)}</span>
     </div>`;
