@@ -704,6 +704,40 @@
       </div>
     </div>
 
+    <!-- ─── 히스토리 뷰 (일별/월별/개선 캘린더) ─────────────── -->
+    <div class="view" id="view-history">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;padding-left:4px">📅 거래 히스토리 + 자가개선 캘린더</div>
+
+      <!-- 월별 손익 (전폭) -->
+      <div class="card compact" style="margin-bottom:10px">
+        <div class="card-title">📊 월별 손익 (코인 + 주식 통합)</div>
+        <div id="history_monthly" style="font-size:11px"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 일별 캘린더 (전폭) -->
+      <div class="card compact" style="margin-bottom:10px">
+        <div class="card-title">🗓 일별 손익 캘린더 (60일) <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 그날 거래 + 개선</span></div>
+        <div id="history_daily_calendar"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 자가개선 변경 로그 -->
+      <div class="card compact">
+        <div class="card-title">🤖 자가개선 변경 히스토리</div>
+        <div id="history_tune_log" style="font-size:11px;max-height:300px;overflow-y:auto"><div class="empty">로딩...</div></div>
+      </div>
+    </div>
+
+    <!-- 일별 상세 모달 (선택한 날짜의 거래 + 개선) -->
+    <div class="modal-bg" id="dayModal" onclick="if(event.target===this)closeDayModal()">
+      <div class="modal" style="max-width:560px">
+        <div class="modal-title" id="dayModalTitle">날짜 상세</div>
+        <div id="dayModalBody" style="font-size:11px;max-height:400px;overflow-y:auto"></div>
+        <div class="modal-actions">
+          <button class="modal-btn" onclick="closeDayModal()">닫기</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── 분석 뷰 (사각 배치) ─────────────── -->
     <div class="view" id="view-analytics">
       <div style="font-size:13px;font-weight:700;margin-bottom:8px;padding-left:4px">📊 종목/사유/시간 분석</div>
@@ -1123,6 +1157,10 @@
 
     <div class="menu-section">
       <div class="menu-section-title">분석</div>
+      <div class="menu-item" data-view="history" onclick="goView('history')">
+        <svg class="ic"><use href="#i-cal"/></svg>📅 히스토리 (일별/월별/개선)
+        <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
+      </div>
       <div class="menu-item" data-view="analytics" onclick="goView('analytics')">
         <svg class="ic"><use href="#i-bag"/></svg>📊 종목/사유/시간 분석
         <svg class="ic ic-sm arrow"><use href="#i-arrow"/></svg>
@@ -1216,6 +1254,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=2.8-meta" defer></script>
+<script src="app.js?v=2.9-history" defer></script>
 </body>
 </html>

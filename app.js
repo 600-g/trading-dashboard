@@ -639,6 +639,185 @@ function openStockModal(bot, stock) {
 
 function closeStockModal() { document.getElementById('stockModal').classList.remove('show'); }
 
+// ─── 히스토리 (일별/월별/자가개선 캘린더) ─────────────────
+function renderHistoryCards() {
+  const c = STATE.coin.status, s = STATE.stock.status;
+
+  // 월별 합산 (코인 + 주식)
+  const monthMap = {};
+  [c, s].forEach((status, i) => {
+    const bot = i === 0 ? 'coin' : 'stock';
+    (status?.monthly_history || []).forEach(m => {
+      if (!monthMap[m.month]) monthMap[m.month] = {month: m.month, trades: 0, pnl: 0, wins: 0, by_bot: {}};
+      monthMap[m.month].trades += m.trades;
+      monthMap[m.month].pnl += m.pnl;
+      monthMap[m.month].wins += Math.round(m.trades * m.winrate / 100);
+      monthMap[m.month].by_bot[bot] = {trades: m.trades, pnl: m.pnl};
+    });
+  });
+  const months = Object.values(monthMap).sort((a,b) => b.month.localeCompare(a.month));
+  const monthBox = document.getElementById('history_monthly');
+  if (monthBox) {
+    monthBox.innerHTML = months.length === 0
+      ? '<div class="empty">월별 데이터 없음</div>'
+      : '<table style="width:100%"><thead><tr><th style="text-align:left">월</th><th class="num">거래</th><th class="num">승률</th><th class="num">🪙코인</th><th class="num">📈주식</th><th class="num">합계</th></tr></thead><tbody>' +
+        months.map(m => {
+          const wr = m.trades ? (m.wins / m.trades * 100).toFixed(1) : 0;
+          const cls = m.pnl > 0 ? 'up' : m.pnl < 0 ? 'down' : '';
+          const cBot = m.by_bot.coin?.pnl || 0;
+          const sBot = m.by_bot.stock?.pnl || 0;
+          const cCls = cBot > 0 ? 'up' : cBot < 0 ? 'down' : '';
+          const sCls = sBot > 0 ? 'up' : sBot < 0 ? 'down' : '';
+          return `<tr><td><b>${m.month}</b></td><td class="num">${m.trades}</td><td class="num">${wr}%</td>` +
+                 `<td class="num ${cCls}">${fmtSign(cBot)}</td>` +
+                 `<td class="num ${sCls}">${fmtSign(sBot)}</td>` +
+                 `<td class="num ${cls}" style="font-weight:700">${fmtSign(m.pnl)}</td></tr>`;
+        }).join('') + '</tbody></table>';
+  }
+
+  // 일별 캘린더 (60일)
+  const dayMap = {};
+  [c, s].forEach((status, i) => {
+    const bot = i === 0 ? 'coin' : 'stock';
+    (status?.daily_history || []).forEach(d => {
+      if (!dayMap[d.day]) dayMap[d.day] = {day: d.day, trades: 0, pnl: 0, wins: 0, by_bot: {}};
+      dayMap[d.day].trades += d.trades;
+      dayMap[d.day].pnl += d.pnl;
+      dayMap[d.day].wins += Math.round(d.trades * d.winrate / 100);
+      dayMap[d.day].by_bot[bot] = d;
+    });
+  });
+  // 자가개선 일자별 묶음
+  const tuneByDay = {};
+  [c?.tune_history, s?.tune_history].forEach(arr => {
+    (arr || []).forEach(t => {
+      if (!tuneByDay[t.day]) tuneByDay[t.day] = [];
+      tuneByDay[t.day].push(t);
+    });
+  });
+
+  const days = Object.values(dayMap).sort((a,b) => a.day.localeCompare(b.day));
+  const calBox = document.getElementById('history_daily_calendar');
+  if (calBox) {
+    if (days.length === 0) {
+      calBox.innerHTML = '<div class="empty">일별 데이터 없음</div>';
+    } else {
+      // 최근 60일 그리드 (7열)
+      const today = new Date();
+      const grid = [];
+      for (let i = 59; i >= 0; i--) {
+        const d = new Date(today); d.setDate(today.getDate() - i);
+        const ymd = d.toISOString().slice(0,10);
+        const data = dayMap[ymd];
+        const tunes = tuneByDay[ymd] || [];
+        grid.push({ymd, dow: d.getDay(), data, tunes});
+      }
+      const dowLabels = ['일','월','화','수','목','금','토'];
+      let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:10px">';
+      // 헤더
+      html += dowLabels.map(d => `<div style="text-align:center;color:var(--muted);font-size:9px;padding:2px">${d}</div>`).join('');
+      // 첫 주 빈칸 채우기
+      const firstDow = grid[0].dow;
+      for (let i = 0; i < firstDow; i++) html += '<div></div>';
+      grid.forEach(g => {
+        const day = g.ymd.slice(8);
+        if (!g.data) {
+          html += `<div style="aspect-ratio:1;background:#0d1117;border:1px solid var(--line);border-radius:4px;padding:4px;font-size:9px;color:var(--muted)">${day}</div>`;
+        } else {
+          const cls = g.data.pnl > 0 ? 'up' : g.data.pnl < 0 ? 'down' : '';
+          const bgColor = g.data.pnl > 0 ? 'rgba(255,82,82,0.15)' : g.data.pnl < 0 ? 'rgba(33,150,243,0.15)' : '#0d1117';
+          const tuneIcon = g.tunes.length > 0 ? `<div style="position:absolute;top:1px;right:3px;font-size:9px">🤖</div>` : '';
+          html += `<div onclick="openDayModal('${g.ymd}')" style="cursor:pointer;position:relative;aspect-ratio:1;background:${bgColor};border:1px solid var(--line);border-radius:4px;padding:3px;font-size:9px" title="${g.ymd} ${fmtSign(g.data.pnl)} (${g.data.trades}건)">
+            ${tuneIcon}<div style="font-weight:700">${day}</div>
+            <div class="${cls}" style="font-size:8.5px;font-weight:700">${fmtSign(g.data.pnl)}</div>
+            <div style="font-size:8px;color:var(--muted)">${g.data.trades}건</div>
+          </div>`;
+        }
+      });
+      html += '</div>';
+      html += '<div style="margin-top:8px;font-size:10px;color:var(--muted)">🤖 = 자가개선 변경 있는 날</div>';
+      calBox.innerHTML = html;
+    }
+  }
+
+  // 자가개선 변경 로그 (양봇 합산)
+  const tunes = [];
+  (c?.tune_history || []).forEach(t => tunes.push({...t, _bot: '🪙'}));
+  (s?.tune_history || []).forEach(t => tunes.push({...t, _bot: '📈'}));
+  tunes.sort((a,b) => (b.created_at || b.ts || '').localeCompare(a.created_at || a.ts || ''));
+  const tuneBox = document.getElementById('history_tune_log');
+  if (tuneBox) {
+    tuneBox.innerHTML = tunes.length === 0
+      ? '<div class="empty">자가개선 변경 기록 없음 (자정 자동 발동)</div>'
+      : tunes.slice(0, 30).map(t => {
+        const ts = (t.created_at || t.ts || '').slice(0, 16).replace('T', ' ');
+        return `<div style="padding:6px 8px;background:#0d1117;border-left:3px solid var(--info);border-radius:4px;margin-bottom:4px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:2px">
+            <span>${t._bot} ${ts}</span><span>${t.pattern || ''}</span>
+          </div>
+          <div><b>${t.param || ''}</b>: ${t.old_value} → <span class="info">${t.new_value}</span></div>
+          ${t.reason ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${t.reason}</div>` : ''}
+        </div>`;
+      }).join('');
+  }
+}
+
+// 일별 모달
+function openDayModal(ymd) {
+  const c = STATE.coin.status, s = STATE.stock.status;
+  const cDay = (c?.daily_history || []).find(d => d.day === ymd);
+  const sDay = (s?.daily_history || []).find(d => d.day === ymd);
+  const cTunes = (c?.tune_history || []).filter(t => t.day === ymd);
+  const sTunes = (s?.tune_history || []).filter(t => t.day === ymd);
+  const cTrades = (c?.recent_trades || []).filter(t => (t.ts || t.created_at || '').startsWith(ymd));
+  const sTrades = (s?.recent_trades || []).filter(t => (t.ts || t.created_at || '').startsWith(ymd));
+
+  document.getElementById('dayModalTitle').textContent = `📅 ${ymd}`;
+
+  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+  [['🪙 코인', cDay], ['📈 주식', sDay]].forEach(([label, d]) => {
+    if (!d) {
+      html += `<div class="stat" style="padding:8px"><div class="stat-label">${label}</div><div style="color:var(--muted);font-size:11px">거래 없음</div></div>`;
+    } else {
+      const cls = d.pnl > 0 ? 'up' : d.pnl < 0 ? 'down' : '';
+      html += `<div class="stat" style="padding:8px"><div class="stat-label">${label}</div>
+        <div class="${cls}" style="font-size:14px;font-weight:700">${fmtSign(d.pnl)}</div>
+        <div style="font-size:10px;color:var(--muted)">${d.trades}건 승률 ${d.winrate}%</div></div>`;
+    }
+  });
+  html += '</div>';
+
+  // 자가개선
+  if (cTunes.length || sTunes.length) {
+    html += '<div style="margin-bottom:8px"><b>🤖 자가개선 변경</b></div>';
+    [...cTunes.map(t => ({...t, _bot:'🪙'})), ...sTunes.map(t => ({...t, _bot:'📈'}))].forEach(t => {
+      html += `<div style="padding:5px 8px;background:#0d1117;border-radius:4px;margin-bottom:3px;font-size:11px">
+        ${t._bot} <b>${t.param || t.pattern}</b>: ${t.old_value} → <span class="info">${t.new_value}</span>
+        ${t.reason ? `<span style="color:var(--muted);font-size:10px"> (${t.reason})</span>` : ''}</div>`;
+    });
+  }
+
+  // 거래 내역
+  const allTrades = [...cTrades.map(t => ({...t, _bot:'🪙'})), ...sTrades.map(t => ({...t, _bot:'📈'}))];
+  if (allTrades.length) {
+    html += '<div style="margin:8px 0"><b>거래 내역</b></div>';
+    html += '<table style="width:100%;font-size:10.5px"><thead><tr><th>시각</th><th>심볼</th><th>매매</th><th>사유</th><th class="num">P&L</th></tr></thead><tbody>' +
+      allTrades.map(t => {
+        const time = (t.ts || t.created_at || '').slice(11, 16);
+        const sym = t.coin || t.stock_name || t.stock || '-';
+        const cls = (t.pnl || 0) > 0 ? 'up' : (t.pnl || 0) < 0 ? 'down' : '';
+        return `<tr><td>${t._bot} ${time}</td><td>${sym}</td><td>${t.side}</td><td style="font-size:9.5px;color:var(--muted)">${(t.reason || '').slice(0, 16)}</td><td class="num ${cls}">${fmtSign(t.pnl || 0)}</td></tr>`;
+      }).join('') + '</tbody></table>';
+  } else if (!cTunes.length && !sTunes.length) {
+    html += '<div class="empty">이 날 거래 데이터 없음 (recent_trades 50건 윈도우 밖)</div>';
+  }
+
+  document.getElementById('dayModalBody').innerHTML = html;
+  document.getElementById('dayModal').classList.add('show');
+}
+
+function closeDayModal() { document.getElementById('dayModal').classList.remove('show'); }
+
 // ─── 자가 메타분석 + 보유시간 렌더 ─────────────────────
 function renderMetaDiagnosis() {
   const c = STATE.coin.status, s = STATE.stock.status;
@@ -1629,6 +1808,7 @@ function renderHomeOverview() {
   renderChart7d();
   renderAnalyticsCards();
   renderImprovementCards();
+  renderHistoryCards();
 }
 
 function renderChart7d() {
