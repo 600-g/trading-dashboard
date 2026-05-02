@@ -910,8 +910,55 @@ function openDayModal(ymd) {
 
 function closeDayModal() { document.getElementById('dayModal').classList.remove('show'); }
 
+// ─── WhatIf 시뮬 렌더 ─────────────────────────────────
+function renderWhatIf() {
+  const c = STATE.coin.status, s = STATE.stock.status;
+
+  // 양봇 합쳐서 baseline + 시나리오 표시
+  const cWi = c?.whatif_simulation || {};
+  const sWi = s?.whatif_simulation || {};
+  const totalBase = (cWi.baseline_pnl || 0) + (sWi.baseline_pnl || 0);
+  const totalN = (cWi.baseline_trades || 0) + (sWi.baseline_trades || 0);
+
+  const baseEl = document.getElementById('whatif_baseline');
+  if (baseEl) {
+    const cls = totalBase > 0 ? 'up' : totalBase < 0 ? 'down' : '';
+    baseEl.innerHTML = `최근 24h 실제: <b class="${cls}">${fmtSign(totalBase)}원</b> (${totalN}건)`;
+  }
+
+  // 시나리오들 (양봇 분리 표시)
+  const allScenarios = [];
+  (cWi.scenarios || []).forEach(x => allScenarios.push({...x, _bot:'🪙'}));
+  (sWi.scenarios || []).forEach(x => allScenarios.push({...x, _bot:'📈'}));
+  allScenarios.sort((a,b) => b.delta - a.delta);
+
+  const box = document.getElementById('all_whatif');
+  if (!box) return;
+  if (allScenarios.length === 0) {
+    box.innerHTML = '<div class="empty">최근 24h 거래 0건 (시뮬할 데이터 없음)</div>';
+    return;
+  }
+  box.innerHTML = allScenarios.map(sc => {
+    const deltaCls = sc.delta > 0 ? 'up' : sc.delta < 0 ? 'down' : '';
+    const sign = sc.delta >= 0 ? '+' : '';
+    const recommend = sc.improve
+      ? `<span style="background:var(--up);color:#0d1117;padding:2px 6px;border-radius:3px;font-size:9.5px;font-weight:700">✅ 적용 권장</span>`
+      : `<span style="color:var(--muted);font-size:9.5px">유지 권장</span>`;
+    return `<div style="padding:8px 10px;background:#0d1117;border:1px solid var(--line);border-radius:6px;margin-bottom:5px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <div><span style="font-size:10px">${sc._bot}</span> <b>${sc.scenario}</b> ${recommend}</div>
+        <div class="${deltaCls}" style="font-weight:700;font-size:12px">${sign}${fmt(sc.delta)}원</div>
+      </div>
+      <div style="font-size:10px;color:var(--muted)">
+        영향 ${sc.affected_trades}건 / 룰 손익 ${fmtSign(sc.rule_pnl)}원 → 시뮬 결과 <b>${fmtSign(sc.simulated_pnl)}원</b>
+      </div>
+    </div>`;
+  }).join('') + (cWi.note ? `<div style="font-size:9.5px;color:var(--muted);margin-top:6px">${cWi.note}</div>` : '');
+}
+
 // ─── 자가 메타분석 + 보유시간 렌더 ─────────────────────
 function renderMetaDiagnosis() {
+  renderWhatIf();
   const c = STATE.coin.status, s = STATE.stock.status;
 
   // 메타진단 합산
