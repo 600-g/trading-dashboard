@@ -639,6 +639,147 @@ function openStockModal(bot, stock) {
 
 function closeStockModal() { document.getElementById('stockModal').classList.remove('show'); }
 
+// ─── 봇 가동 상태 + 홈 핵심 카드 ──────────────────────────
+async function fetchBotProcesses() {
+  try {
+    const r = await fetch(`${APIS.system}/system/processes`, { signal: AbortSignal.timeout(3000) });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+
+async function cleanupZombies() {
+  if (!confirm('좀비 봇 자동 정리하시겠습니까? (가장 오래된 PID 유지)')) return;
+  try {
+    const r = await fetch(`${APIS.system}/system/processes/cleanup_zombies`, {
+      method: 'POST', signal: AbortSignal.timeout(8000),
+    });
+    const d = await r.json();
+    toast(`🧹 ${d.count}개 좀비 정리 완료`);
+    setTimeout(renderBotProcesses, 1000);
+  } catch (e) { toast('❌ 정리 실패: ' + e.message); }
+}
+
+async function renderBotProcesses() {
+  const grid = document.getElementById('proc_grid');
+  const sumEl = document.getElementById('proc_summary');
+  const btn = document.getElementById('proc_cleanup_btn');
+  if (!grid) return;
+  const data = await fetchBotProcesses();
+  if (!data) {
+    grid.innerHTML = '<div class="empty">system_api(:9000) 연결 실패</div>';
+    return;
+  }
+  const labelMap = {
+    'coinbot': '🪙 코인봇',
+    'stockbot-main': '📈 주식봇',
+    'stockbot-api': '📈 주식 API',
+    'system-api': '⚙️ 시스템 API',
+    'firebase-bridge': '☁️ Firebase',
+  };
+  const colorMap = {
+    'ok': 'var(--up)', 'down': 'var(--down)', 'duplicate': 'var(--warn)', 'warn': 'var(--warn)',
+  };
+  const iconMap = {'ok':'✅','down':'❌','duplicate':'⚠️','warn':'⚠️'};
+  let hasZombie = false;
+  grid.innerHTML = data.processes.map(p => {
+    if (p.status === 'duplicate') hasZombie = true;
+    const color = colorMap[p.status] || 'var(--muted)';
+    const icon = iconMap[p.status] || '•';
+    const startInfo = p.processes.length > 0
+      ? `<div style="font-size:9px;color:var(--muted)">PID ${p.processes.map(x=>x.pid).join(', ')}</div>`
+      : '';
+    return `<div style="padding:6px 8px;background:#0d1117;border:1px solid var(--line);border-radius:6px;border-left:3px solid ${color}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;font-weight:600">${labelMap[p.name] || p.name}</span>
+        <span style="font-size:11px">${icon} ${p.running}/${p.expected}</span>
+      </div>
+      ${startInfo}
+    </div>`;
+  }).join('');
+  if (sumEl) {
+    sumEl.innerHTML = data.ok
+      ? '<span class="up">✅ 모든 프로세스 정상</span>'
+      : `<span class="down">${hasZombie ? '⚠️ 좀비 감지' : '❌ 일부 down'}</span>`;
+  }
+  if (btn) btn.style.display = hasZombie ? 'block' : 'none';
+}
+
+// ─── 홈 핵심 카드 (종목별 톱 + 페르소나 + 자가개선 요약) ──────
+function renderHomeCoreCards() {
+  const c = STATE.coin.status, s = STATE.stock.status;
+
+  // 종목 톱5 수익/손실 (양봇 합산, 홈 컴팩트 버전)
+  const winnersAll = [];
+  const losersAll = [];
+  ((c?.stock_pnl_ranking?.winners) || []).forEach(w => winnersAll.push({...w, _bot:'coin'}));
+  ((s?.stock_pnl_ranking?.winners) || []).forEach(w => winnersAll.push({...w, _bot:'stock'}));
+  ((c?.stock_pnl_ranking?.losers) || []).forEach(l => losersAll.push({...l, _bot:'coin'}));
+  ((s?.stock_pnl_ranking?.losers) || []).forEach(l => losersAll.push({...l, _bot:'stock'}));
+  winnersAll.sort((a,b) => b.total_pnl - a.total_pnl);
+  losersAll.sort((a,b) => a.total_pnl - b.total_pnl);
+
+  const renderRow = (r) => {
+    const cls = r.total_pnl > 0 ? 'up' : 'down';
+    const icon = r._bot === 'coin' ? '🪙' : '📈';
+    return `<div onclick="openStockHistoryModal('${r._bot}','${r.stock}')" style="cursor:pointer;display:flex;justify-content:space-between;padding:5px 7px;background:#0d1117;border:1px solid var(--line);border-radius:5px;font-size:10.5px">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${icon} <b>${(r.stock_name || r.stock).slice(0,12)}</b></span>
+      <span class="${cls}" style="font-weight:700;white-space:nowrap;margin-left:4px">${fmtSign(r.total_pnl)}</span>
+    </div>`;
+  };
+  const wBox = document.getElementById('home_winners');
+  if (wBox) wBox.innerHTML = winnersAll.length === 0 ? '<div class="empty" style="font-size:10px">데이터 누적 중</div>' :
+    winnersAll.slice(0,5).map(renderRow).join('');
+  const lBox = document.getElementById('home_losers');
+  if (lBox) lBox.innerHTML = losersAll.length === 0 ? '<div class="empty" style="font-size:10px">손실 종목 없음</div>' :
+    losersAll.slice(0,5).map(renderRow).join('');
+
+  // 페르소나 (양봇 합산)
+  const personas = [];
+  ((c?.persona_stats) || []).forEach(p => personas.push({...p, _bot:'coin'}));
+  ((s?.persona_stats) || []).forEach(p => personas.push({...p, _bot:'stock'}));
+  personas.sort((a,b) => (b.total_pnl||0) - (a.total_pnl||0));
+  const pBox = document.getElementById('home_personas');
+  if (pBox) {
+    pBox.innerHTML = personas.length === 0 ? '<div class="empty">데이터 누적 중</div>' :
+      personas.map(p => {
+        const meta = PERSONA_META[p.persona] || {icon:'•', cls:'p-default', trait:''};
+        const wr = p.winrate || 0;
+        const wrCls = wr >= 60 ? 'up' : wr < 40 ? 'down' : '';
+        const pnlCls = p.total_pnl > 0 ? 'up' : p.total_pnl < 0 ? 'down' : '';
+        const botIcon = p._bot === 'coin' ? '🪙' : '📈';
+        return `<div onclick="openPersonaModal('${p._bot}','${p.persona}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#0d1117;border:1px solid var(--line);border-radius:5px;font-size:11px">
+          <div style="overflow:hidden">${botIcon} <b>${p.persona}</b> <span style="font-size:9.5px;color:var(--muted)">${meta.trait || ''}</span></div>
+          <div style="display:flex;gap:10px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:6px">
+            <span>${p.trades}건</span>
+            <span class="${wrCls}">${wr.toFixed(0)}%</span>
+            <span class="${pnlCls}" style="font-weight:700;min-width:70px;text-align:right">${fmtSign(p.total_pnl)}</span>
+          </div>
+        </div>`;
+      }).join('');
+  }
+
+  // 자가개선 최근 변경
+  const tunes = [];
+  ((c?.tune_history) || []).forEach(t => tunes.push({...t, _bot:'🪙'}));
+  ((s?.tune_history) || []).forEach(t => tunes.push({...t, _bot:'📈'}));
+  tunes.sort((a,b) => (b.created_at || b.ts || '').localeCompare(a.created_at || a.ts || ''));
+  const sumEl = document.getElementById('home_tune_summary');
+  if (sumEl) sumEl.innerHTML = tunes.length === 0
+    ? '<span style="color:var(--muted)">변경 없음</span>'
+    : `<span class="info">최근 ${tunes.length}건 자동 조정</span>`;
+  const tBox = document.getElementById('home_tune_recent');
+  if (tBox) {
+    tBox.innerHTML = tunes.length === 0 ? '<div class="empty">자가개선 변경 없음 (자정 자동)</div>' :
+      tunes.slice(0, 4).map(t => {
+        const ts = (t.created_at || t.ts || '').slice(5, 16).replace('T', ' ');
+        return `<div style="display:flex;justify-content:space-between;padding:5px 7px;background:#0d1117;border-left:2px solid var(--info);border-radius:4px;margin-bottom:3px;font-size:10.5px">
+          <span>${t._bot} ${ts} <b>${t.param || t.pattern || ''}</b></span>
+          <span>${t.old_value} → <span class="info">${t.new_value}</span></span>
+        </div>`;
+      }).join('');
+  }
+}
+
 // ─── 종목별 누적 거래 (history 사용, 50건 윈도우 회피) ──────
 let _stockHistoryFilter = localStorage.getItem('stockHistoryFilter') || 'all';
 
@@ -1948,6 +2089,8 @@ function renderHomeOverview() {
   renderAnalyticsCards();
   renderImprovementCards();
   renderHistoryCards();
+  renderHomeCoreCards();
+  renderBotProcesses();
 }
 
 function renderChart7d() {

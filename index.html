@@ -462,6 +462,60 @@
     .cal-cell{padding:2px; font-size:9px}
     .cal-pnl{font-size:8px}
     .cal-day{font-size:9px}
+
+    /* 필터바 — 가로 스크롤 + 칩 작게 */
+    .filter-bar{
+      flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden;
+      -webkit-overflow-scrolling:touch; padding:6px 0 8px;
+      scrollbar-width:none;
+    }
+    .filter-bar::-webkit-scrollbar{display:none}
+    .filter-chip{padding:4px 8px; font-size:10px; white-space:nowrap; flex-shrink:0}
+    .filter-count{font-size:9px; padding-right:2px}
+
+    /* 페르소나 배지 — 한 줄 유지 + trait 숨김 */
+    .p-badge{padding:1px 5px; font-size:9px; gap:2px}
+    .p-badge .p-trait{display:none}
+
+    /* 마켓 배지 */
+    .badge{padding:2px 5px; font-size:9px}
+
+    /* 종목별 누적 거래 — 한 줄 유지 */
+    #stock_history_list > div > div:first-child{font-size:11px; min-width:0; overflow:hidden}
+
+    /* WhatIf / 메타진단 / 후회 카드 — 폰트 컴팩트 */
+    #all_whatif > div, #all_meta_diag > div, #all_hindsight > div,
+    #all_persona_stats > div, #all_council_log > div, #all_reason_stats > div,
+    #all_time_slots > div, #all_hold_time > div{font-size:10.5px}
+
+    /* 페르소나×사유 매트릭스 — 가로 스크롤 */
+    #all_persona_matrix{overflow-x:auto; -webkit-overflow-scrolling:touch}
+    #all_persona_matrix table{min-width:480px; font-size:9.5px}
+    #all_persona_matrix th{font-size:9px; padding:3px}
+    #all_persona_matrix td{padding:3px}
+
+    /* 일별 캘린더 — 셀 더 작게 */
+    #history_daily_calendar > div{gap:2px !important}
+    #history_daily_calendar > div > div{padding:2px !important; font-size:8px !important}
+
+    /* 모달 — 폰 화면 꽉 차게 */
+    .modal{max-width:100%; padding:14px; border-radius:12px}
+    .modal-title{font-size:13px}
+    #posModalBody, #stockModalBody, #personaModalBody, #dayModalBody{font-size:10.5px}
+    #stockModalBody table, #personaModalBody table, #dayModalBody table{font-size:9.5px}
+    #stockModalBody th, #personaModalBody th, #dayModalBody th{padding:4px 3px; font-size:9px}
+    #stockModalBody td, #personaModalBody td, #dayModalBody td{padding:4px 3px; font-size:9.5px}
+
+    /* 행 좌측 마켓 컬러 보더 — 모바일에서도 유지 */
+    tr.row-coin td:first-child, tr.row-kr td:first-child, tr.row-us td:first-child{
+      box-shadow:inset 2px 0 0; padding-left:6px;
+    }
+
+    /* 메뉴 카드 클릭 (홈 빠른 진입) — 패딩 줄임 */
+    .grid-2 > .card[onclick]{padding:10px 12px}
+
+    /* 자가개선 통합 뷰 카드들 좌측 강조선 작게 */
+    .view#view-improvement .card{border-left-width:2px}
   }
 
   /* 아주 작은 폰 (375px 이하 - iPhone SE 등) */
@@ -668,15 +722,49 @@
         </div>
       </div>
 
-      <!-- 빠른 진입 (분석/자가개선) -->
-      <div class="grid-2" style="gap:10px;margin-bottom:10px">
-        <div class="card compact" onclick="goView('analytics')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--info)'" onmouseout="this.style.borderColor='var(--line)'">
-          <div class="card-title">📊 종목/사유/시간 분석 →</div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.6">종목 톱5 손익 · Qullamaggie 룰별 검증 · 시간대별 성과 · 페르소나 × 사유 매트릭스</div>
+      <!-- ⚙️ 봇 가동 상태 (좀비/중복 즉시 표시) -->
+      <div class="card compact" style="margin-bottom:10px;border-left:3px solid var(--info)">
+        <div class="card-title">⚙️ 봇 가동 상태 <span id="proc_summary" style="margin-left:auto;font-size:11px;font-weight:400"></span></div>
+        <div id="proc_grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;font-size:11px"><div class="empty">로딩...</div></div>
+        <button id="proc_cleanup_btn" onclick="cleanupZombies()" style="display:none;margin-top:8px;padding:8px 12px;background:var(--down);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;width:100%">🧹 좀비 자동 정리</button>
+      </div>
+
+      <!-- 🏆 종목별 수익 톱 (홈 핵심 카드) -->
+      <div class="card compact" style="margin-bottom:10px">
+        <div class="card-title">🏆 종목별 수익/손실 톱 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <div style="font-size:10px;color:var(--up);font-weight:700;margin-bottom:4px">🟢 수익 톱5</div>
+            <div id="home_winners" style="display:flex;flex-direction:column;gap:3px"><div class="empty">로딩...</div></div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--down);font-weight:700;margin-bottom:4px">🔴 손실 톱5</div>
+            <div id="home_losers" style="display:flex;flex-direction:column;gap:3px"><div class="empty">로딩...</div></div>
+          </div>
         </div>
-        <div class="card compact" onclick="goView('improvement')" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--info)'" onmouseout="this.style.borderColor='var(--line)'">
-          <div class="card-title">🎭 페르소나/자가개선 →</div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.6">페르소나 누적 성과 · 위원회 토론 · 후회분석 · 자체평가 · 반복 실수</div>
+      </div>
+
+      <!-- 🎭 페르소나 잘하는/못하는 (홈 핵심) -->
+      <div class="card compact" style="margin-bottom:10px">
+        <div class="card-title">🎭 페르소나별 성과 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
+        <div id="home_personas" style="display:flex;flex-direction:column;gap:4px"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 🤖 자가개선 진행중? (홈 핵심) -->
+      <div class="card compact" style="margin-bottom:10px">
+        <div class="card-title">🤖 자가개선 진행 상황 <span id="home_tune_summary" style="margin-left:auto;font-size:11px;font-weight:400"></span></div>
+        <div id="home_tune_recent" style="font-size:11px"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 빠른 진입 (분석/자가개선/히스토리) -->
+      <div class="grid-2" style="gap:10px;margin-bottom:10px">
+        <div class="card compact" onclick="goView('history')" style="cursor:pointer">
+          <div class="card-title">📅 일별/월별 히스토리 →</div>
+          <div style="font-size:10.5px;color:var(--muted)">캘린더 · 종목별 누적</div>
+        </div>
+        <div class="card compact" onclick="goView('improvement')" style="cursor:pointer">
+          <div class="card-title">🤖 자가개선 통합 →</div>
+          <div style="font-size:10.5px;color:var(--muted)">메타진단 · WhatIf · 위원회 · 후회</div>
         </div>
       </div>
 
@@ -1275,6 +1363,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=3.1-whatif" defer></script>
+<script src="app.js?v=3.2-home-core" defer></script>
 </body>
 </html>
