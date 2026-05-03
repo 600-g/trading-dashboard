@@ -995,7 +995,7 @@ function renderHistoryCards() {
   }
 }
 
-// 일별 모달 — 거래/복기/개선/토론/후회 모두 한 곳
+// 일별 모달 — 거래/복기/개선/토론/후회 모두 한 곳 + 승/패/손절/익절 stat
 function openDayModal(ymd) {
   const c = STATE.coin.status, s = STATE.stock.status;
   const cDay = (c?.daily_history || []).find(d => d.day === ymd);
@@ -1012,16 +1012,43 @@ function openDayModal(ymd) {
 
   document.getElementById('dayModalTitle').textContent = `📅 ${ymd}`;
 
-  // 1. 일자 손익 요약
-  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+  // 1. 종합 stat (양봇 합산: 거래/승률/평균수익/평균손실/손절/익절/RR)
+  const allTrades = [...cTrades.map(t => ({...t, _bot:'🪙'})), ...sTrades.map(t => ({...t, _bot:'📈'}))];
+  const sells = allTrades.filter(t => (t.side || '').toLowerCase().includes('sell') || (t.side || '').toUpperCase() === 'SELL');
+  const wins = sells.filter(t => (t.pnl || 0) > 0);
+  const losses = sells.filter(t => (t.pnl || 0) < 0);
+  const totalPnl = sells.reduce((a, t) => a + (t.pnl || 0), 0);
+  const wr = sells.length ? (wins.length / sells.length * 100) : 0;
+  const avgWin = wins.length ? wins.reduce((a,t)=>a+(t.pnl||0),0)/wins.length : 0;
+  const avgLoss = losses.length ? losses.reduce((a,t)=>a+(t.pnl||0),0)/losses.length : 0;
+  const stopLossN = sells.filter(t => (t.reason||'').includes('손절') || (t.reason||'').includes('긴급')).length;
+  const takeProfitN = sells.filter(t => (t.reason||'').includes('익절') || (t.reason||'').includes('트레일링')).length;
+  const rr = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : 0;
+  const totalCls = totalPnl > 0 ? 'up' : totalPnl < 0 ? 'down' : '';
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">
+    <div class="stat" style="padding:7px"><div class="stat-label">총 P&L</div><div class="${totalCls}" style="font-size:13px;font-weight:700">${fmtSign(totalPnl)}</div></div>
+    <div class="stat" style="padding:7px"><div class="stat-label">거래</div><div style="font-size:13px;font-weight:700">${sells.length}건</div></div>
+    <div class="stat" style="padding:7px"><div class="stat-label">승률</div><div class="${wr>=60?'up':wr<40?'down':''}" style="font-size:13px;font-weight:700">${wr.toFixed(0)}%</div></div>
+    <div class="stat" style="padding:7px"><div class="stat-label">RR</div><div style="font-size:13px;font-weight:700">${rr.toFixed(2)}</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">
+    <div class="stat" style="padding:6px"><div class="stat-label">🟢 익절</div><div class="up" style="font-size:12px;font-weight:700">${wins.length}건</div><div style="font-size:9px;color:var(--muted)">평균 ${fmtSign(avgWin)}</div></div>
+    <div class="stat" style="padding:6px"><div class="stat-label">🔴 손절</div><div class="down" style="font-size:12px;font-weight:700">${losses.length}건</div><div style="font-size:9px;color:var(--muted)">평균 ${fmtSign(avgLoss)}</div></div>
+    <div class="stat" style="padding:6px"><div class="stat-label">🛑 손절룰</div><div style="font-size:12px;font-weight:700">${stopLossN}회</div></div>
+    <div class="stat" style="padding:6px"><div class="stat-label">🎯 익절룰</div><div style="font-size:12px;font-weight:700">${takeProfitN}회</div></div>
+  </div>`;
+
+  // 봇별 분리 (코인/주식)
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">';
   [['🪙 코인', cDay], ['📈 주식', sDay]].forEach(([label, d]) => {
     if (!d) {
-      html += `<div class="stat" style="padding:8px"><div class="stat-label">${label}</div><div style="color:var(--muted);font-size:11px">거래 없음</div></div>`;
+      html += `<div class="stat" style="padding:6px"><div class="stat-label">${label}</div><div style="color:var(--muted);font-size:10px">거래 없음</div></div>`;
     } else {
       const cls = d.pnl > 0 ? 'up' : d.pnl < 0 ? 'down' : '';
-      html += `<div class="stat" style="padding:8px"><div class="stat-label">${label}</div>
-        <div class="${cls}" style="font-size:14px;font-weight:700">${fmtSign(d.pnl)}</div>
-        <div style="font-size:10px;color:var(--muted)">${d.trades}건 · 승률 ${d.winrate}%</div></div>`;
+      html += `<div class="stat" style="padding:6px"><div class="stat-label">${label}</div>
+        <div class="${cls}" style="font-size:13px;font-weight:700">${fmtSign(d.pnl)}</div>
+        <div style="font-size:10px;color:var(--muted)">${d.trades}건 · ${d.winrate}%</div></div>`;
     }
   });
   html += '</div>';

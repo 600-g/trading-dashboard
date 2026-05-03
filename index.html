@@ -729,38 +729,17 @@
         <button id="proc_cleanup_btn" onclick="cleanupZombies()" style="display:none;margin-top:8px;padding:8px 12px;background:var(--down);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;width:100%">🧹 좀비 자동 정리</button>
       </div>
 
-      <!-- 🏆 종목별 수익 톱 (홈 핵심 카드) -->
-      <div class="card compact" style="margin-bottom:10px">
-        <div class="card-title">🏆 종목별 수익/손실 톱 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div>
-            <div style="font-size:10px;color:var(--up);font-weight:700;margin-bottom:4px">🟢 수익 톱5</div>
-            <div id="home_winners" style="display:flex;flex-direction:column;gap:3px"><div class="empty">로딩...</div></div>
-          </div>
-          <div>
-            <div style="font-size:10px;color:var(--down);font-weight:700;margin-bottom:4px">🔴 손실 톱5</div>
-            <div id="home_losers" style="display:flex;flex-direction:column;gap:3px"><div class="empty">로딩...</div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 🎭 페르소나 잘하는/못하는 (홈 핵심) -->
-      <div class="card compact" style="margin-bottom:10px">
-        <div class="card-title">🎭 페르소나별 성과 <span style="opacity:0.6;font-size:10px;font-weight:400">· 클릭하면 거래내역</span></div>
-        <div id="home_personas" style="display:flex;flex-direction:column;gap:4px"><div class="empty">로딩...</div></div>
-      </div>
-
-      <!-- 🤖 자가개선 진행중? (홈 핵심) -->
-      <div class="card compact" style="margin-bottom:10px">
-        <div class="card-title">🤖 자가개선 진행 상황 <span id="home_tune_summary" style="margin-left:auto;font-size:11px;font-weight:400"></span></div>
-        <div id="home_tune_recent" style="font-size:11px"><div class="empty">로딩...</div></div>
+      <!-- 🗓 캘린더 (홈 메인) — 일자 클릭 → 승/패/수익/손절 + 자가개선 모달 -->
+      <div class="card compact" style="margin-bottom:10px;border-left:3px solid var(--info)">
+        <div class="card-title">🗓 일별 손익 + 자가개선 캘린더 <span style="opacity:0.6;font-size:10px;font-weight:400">· 날짜 클릭하면 승률·손절·익절·복기</span></div>
+        <div id="home_calendar"><div class="empty">로딩...</div></div>
       </div>
 
       <!-- 빠른 진입 -->
       <div class="grid-2" style="gap:10px;margin-bottom:10px">
         <div class="card compact" onclick="goView('history')" style="cursor:pointer">
           <div class="card-title">📅 수익 히스토리 →</div>
-          <div style="font-size:10.5px;color:var(--muted)">일별 · 월별 · 종목별 누적</div>
+          <div style="font-size:10.5px;color:var(--muted)">월별 · 종목별 누적</div>
         </div>
         <div class="card compact" onclick="goView('improvement')" style="cursor:pointer">
           <div class="card-title">🤖 자가개선 →</div>
