@@ -1569,8 +1569,11 @@ function goView(view) {
   closeMenu();
   if (view === 'system') loadSystemView();
   if (view === 'tune') initCalendar();
-  // 홈/히스토리 진입 시 캘린더 강제 렌더
-  if (view === 'home' || view === 'history') {
+  // 홈/히스토리 진입 시 캘린더 강제 렌더 (홈은 view-tune의 진짜 캘린더 사용)
+  if (view === 'home') {
+    try { initCalendar(); } catch(e) { console.error(e); }
+  }
+  if (view === 'history') {
     try { renderHistoryCards(); } catch(e) { console.error(e); }
   }
   if (view === 'alerts') {

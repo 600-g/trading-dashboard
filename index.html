@@ -708,11 +708,33 @@
         </div>
       </div>
 
-      <!-- 🗓 캘린더 — 코인/주식 시장 바로 밑 (홈 메인) -->
+      <!-- 🗓 자가개선 캘린더 (view-tune과 동일, 홈 메인 위치) -->
       <div class="card compact" style="margin-bottom:10px;border-left:3px solid var(--info)">
-        <div class="card-title">🗓 일별 손익 + 자가개선 캘린더 <span style="opacity:0.6;font-size:10px;font-weight:400">· 날짜 클릭하면 승률·손절·익절·복기</span></div>
-        <div id="home_calendar"><div class="empty">로딩...</div></div>
+        <div class="card-title"><svg class="ic"><use href="#i-cal"/></svg>자가개선 캘린더
+          <span class="right">
+            <span style="color:var(--warn)">●</span> 튜닝 발생일
+          </span>
+        </div>
+        <div class="cal-head">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="calNav(-1)">◀</button>
+            <button class="cal-nav-btn" onclick="calNav(0)">오늘</button>
+            <button class="cal-nav-btn" onclick="calNav(1)">▶</button>
+          </div>
+          <div id="cal_month" style="font-size:14px; font-weight:600">-</div>
+          <div style="display:flex; gap:6px">
+            <button class="cal-nav-btn" onclick="calBot('coin')" id="calbtn_coin">코인</button>
+            <button class="cal-nav-btn" onclick="calBot('stock')" id="calbtn_stock">주식</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal_grid"></div>
+        <div class="cal-detail" id="cal_detail">
+          <div class="empty" style="font-size:11px">날짜를 선택하면 그 날의 거래/자가개선/WhatIf 표시</div>
+        </div>
       </div>
+
+      <!-- view-tune 의 중복 element 충돌 방지 (숨김 컨테이너) -->
+      <div id="home_calendar" style="display:none"></div>
 
       <!-- 7일 P&L 차트 -->
       <div class="card compact">
@@ -1104,27 +1126,9 @@
     <!-- ─── 자가개선 캘린더 뷰 ─────────────── -->
     <div class="view" id="view-tune">
       <div class="card">
-        <div class="card-title"><svg class="ic"><use href="#i-cal"/></svg>자가개선 캘린더
-          <span class="right">
-            <span style="color:var(--warn)">●</span> 튜닝 발생일
-          </span>
-        </div>
-        <div class="cal-head">
-          <div class="cal-nav">
-            <button class="cal-nav-btn" onclick="calNav(-1)">◀</button>
-            <button class="cal-nav-btn" onclick="calNav(0)">오늘</button>
-            <button class="cal-nav-btn" onclick="calNav(1)">▶</button>
-          </div>
-          <div id="cal_month" style="font-size:14px; font-weight:600">-</div>
-          <div style="display:flex; gap:6px">
-            <button class="cal-nav-btn" onclick="calBot('coin')" id="calbtn_coin">코인</button>
-            <button class="cal-nav-btn" onclick="calBot('stock')" id="calbtn_stock">주식</button>
-          </div>
-        </div>
-        <div class="cal-grid" id="cal_grid"></div>
-        <div class="cal-detail" id="cal_detail">
-          <div class="empty">날짜를 선택하세요</div>
-        </div>
+        <div class="card-title">자가개선 캘린더는 홈으로 통합됨</div>
+        <div style="font-size:12px;color:var(--muted);padding:8px 0">홈 화면 → 코인/주식 시장 바로 밑 캘린더에서 확인하세요.</div>
+        <button onclick="goView('home')" style="margin-top:8px;padding:10px;background:var(--info);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">🏠 홈으로 이동</button>
       </div>
 
       <div class="card">
@@ -1273,7 +1277,7 @@
   <!-- 메뉴 하단 footer (버전 + CC + 캐시 초기화 버튼) -->
   <div style="padding:14px 16px;border-top:1px solid var(--line);text-align:center;font-size:10.5px;color:var(--muted);line-height:1.7">
     <button onclick="hardReload()" style="width:100%;padding:9px;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--info);font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:8px" title="캐시 모두 삭제 + 강제 새로고침">
-      🔄 v3.9-cal-debug · 캐시 초기화
+      🔄 v4.0-real-calendar · 캐시 초기화
     </button>
     <div>© 2026 두근컴퍼니</div>
     <div style="font-size:9.5px;margin-top:2px;opacity:0.6">코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
@@ -1363,6 +1367,6 @@ async function hardReload() {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=3.9-cal-debug" defer></script>
+<script src="app.js?v=4.0-real-calendar" defer></script>
 </body>
 </html>
