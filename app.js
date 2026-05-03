@@ -967,11 +967,18 @@ function renderHistoryCards() {
     calHtml += '</div>';
     calHtml += '<div style="margin-top:8px;font-size:10px;color:var(--muted)">🤖 = 자가개선 변경 있는 날 · 클릭하면 상세</div>';
   }
-  // 양쪽 모두 채움 (홈 메인 + 히스토리 메뉴)
+  // 양쪽 모두 채움 (홈 메인 + 히스토리 메뉴) + 디버깅
+  const cDh = (c?.daily_history || []).length;
+  const sDh = (s?.daily_history || []).length;
+  console.log(`[캘린더] dayMap=${Object.keys(dayMap).length}일 / 코인 daily=${cDh} 주식 daily=${sDh} / calHtml=${calHtml.length}자`);
   const homeCal = document.getElementById('home_calendar');
-  if (homeCal) homeCal.innerHTML = calHtml;
+  if (homeCal) {
+    homeCal.innerHTML = calHtml || `<div class="empty">캘린더 데이터 없음 (코인:${cDh}일 / 주식:${sDh}일)</div>`;
+  }
   const histCal = document.getElementById('history_daily_calendar');
-  if (histCal) histCal.innerHTML = calHtml;
+  if (histCal) {
+    histCal.innerHTML = calHtml || `<div class="empty">캘린더 데이터 없음 (코인:${cDh}일 / 주식:${sDh}일)</div>`;
+  }
 
   // 자가개선 변경 로그 (양봇 합산)
   const tunes = [];

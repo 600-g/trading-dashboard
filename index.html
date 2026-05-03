@@ -561,15 +561,20 @@
 
 <div class="app">
 
-  <!-- 상단바 -->
+  <!-- 상단바 — 메뉴 버튼 좌측 -->
   <div class="topbar">
-    <h1 id="topbar-title" onclick="goView('home')" style="cursor:pointer; user-select:none">📊 두근 트레이딩</h1>
+    <div style="display:flex; gap:8px; align-items:center">
+      <button class="menu-btn" onclick="openMenu()" aria-label="메뉴" style="margin-right:4px">
+        <svg class="ic ic-lg"><use href="#i-menu"/></svg>
+      </button>
+      <h1 id="topbar-title" onclick="goView('home')" style="cursor:pointer; user-select:none">📊 두근 트레이딩</h1>
+    </div>
     <div style="display:flex; gap:10px; align-items:center">
       <span class="updated"><svg class="ic ic-xs"><use href="#i-clock"/></svg><span id="upd-time">-</span></span>
       <button class="menu-btn" onclick="loadAll(true)" aria-label="새로고침" title="새로고침">
         <svg class="ic"><use href="#i-refresh"/></svg>
       </button>
-      <button class="menu-btn" onclick="openMenu()" aria-label="메뉴">
+      <button class="menu-btn" onclick="openMenu()" aria-label="메뉴" style="display:none">
         <svg class="ic ic-lg"><use href="#i-menu"/></svg>
       </button>
     </div>
@@ -703,6 +708,12 @@
         </div>
       </div>
 
+      <!-- 🗓 캘린더 — 코인/주식 시장 바로 밑 (홈 메인) -->
+      <div class="card compact" style="margin-bottom:10px;border-left:3px solid var(--info)">
+        <div class="card-title">🗓 일별 손익 + 자가개선 캘린더 <span style="opacity:0.6;font-size:10px;font-weight:400">· 날짜 클릭하면 승률·손절·익절·복기</span></div>
+        <div id="home_calendar"><div class="empty">로딩...</div></div>
+      </div>
+
       <!-- 7일 P&L 차트 -->
       <div class="card compact">
         <div class="card-title"><svg class="ic"><use href="#i-trend"/></svg>7일 P&amp;L<span class="right" id="chart_total">-</span></div>
@@ -730,12 +741,6 @@
         <div class="card-title">⚙️ 봇 가동 상태 <span id="proc_summary" style="margin-left:auto;font-size:11px;font-weight:400"></span></div>
         <div id="proc_grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;font-size:11px"><div class="empty">로딩...</div></div>
         <button id="proc_cleanup_btn" onclick="cleanupZombies()" style="display:none;margin-top:8px;padding:8px 12px;background:var(--down);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;width:100%">🧹 좀비 자동 정리</button>
-      </div>
-
-      <!-- 🗓 캘린더 (홈 메인) — 일자 클릭 → 승/패/수익/손절 + 자가개선 모달 -->
-      <div class="card compact" style="margin-bottom:10px;border-left:3px solid var(--info)">
-        <div class="card-title">🗓 일별 손익 + 자가개선 캘린더 <span style="opacity:0.6;font-size:10px;font-weight:400">· 날짜 클릭하면 승률·손절·익절·복기</span></div>
-        <div id="home_calendar"><div class="empty">로딩...</div></div>
       </div>
 
       <!-- 빠른 진입 -->
@@ -1264,6 +1269,15 @@
     </div>
 
   </div>
+
+  <!-- 메뉴 하단 footer (버전 + CC + 캐시 초기화 버튼) -->
+  <div style="padding:14px 16px;border-top:1px solid var(--line);text-align:center;font-size:10.5px;color:var(--muted);line-height:1.7">
+    <button onclick="hardReload()" style="width:100%;padding:9px;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--info);font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:8px" title="캐시 모두 삭제 + 강제 새로고침">
+      🔄 v3.9-cal-debug · 캐시 초기화
+    </button>
+    <div>© 2026 두근컴퍼니</div>
+    <div style="font-size:9.5px;margin-top:2px;opacity:0.6">코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
+  </div>
 </aside>
 
 <!-- 비밀번호 모달 -->
@@ -1316,14 +1330,7 @@
   </div>
 </div>
 
-<div class="footer" style="text-align:center;padding:16px;font-size:11px;color:var(--muted);line-height:1.6">
-  <div>두근 트레이딩 · 코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
-  <div style="margin-top:4px">
-    <span onclick="hardReload()" style="cursor:pointer;padding:4px 10px;background:#0d1117;border:1px solid var(--line);border-radius:6px;font-weight:700;color:var(--info)" title="클릭하면 캐시 초기화 + 새로고침">🔄 v3.7-final</span>
-    <span style="margin:0 8px">·</span>
-    <span>© 2026 두근컴퍼니</span>
-  </div>
-</div>
+<div class="footer" style="text-align:center;padding:16px;font-size:10px;color:var(--muted)">두근 트레이딩 · 코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
 
 <script>
 async function hardReload() {
@@ -1356,6 +1363,6 @@ async function hardReload() {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=3.7-final" defer></script>
+<script src="app.js?v=3.9-cal-debug" defer></script>
 </body>
 </html>
