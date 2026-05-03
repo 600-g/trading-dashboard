@@ -930,48 +930,48 @@ function renderHistoryCards() {
   });
 
   const days = Object.values(dayMap).sort((a,b) => a.day.localeCompare(b.day));
-  const calBox = document.getElementById('history_daily_calendar');
-  if (calBox) {
-    if (days.length === 0) {
-      calBox.innerHTML = '<div class="empty">일별 데이터 없음</div>';
-    } else {
-      // 최근 60일 그리드 (7열)
-      const today = new Date();
-      const grid = [];
-      for (let i = 59; i >= 0; i--) {
-        const d = new Date(today); d.setDate(today.getDate() - i);
-        const ymd = d.toISOString().slice(0,10);
-        const data = dayMap[ymd];
-        const tunes = tuneByDay[ymd] || [];
-        grid.push({ymd, dow: d.getDay(), data, tunes});
-      }
-      const dowLabels = ['일','월','화','수','목','금','토'];
-      let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:10px">';
-      // 헤더
-      html += dowLabels.map(d => `<div style="text-align:center;color:var(--muted);font-size:9px;padding:2px">${d}</div>`).join('');
-      // 첫 주 빈칸 채우기
-      const firstDow = grid[0].dow;
-      for (let i = 0; i < firstDow; i++) html += '<div></div>';
-      grid.forEach(g => {
-        const day = g.ymd.slice(8);
-        if (!g.data) {
-          html += `<div style="aspect-ratio:1;background:#0d1117;border:1px solid var(--line);border-radius:4px;padding:4px;font-size:9px;color:var(--muted)">${day}</div>`;
-        } else {
-          const cls = g.data.pnl > 0 ? 'up' : g.data.pnl < 0 ? 'down' : '';
-          const bgColor = g.data.pnl > 0 ? 'rgba(255,82,82,0.15)' : g.data.pnl < 0 ? 'rgba(33,150,243,0.15)' : '#0d1117';
-          const tuneIcon = g.tunes.length > 0 ? `<div style="position:absolute;top:1px;right:3px;font-size:9px">🤖</div>` : '';
-          html += `<div onclick="openDayModal('${g.ymd}')" style="cursor:pointer;position:relative;aspect-ratio:1;background:${bgColor};border:1px solid var(--line);border-radius:4px;padding:3px;font-size:9px" title="${g.ymd} ${fmtSign(g.data.pnl)} (${g.data.trades}건)">
-            ${tuneIcon}<div style="font-weight:700">${day}</div>
-            <div class="${cls}" style="font-size:8.5px;font-weight:700">${fmtSign(g.data.pnl)}</div>
-            <div style="font-size:8px;color:var(--muted)">${g.data.trades}건</div>
-          </div>`;
-        }
-      });
-      html += '</div>';
-      html += '<div style="margin-top:8px;font-size:10px;color:var(--muted)">🤖 = 자가개선 변경 있는 날</div>';
-      calBox.innerHTML = html;
+  // 캘린더 HTML 한 번 만들어서 홈 + 히스토리 두 곳 모두 채움
+  let calHtml = '';
+  if (days.length === 0) {
+    calHtml = '<div class="empty">일별 데이터 없음</div>';
+  } else {
+    const today = new Date();
+    const grid = [];
+    for (let i = 59; i >= 0; i--) {
+      const d = new Date(today); d.setDate(today.getDate() - i);
+      const ymd = d.toISOString().slice(0,10);
+      const data = dayMap[ymd];
+      const tunes = tuneByDay[ymd] || [];
+      grid.push({ymd, dow: d.getDay(), data, tunes});
     }
+    const dowLabels = ['일','월','화','수','목','금','토'];
+    calHtml = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:10px">';
+    calHtml += dowLabels.map(d => `<div style="text-align:center;color:var(--muted);font-size:9px;padding:2px">${d}</div>`).join('');
+    const firstDow = grid[0].dow;
+    for (let i = 0; i < firstDow; i++) calHtml += '<div></div>';
+    grid.forEach(g => {
+      const day = g.ymd.slice(8);
+      if (!g.data) {
+        calHtml += `<div style="aspect-ratio:1;background:#0d1117;border:1px solid var(--line);border-radius:4px;padding:4px;font-size:9px;color:var(--muted)">${day}</div>`;
+      } else {
+        const cls = g.data.pnl > 0 ? 'up' : g.data.pnl < 0 ? 'down' : '';
+        const bgColor = g.data.pnl > 0 ? 'rgba(255,82,82,0.15)' : g.data.pnl < 0 ? 'rgba(33,150,243,0.15)' : '#0d1117';
+        const tuneIcon = g.tunes.length > 0 ? `<div style="position:absolute;top:1px;right:3px;font-size:9px">🤖</div>` : '';
+        calHtml += `<div onclick="openDayModal('${g.ymd}')" style="cursor:pointer;position:relative;aspect-ratio:1;background:${bgColor};border:1px solid var(--line);border-radius:4px;padding:3px;font-size:9px" title="${g.ymd} ${fmtSign(g.data.pnl)} (${g.data.trades}건)">
+          ${tuneIcon}<div style="font-weight:700">${day}</div>
+          <div class="${cls}" style="font-size:8.5px;font-weight:700">${fmtSign(g.data.pnl)}</div>
+          <div style="font-size:8px;color:var(--muted)">${g.data.trades}건</div>
+        </div>`;
+      }
+    });
+    calHtml += '</div>';
+    calHtml += '<div style="margin-top:8px;font-size:10px;color:var(--muted)">🤖 = 자가개선 변경 있는 날 · 클릭하면 상세</div>';
   }
+  // 양쪽 모두 채움 (홈 메인 + 히스토리 메뉴)
+  const homeCal = document.getElementById('home_calendar');
+  if (homeCal) homeCal.innerHTML = calHtml;
+  const histCal = document.getElementById('history_daily_calendar');
+  if (histCal) histCal.innerHTML = calHtml;
 
   // 자가개선 변경 로그 (양봇 합산)
   const tunes = [];
@@ -2174,12 +2174,6 @@ function renderHomeOverview() {
   renderHistoryCards();
   renderHomeCoreCards();
   renderBotProcesses();
-  // 홈 캘린더는 히스토리 캘린더와 동일 — 동일 ID로 렌더되도록 cloneNode
-  const homeBox = document.getElementById('home_calendar');
-  const histBox = document.getElementById('history_daily_calendar');
-  if (homeBox && histBox && histBox.innerHTML) {
-    homeBox.innerHTML = histBox.innerHTML;
-  }
 }
 
 function renderChart7d() {
