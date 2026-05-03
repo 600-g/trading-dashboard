@@ -1562,6 +1562,10 @@ function goView(view) {
   closeMenu();
   if (view === 'system') loadSystemView();
   if (view === 'tune') initCalendar();
+  // 홈/히스토리 진입 시 캘린더 강제 렌더
+  if (view === 'home' || view === 'history') {
+    try { renderHistoryCards(); } catch(e) { console.error(e); }
+  }
   if (view === 'alerts') {
     const perm = ('Notification' in window) ? Notification.permission : 'X';
     document.getElementById('alert_perm_status').textContent =

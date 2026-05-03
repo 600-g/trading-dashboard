@@ -61,10 +61,10 @@
   .menu-bg.show{opacity:1; pointer-events:auto}
 
   .menu{
-    position:fixed; top:0; right:0; bottom:0;
+    position:fixed; top:0; left:0; bottom:0;
     width:min(320px, 88vw);
-    background:var(--card); border-left:1px solid var(--line);
-    z-index:100; transform:translateX(100%); transition:transform .25s;
+    background:var(--card); border-right:1px solid var(--line);
+    z-index:100; transform:translateX(-100%); transition:transform .25s;
     display:flex; flex-direction:column;
     padding-top: env(safe-area-inset-top);
   }
@@ -1316,7 +1316,37 @@
   </div>
 </div>
 
-<div class="footer">두근 트레이딩 v1.1 · 코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
+<div class="footer" style="text-align:center;padding:16px;font-size:11px;color:var(--muted);line-height:1.6">
+  <div>두근 트레이딩 · 코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
+  <div style="margin-top:4px">
+    <span onclick="hardReload()" style="cursor:pointer;padding:4px 10px;background:#0d1117;border:1px solid var(--line);border-radius:6px;font-weight:700;color:var(--info)" title="클릭하면 캐시 초기화 + 새로고침">🔄 v3.7-final</span>
+    <span style="margin:0 8px">·</span>
+    <span>© 2026 두근컴퍼니</span>
+  </div>
+</div>
+
+<script>
+async function hardReload() {
+  try {
+    // Service Worker 등록 해제
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) await r.unregister();
+    }
+    // Cache Storage 모두 삭제
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    // localStorage 보존하고 강제 새로고침 (no-cache)
+    const url = new URL(location.href);
+    url.searchParams.set('_cb', Date.now());
+    location.replace(url.toString());
+  } catch (e) {
+    location.reload(true);
+  }
+}
+</script>
 <div class="toast" id="toast"></div>
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
@@ -1326,6 +1356,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=3.6-cachebust" defer></script>
+<script src="app.js?v=3.7-final" defer></script>
 </body>
 </html>
