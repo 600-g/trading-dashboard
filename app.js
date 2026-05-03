@@ -995,7 +995,7 @@ function renderHistoryCards() {
   }
 }
 
-// 일별 모달
+// 일별 모달 — 거래/복기/개선/토론/후회 모두 한 곳
 function openDayModal(ymd) {
   const c = STATE.coin.status, s = STATE.stock.status;
   const cDay = (c?.daily_history || []).find(d => d.day === ymd);
@@ -1004,9 +1004,15 @@ function openDayModal(ymd) {
   const sTunes = (s?.tune_history || []).filter(t => t.day === ymd);
   const cTrades = (c?.recent_trades || []).filter(t => (t.ts || t.created_at || '').startsWith(ymd));
   const sTrades = (s?.recent_trades || []).filter(t => (t.ts || t.created_at || '').startsWith(ymd));
+  const cReviews = (c?.reviews || []).filter(r => (r.created_at || r.reviewed_at || '').startsWith(ymd));
+  const sReviews = (s?.reviews || []).filter(r => (r.created_at || r.reviewed_at || '').startsWith(ymd));
+  const cCouncils = (c?.council_log || []).filter(r => (r.updated_at || r.ts || '').startsWith(ymd));
+  const sCouncils = (s?.council_log || []).filter(r => (r.updated_at || r.ts || '').startsWith(ymd));
+  const todayHind = ymd === new Date().toISOString().slice(0,10) ? (c?.hindsight || s?.hindsight || {}) : {};
 
   document.getElementById('dayModalTitle').textContent = `📅 ${ymd}`;
 
+  // 1. 일자 손익 요약
   let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
   [['🪙 코인', cDay], ['📈 주식', sDay]].forEach(([label, d]) => {
     if (!d) {
@@ -1015,34 +1021,70 @@ function openDayModal(ymd) {
       const cls = d.pnl > 0 ? 'up' : d.pnl < 0 ? 'down' : '';
       html += `<div class="stat" style="padding:8px"><div class="stat-label">${label}</div>
         <div class="${cls}" style="font-size:14px;font-weight:700">${fmtSign(d.pnl)}</div>
-        <div style="font-size:10px;color:var(--muted)">${d.trades}건 승률 ${d.winrate}%</div></div>`;
+        <div style="font-size:10px;color:var(--muted)">${d.trades}건 · 승률 ${d.winrate}%</div></div>`;
     }
   });
   html += '</div>';
 
-  // 자가개선
-  if (cTunes.length || sTunes.length) {
-    html += '<div style="margin-bottom:8px"><b>🤖 자가개선 변경</b></div>';
-    [...cTunes.map(t => ({...t, _bot:'🪙'})), ...sTunes.map(t => ({...t, _bot:'📈'}))].forEach(t => {
-      html += `<div style="padding:5px 8px;background:#0d1117;border-radius:4px;margin-bottom:3px;font-size:11px">
-        ${t._bot} <b>${t.param || t.pattern}</b>: ${t.old_value} → <span class="info">${t.new_value}</span>
-        ${t.reason ? `<span style="color:var(--muted);font-size:10px"> (${t.reason})</span>` : ''}</div>`;
-    });
-  }
-
-  // 거래 내역
+  // 2. 거래 내역
   const allTrades = [...cTrades.map(t => ({...t, _bot:'🪙'})), ...sTrades.map(t => ({...t, _bot:'📈'}))];
   if (allTrades.length) {
-    html += '<div style="margin:8px 0"><b>거래 내역</b></div>';
-    html += '<table style="width:100%;font-size:10.5px"><thead><tr><th>시각</th><th>심볼</th><th>매매</th><th>사유</th><th class="num">P&L</th></tr></thead><tbody>' +
+    html += '<details open style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:700;font-size:12px;padding:4px 0">💼 거래 내역 (' + allTrades.length + '건)</summary>';
+    html += '<table style="width:100%;font-size:10.5px;margin-top:6px"><thead><tr><th>시각</th><th>심볼</th><th>매매</th><th>전략</th><th>사유</th><th class="num">P&L</th></tr></thead><tbody>' +
       allTrades.map(t => {
         const time = (t.ts || t.created_at || '').slice(11, 16);
         const sym = t.coin || t.stock_name || t.stock || '-';
+        const persona = t.persona || t.profile || '';
         const cls = (t.pnl || 0) > 0 ? 'up' : (t.pnl || 0) < 0 ? 'down' : '';
-        return `<tr><td>${t._bot} ${time}</td><td>${sym}</td><td>${t.side}</td><td style="font-size:9.5px;color:var(--muted)">${(t.reason || '').slice(0, 16)}</td><td class="num ${cls}">${fmtSign(t.pnl || 0)}</td></tr>`;
-      }).join('') + '</tbody></table>';
-  } else if (!cTunes.length && !sTunes.length) {
-    html += '<div class="empty">이 날 거래 데이터 없음 (recent_trades 50건 윈도우 밖)</div>';
+        return `<tr><td>${t._bot} ${time}</td><td>${sym}</td><td>${t.side}</td><td style="font-size:9px">${persona.slice(0,5)}</td><td style="font-size:9px;color:var(--muted)">${(t.reason || '').slice(0, 14)}</td><td class="num ${cls}">${fmtSign(t.pnl || 0)}</td></tr>`;
+      }).join('') + '</tbody></table></details>';
+  }
+
+  // 3. 자가개선 변경
+  const allTunes = [...cTunes.map(t => ({...t, _bot:'🪙'})), ...sTunes.map(t => ({...t, _bot:'📈'}))];
+  if (allTunes.length) {
+    html += '<details open style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:700;font-size:12px;padding:4px 0">🤖 자가개선 변경 (' + allTunes.length + '건)</summary>';
+    html += allTunes.map(t => `<div style="padding:5px 8px;background:#0d1117;border-left:2px solid var(--info);border-radius:4px;margin:3px 0;font-size:11px">
+      ${t._bot} <b>${t.param || t.pattern}</b>: ${t.old_value} → <span class="info">${t.new_value}</span>
+      ${t.reason ? `<div style="color:var(--muted);font-size:10px">${t.reason}</div>` : ''}</div>`).join('');
+    html += '</details>';
+  }
+
+  // 4. 자체평가 / 복기
+  const allReviews = [...cReviews.map(r => ({...r, _bot:'🪙'})), ...sReviews.map(r => ({...r, _bot:'📈'}))];
+  if (allReviews.length) {
+    html += '<details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:700;font-size:12px;padding:4px 0">📝 자체평가/복기 (' + allReviews.length + '건)</summary>';
+    html += allReviews.slice(0, 10).map(r => `<div style="padding:5px 8px;background:#0d1117;border-radius:4px;margin:3px 0;font-size:10.5px">
+      ${r._bot} <b>${r.stock || ''}</b> <span style="color:var(--muted)">${r.verdict || ''}</span>
+      ${r.lesson ? `<div style="font-size:10px;margin-top:2px">💡 ${r.lesson.slice(0,80)}</div>` : ''}</div>`).join('');
+    html += '</details>';
+  }
+
+  // 5. 위원회 토론
+  const allCouncils = [...cCouncils.map(r => ({...r, _bot:'🪙'})), ...sCouncils.map(r => ({...r, _bot:'📈'}))];
+  if (allCouncils.length) {
+    html += '<details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:700;font-size:12px;padding:4px 0">📋 위원회 토론 (' + allCouncils.length + '건)</summary>';
+    html += allCouncils.map(d => {
+      const consensus = d['합의'] || d.consensus || {};
+      return `<div style="padding:6px 8px;background:#0d1117;border-radius:4px;margin:3px 0;font-size:10.5px">
+        ${d._bot} <b>합의 th=${consensus.threshold || '?'}</b>
+        <div style="color:var(--muted);font-size:10px">${(consensus.reason || '').slice(0, 100)}</div></div>`;
+    }).join('');
+    html += '</details>';
+  }
+
+  // 6. 후회분석 (오늘 날짜만)
+  if (todayHind && (todayHind.hindsight_conserv || todayHind.hindsight_calib)) {
+    const conserv = todayHind.hindsight_conserv;
+    const calib = todayHind.hindsight_calib;
+    html += '<details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:700;font-size:12px;padding:4px 0">⚠️ 후회분석 (Qullamaggie WhatIf)</summary>';
+    if (conserv) html += `<div style="padding:6px 8px;background:#0d1117;border-radius:4px;font-size:10.5px;margin:3px 0">진단: <b>${conserv.verdict || '-'}</b> · ${(conserv.regret || '').slice(0,80)}</div>`;
+    if (calib?.need_calibration) html += `<div style="padding:6px 8px;background:#0d1117;border-radius:4px;font-size:10.5px;margin:3px 0;color:var(--warn)">⚠️ 모멘텀 교정: ${calib.reason}</div>`;
+    html += '</details>';
+  }
+
+  if (!allTrades.length && !allTunes.length && !allReviews.length && !allCouncils.length) {
+    html += '<div class="empty">이 날 데이터 없음</div>';
   }
 
   document.getElementById('dayModalBody').innerHTML = html;
@@ -1050,6 +1092,15 @@ function openDayModal(ymd) {
 }
 
 function closeDayModal() { document.getElementById('dayModal').classList.remove('show'); }
+
+// 빈 카드 자동 숨김 헬퍼 — 데이터 없는 카드 .card 부모 hide
+function hideIfEmpty(elementId, isEmpty) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const card = el.closest('.card');
+  if (!card) return;
+  card.style.display = isEmpty ? 'none' : '';
+}
 
 // ─── WhatIf 시뮬 렌더 ─────────────────────────────────
 function renderWhatIf() {
@@ -1075,8 +1126,9 @@ function renderWhatIf() {
 
   const box = document.getElementById('all_whatif');
   if (!box) return;
+  hideIfEmpty('all_whatif', allScenarios.length === 0);
   if (allScenarios.length === 0) {
-    box.innerHTML = '<div class="empty">최근 24h 거래 0건 (시뮬할 데이터 없음)</div>';
+    box.innerHTML = '<div class="empty">최근 24h 거래 0건</div>';
     return;
   }
   box.innerHTML = allScenarios.map(sc => {
@@ -1136,13 +1188,15 @@ function renderMetaDiagnosis() {
       html += allRec.map(r => `<div style="padding:6px 8px;background:#0d1117;border-left:3px solid var(--down);border-radius:4px;margin-bottom:4px">
         <span style="font-size:10px;color:var(--muted)">${r._bot}</span> <b>${r.rule}</b>: ${r.current}<br><span style="font-size:10.5px;opacity:0.85">${r.action}</span></div>`).join('');
     }
-    box.innerHTML = html || '<div class="empty">데이터 누적 중 (거래 15+건 후 자동 진단)</div>';
+    box.innerHTML = html || '<div class="empty">데이터 누적 중</div>';
   }
+  hideIfEmpty('all_meta_diag', allWin.length + allWarn.length + allRec.length === 0);
 
   // 보유시간 합산
   const ht = [];
   (c?.hold_time_stats || []).forEach(h => ht.push({...h, _bot:'🪙'}));
   (s?.hold_time_stats || []).forEach(h => ht.push({...h, _bot:'📈'}));
+  hideIfEmpty('all_hold_time', ht.length === 0);
   const htBox = document.getElementById('all_hold_time');
   if (htBox) {
     if (ht.length === 0) {
@@ -1354,6 +1408,8 @@ function renderImprovementCards() {
     }
   }
 
+  hideIfEmpty('all_persona_stats', personas.length === 0);
+
   // 위원회 토론
   const councils = [];
   (c?.council_log || []).forEach(x => councils.push({...x, _bot:'coin'}));
@@ -1363,6 +1419,7 @@ function renderImprovementCards() {
     if (councils.length === 0) {
       cBox.innerHTML = '<div class="empty">아직 토론 기록 없음 (코인 자정 / KR 15:35 / US 05:10 자동 발동)</div>';
     } else {
+      hideIfEmpty('all_council_log', false);
       cBox.innerHTML = councils.map(d => {
         const consensus = d['합의'] || d.consensus || {};
         const market = d.market || (d._bot === 'coin' ? '🪙 코인' : '📈 주식');
