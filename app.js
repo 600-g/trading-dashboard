@@ -2671,6 +2671,13 @@ async function renderCalendar() {
 
 async function selectDay(dateStr) {
   STATE.cal.selectedDay = dateStr;
+  // 팝업 모달로 표시 (하단 cal_detail 대신)
+  openDayModal(dateStr);
+  return;
+}
+
+async function _selectDay_old(dateStr) {
+  STATE.cal.selectedDay = dateStr;
   const detail = document.getElementById('cal_detail');
   const bot = STATE.cal.bot;
   const data = await fetchCalendarData(bot, STATE.cal.year, STATE.cal.month);
