@@ -1053,8 +1053,7 @@ function openDayModal(ymd) {
   });
   html += '</div>';
 
-  // 2. 거래 내역
-  const allTrades = [...cTrades.map(t => ({...t, _bot:'🪙'})), ...sTrades.map(t => ({...t, _bot:'📈'}))];
+  // 2. 거래 내역 (allTrades 위에서 이미 선언됨)
   if (allTrades.length) {
     html += '<details open style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:700;font-size:12px;padding:4px 0">💼 거래 내역 (' + allTrades.length + '건)</summary>';
     html += '<table style="width:100%;font-size:10.5px;margin-top:6px"><thead><tr><th>시각</th><th>심볼</th><th>매매</th><th>전략</th><th>사유</th><th class="num">P&L</th></tr></thead><tbody>' +
@@ -2175,6 +2174,12 @@ function renderHomeOverview() {
   renderHistoryCards();
   renderHomeCoreCards();
   renderBotProcesses();
+  // 홈 캘린더는 히스토리 캘린더와 동일 — 동일 ID로 렌더되도록 cloneNode
+  const homeBox = document.getElementById('home_calendar');
+  const histBox = document.getElementById('history_daily_calendar');
+  if (homeBox && histBox && histBox.innerHTML) {
+    homeBox.innerHTML = histBox.innerHTML;
+  }
 }
 
 function renderChart7d() {
