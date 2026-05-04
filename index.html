@@ -504,6 +504,21 @@
       padding:4px 8px; font-size:10px; font-weight:700; cursor:pointer;
       white-space:nowrap; flex-shrink:0;
     }
+    .close-icon-btn{
+      background:var(--down); color:#fff; border:none; border-radius:6px;
+      width:32px; height:32px; cursor:pointer;
+      display:inline-flex; align-items:center; justify-content:center;
+      transition:transform .1s;
+    }
+    .close-icon-btn:active{transform:scale(0.92)}
+    .cancel-icon-btn{
+      background:#6b7280; color:#fff; border:none; border-radius:6px;
+      width:32px; height:32px; cursor:pointer;
+      display:inline-flex; align-items:center; justify-content:center;
+    }
+    .sort-arrow{display:inline-block; opacity:0.4; margin-left:3px; font-size:9px; transition:opacity .15s}
+    .sort-arrow.active{opacity:1; color:var(--info)}
+    th[onclick]:hover{background:#1a1f2e}
     .cancel-btn{
       background:#6b7280; color:#fff; border:none; border-radius:5px;
       padding:4px 8px; font-size:10px; cursor:pointer;
@@ -687,6 +702,10 @@
 <!-- SVG 정의 -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
+    <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-cancel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+    <symbol id="i-sort-asc" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-6 8h12z"/></symbol>
+    <symbol id="i-sort-desc" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20l6-8H6z"/></symbol>
     <symbol id="i-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9h4.5a1.5 1.5 0 010 3H9m0 0h5a1.5 1.5 0 010 3H9m0-6v6m3-9v2m0 7v2"/></symbol>
     <symbol id="i-stock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></symbol>
@@ -1238,8 +1257,15 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>코인 / 전략</th><th class="num">평단</th><th class="num">수량</th><th class="num">투자금</th><th class="num">현재금액 (손익)</th></tr></thead>
-            <tbody id="coin_positions"><tr><td colspan="5" class="empty">로딩...</td></tr></tbody>
+            <thead><tr>
+              <th onclick="sortPos('coin','symbol')" style="cursor:pointer">코인/전략 <span class="sort-arrow" data-key="symbol"></span></th>
+              <th class="num" onclick="sortPos('coin','avg')" style="cursor:pointer">평단 <span class="sort-arrow" data-key="avg"></span></th>
+              <th class="num" onclick="sortPos('coin','amount')" style="cursor:pointer">수량 <span class="sort-arrow" data-key="amount"></span></th>
+              <th class="num" onclick="sortPos('coin','invested')" style="cursor:pointer">투자금 <span class="sort-arrow" data-key="invested"></span></th>
+              <th class="num" onclick="sortPos('coin','pnl')" style="cursor:pointer">현재금액(손익) <span class="sort-arrow" data-key="pnl"></span></th>
+              <th class="num" style="width:60px">관리</th>
+            </tr></thead>
+            <tbody id="coin_positions"><tr><td colspan="6" class="empty">로딩...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1302,8 +1328,15 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>종목 / 전략</th><th class="num">평단</th><th class="num">수량</th><th class="num">투자금</th><th class="num">현재금액 (손익)</th></tr></thead>
-            <tbody id="stock_positions"><tr><td colspan="5" class="empty">로딩...</td></tr></tbody>
+            <thead><tr>
+              <th onclick="sortPos('stock','symbol')" style="cursor:pointer">종목/전략 <span class="sort-arrow" data-key="symbol"></span></th>
+              <th class="num" onclick="sortPos('stock','avg')" style="cursor:pointer">평단 <span class="sort-arrow" data-key="avg"></span></th>
+              <th class="num" onclick="sortPos('stock','amount')" style="cursor:pointer">수량 <span class="sort-arrow" data-key="amount"></span></th>
+              <th class="num" onclick="sortPos('stock','invested')" style="cursor:pointer">투자금 <span class="sort-arrow" data-key="invested"></span></th>
+              <th class="num" onclick="sortPos('stock','pnl')" style="cursor:pointer">현재금액(손익) <span class="sort-arrow" data-key="pnl"></span></th>
+              <th class="num" style="width:60px">관리</th>
+            </tr></thead>
+            <tbody id="stock_positions"><tr><td colspan="6" class="empty">로딩...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1521,7 +1554,7 @@
   <!-- 메뉴 하단 footer (버전 + CC + 캐시 초기화 버튼) -->
   <div style="padding:14px 16px;border-top:1px solid var(--line);text-align:center;font-size:10.5px;color:var(--muted);line-height:1.7">
     <button onclick="hardReload()" style="width:100%;padding:9px;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--info);font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:8px" title="캐시 모두 삭제 + 강제 새로고침">
-      🔄 v4.7-close-btn · 캐시 초기화
+      🔄 v4.8-sort-svg · 캐시 초기화
     </button>
     <div>© 2026 두근컴퍼니</div>
     <div style="font-size:9.5px;margin-top:2px;opacity:0.6">코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
@@ -1611,6 +1644,6 @@ async function hardReload() {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=4.7-close-btn" defer></script>
+<script src="app.js?v=4.8-sort-svg" defer></script>
 </body>
 </html>

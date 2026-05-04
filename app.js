@@ -737,6 +737,53 @@ function scrollToMobileCalendar() {
   document.getElementById('cal_grid')?.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
+// ─── 보유 테이블 정렬 (헤더 클릭) ────────────────────────
+const _sortState = {
+  coin: {key:'pnl', dir:'desc'},
+  stock: {key:'pnl', dir:'desc'},
+};
+function sortPos(bot, key) {
+  const s = _sortState[bot];
+  if (s.key === key) s.dir = s.dir === 'desc' ? 'asc' : 'desc';
+  else { s.key = key; s.dir = 'desc'; }
+  // 화살표 갱신
+  const tableId = `${bot}_positions`;
+  const tbl = document.getElementById(tableId)?.closest('table');
+  if (tbl) {
+    tbl.querySelectorAll('.sort-arrow').forEach(el => {
+      const k = el.dataset.key;
+      if (k === key) {
+        el.innerHTML = s.dir === 'desc' ? '▼' : '▲';
+        el.classList.add('active');
+      } else {
+        el.innerHTML = '⇅'; el.classList.remove('active');
+      }
+    });
+  }
+  renderBotPanel(bot);
+}
+
+function _sortRows(rows, bot) {
+  const s = _sortState[bot];
+  const get = (p, k) => {
+    if (k === 'symbol') return p.coin || p.stock_name || p.stock || '';
+    if (k === 'avg') return +(p.entry_price || p.avg_price_krw || p.avg_price || 0);
+    if (k === 'amount') return +(p.amount || 0);
+    if (k === 'invested') return +(p.krw_invested || p.notional_krw || ((+p.avg_price_krw || +p.avg_price || +p.entry_price || 0) * (+p.amount || 0)));
+    if (k === 'pnl') {
+      if (p.pnl_pct != null) return +p.pnl_pct;
+      const cur = +p.current_price || 0, avg = +p.avg_price || +p.entry_price || 0;
+      return avg > 0 && cur > 0 ? (cur - avg) / avg : 0;
+    }
+    return 0;
+  };
+  return [...rows].sort((a, b) => {
+    const av = get(a, s.key), bv = get(b, s.key);
+    if (typeof av === 'string') return s.dir === 'desc' ? bv.localeCompare(av) : av.localeCompare(bv);
+    return s.dir === 'desc' ? bv - av : av - bv;
+  });
+}
+
 // ─── 청산 예약 (사용자 [청산] 버튼) ─────────────────────
 async function schedulePosClose(bot, symbol, name) {
   if (!confirm(`${name} 청산 예약?\n다음 사이클 (60초 내) 자동 매도됩니다.`)) return;
@@ -2265,10 +2312,12 @@ function applyStatusUI(bot, status) {
       ? `총 ${all.length}건`
       : `총 ${all.length}건 / 필터 ${positions.length}건`;
 
+    // 정렬 적용
+    const sorted = _sortRows(positions, bot);
     if (positions.length === 0) {
-      posTb.innerHTML = `<tr><td colspan="5" class="empty">${all.length === 0 ? '보유 없음' : '필터 결과 없음'}</td></tr>`;
+      posTb.innerHTML = `<tr><td colspan="6" class="empty">${all.length === 0 ? '보유 없음' : '필터 결과 없음'}</td></tr>`;
     } else if (bot === 'coin') {
-      posTb.innerHTML = positions.map(p => {
+      posTb.innerHTML = sorted.map(p => {
         const amount = p.amount != null ? +p.amount : 0;
         const avg = p.entry_price != null ? +p.entry_price : 0;
         const cur = p.current_price != null ? +p.current_price : 0;
@@ -2280,17 +2329,18 @@ function applyStatusUI(bot, status) {
         const sign = pnl >= 0 ? '+' : '';
         const isSched = (_scheduledClose.coin || []).includes(p.coin);
         const closeBtn = isSched
-          ? `<button class="cancel-btn" style="margin-top:3px;font-size:9px;padding:3px 6px" onclick="event.stopPropagation();cancelPosClose('coin','${p.coin}','${p.coin}')">⏸취소</button>`
-          : `<button class="close-btn" style="margin-top:3px;font-size:9px;padding:3px 6px" onclick="event.stopPropagation();schedulePosClose('coin','${p.coin}','${p.coin}')">🔴청산</button>`;
-        return `<tr class="row-coin" onclick="openStockHistoryModal('coin','${p.coin}')" style="cursor:pointer"><td><b>${p.coin}</b>${personaBadge(p.persona)}<div>${closeBtn}</div></td>` +
+          ? `<button class="cancel-icon-btn" title="청산 예약 취소" onclick="event.stopPropagation();cancelPosClose('coin','${p.coin}','${p.coin}')"><svg class="ic"><use href="#i-cancel"/></svg></button>`
+          : `<button class="close-icon-btn" title="청산 (다음 사이클 자동 매도)" onclick="event.stopPropagation();schedulePosClose('coin','${p.coin}','${p.coin}')"><svg class="ic"><use href="#i-close"/></svg></button>`;
+        return `<tr class="row-coin" onclick="openStockHistoryModal('coin','${p.coin}')" style="cursor:pointer"><td><b>${p.coin}</b>${personaBadge(p.persona)}</td>` +
                `<td class="num">${avg > 0 ? fmt(avg) : '-'}</td>` +
                `<td class="num">${amount.toFixed(4)}</td>` +
                `<td class="num">${fmt(invested)}원</td>` +
                `<td class="num ${pctCls}"><b>${fmt(currentValue)}원</b>` +
-                 `<div style="font-size:10px;font-weight:600;opacity:0.9">${sign}${fmt(pnl)}원 (${sign}${pct.toFixed(2)}%)</div></td></tr>`;
+                 `<div style="font-size:10px;font-weight:600;opacity:0.9">${sign}${fmt(pnl)}원 (${sign}${pct.toFixed(2)}%)</div></td>` +
+               `<td class="num">${closeBtn}</td></tr>`;
       }).join('');
     } else {
-      posTb.innerHTML = positions.map(p => {
+      posTb.innerHTML = sorted.map(p => {
         const cur = p.current_price || 0;
         const avg = +p.avg_price || 0;
         const avgKrw = +(p.avg_price_krw || avg) || 0;
@@ -2314,9 +2364,9 @@ function applyStatusUI(bot, status) {
         const noPnl = !(cur > 0);
         const isSched = (_scheduledClose.stock || []).includes(p.stock);
         const closeBtn = isSched
-          ? `<button class="cancel-btn" style="margin-top:3px;font-size:9px;padding:3px 6px" onclick="event.stopPropagation();cancelPosClose('stock','${p.stock}','${p.stock_name||p.stock}')">⏸취소</button>`
-          : `<button class="close-btn" style="margin-top:3px;font-size:9px;padding:3px 6px" onclick="event.stopPropagation();schedulePosClose('stock','${p.stock}','${p.stock_name||p.stock}')">🔴청산</button>`;
-        return `<tr class="${rowCls}" onclick="openStockHistoryModal('stock','${p.stock}')" style="cursor:pointer"><td>${mkBadge} <b>${p.stock_name || p.stock}</b> <span style="color:var(--muted);font-size:9px">${p.stock}</span>${personaBadge(p.profile)}<div>${closeBtn}</div></td>` +
+          ? `<button class="cancel-icon-btn" title="청산 예약 취소" onclick="event.stopPropagation();cancelPosClose('stock','${p.stock}','${p.stock_name||p.stock}')"><svg class="ic"><use href="#i-cancel"/></svg></button>`
+          : `<button class="close-icon-btn" title="청산 (다음 사이클 자동 매도)" onclick="event.stopPropagation();schedulePosClose('stock','${p.stock}','${p.stock_name||p.stock}')"><svg class="ic"><use href="#i-close"/></svg></button>`;
+        return `<tr class="${rowCls}" onclick="openStockHistoryModal('stock','${p.stock}')" style="cursor:pointer"><td>${mkBadge} <b>${p.stock_name || p.stock}</b> <span style="color:var(--muted);font-size:9px">${p.stock}</span>${personaBadge(p.profile)}</td>` +
                `<td class="num">${fmt(avgKrw)}${priceUsd}</td>` +
                `<td class="num">${amount}</td>` +
                `<td class="num">${fmt(invested)}원</td>` +
@@ -2324,7 +2374,7 @@ function applyStatusUI(bot, status) {
                  ? `<td class="num">-</td>`
                  : `<td class="num ${pctCls}"><b>${fmt(currentValue)}원</b>` +
                    `<div style="font-size:10px;font-weight:600;opacity:0.9">${sign}${fmt(pnl)}원 (${sign}${pct.toFixed(2)}%)</div></td>`) +
-               `</tr>`;
+               `<td class="num">${closeBtn}</td></tr>`;
       }).join('');
     }
   }
