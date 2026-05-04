@@ -397,16 +397,20 @@ function clearAllAlerts() {
 // ─── 페르소나 / 카테고리 메타 ─────────────────────────────────────
 // trait = 한글 특성 (이모지로는 안 보이는 핵심 행동 요약)
 const PERSONA_META = {
-  // 코인봇
-  '박단타':       {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'초단타·빠른회전'},
-  '최모멘텀':     {icon:'🚀', cls:'p-momentum', group:'momentum', trait:'급등추격·돌파매수'},
-  '이패턴':       {icon:'📊', cls:'p-pattern',  group:'pattern',  trait:'차트패턴·기술적'},
-  '김리스크':     {icon:'🛡', cls:'p-risk',     group:'risk',     trait:'보수적·저변동'},
-  // 주식봇 KR
+  // UPGRADE_SPEC v1.0 — 신규 3 페르소나
+  '이단타':       {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'당일청산·4h캡·-1%조기손절'},
+  '김안전':       {icon:'🛡', cls:'p-risk',     group:'risk',     trait:'1~3일 스윙·모멘텀 청산'},
+  '쿨마매기봇':   {icon:'🚀', cls:'p-momentum', group:'momentum', trait:'정통 EP/Breakout 라이딩'},
+  // 구버전 호환 (히스토리 표시용)
+  '박단타':       {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'(구) 초단타'},
+  '최모멘텀':     {icon:'🚀', cls:'p-momentum', group:'momentum', trait:'(구) 급등추격'},
+  '이패턴':       {icon:'📊', cls:'p-pattern',  group:'pattern',  trait:'(구) 차트패턴'},
+  '김리스크':     {icon:'🛡', cls:'p-risk',     group:'risk',     trait:'(구) 보수적'},
+  // 주식봇 KR (구)
   '단타':         {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'당일청산·빠른익절'},
   '중타':         {icon:'🎯', cls:'p-midta',    group:'midta',    trait:'1~3일·스윙'},
   '장기':         {icon:'🌳', cls:'p-long',     group:'long',     trait:'주단위·트렌드라이딩'},
-  // 주식봇 US
+  // 주식봇 US (구)
   '나스닥단타':   {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'나스닥·당일'},
   'S&P안정형':    {icon:'🛡', cls:'p-snp',      group:'risk',     trait:'대형주·저변동'},
   '기술주모멘텀': {icon:'🚀', cls:'p-tech',     group:'momentum', trait:'테크주·돌파'},
