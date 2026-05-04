@@ -44,7 +44,7 @@
     max-width: 420px;
     margin: 0 auto;
     min-height: 100vh;
-    padding-bottom: 80px;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));  /* 플로팅 탭바 + 홈바 */
   }
 
   /* SVG 아이콘 베이스 */
@@ -353,20 +353,21 @@
   /* 하단 탭바 */
   .tabbar {
     position: fixed;
-    bottom: 0;
+    bottom: max(16px, env(safe-area-inset-bottom));  /* 홈바와 안 겹치게 */
     left: 50%;
     transform: translateX(-50%);
-    width: 100%;
-    max-width: 420px;
+    width: calc(100% - 24px);
+    max-width: 396px;
     background: var(--surface);
     display: flex;
-    border-top: 1px solid var(--line);
+    border-radius: 18px;  /* 둥근 플로팅 탭바 (토스 스타일) */
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
     z-index: 100;
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding: 4px;
   }
   .tab {
     flex: 1;
-    padding: 10px 4px 12px;
+    padding: 10px 4px;
     text-align: center;
     color: var(--text-3);
     cursor: pointer;
@@ -374,7 +375,10 @@
     flex-direction: column;
     align-items: center;
     gap: 4px;
+    border-radius: 14px;
+    transition: background 0.15s;
   }
+  .tab.active { color: var(--text-1); background: var(--bg); }
   .tab.active { color: var(--text-1); }
   .tab .ico { font-size: 22px; }
   .tab-label {
