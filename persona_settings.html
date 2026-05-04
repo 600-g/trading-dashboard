@@ -647,7 +647,7 @@ body {
   <div class="back-btn" onclick="goBack()" style="cursor:pointer">
     <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </div>
-  <div class="header-title">페르소나 비중</div>
+  <div class="header-title">페르소나 비중 <span id="header-market-tag" style="font-size:10px;background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:6px;margin-left:6px;font-weight:700;vertical-align:middle">COIN</span></div>
   <div class="header-sub">
     <span id="data-status">실데이터</span>
     <div class="refresh-btn" id="btn-refresh" title="데이터 새로고침">
@@ -903,12 +903,26 @@ async function _initFirebase() {
   return _firestore;
 }
 
-// READ: 외부 호스트는 Firestore에서 status doc fetch (system_api 대신)
+// READ: Firestore status doc → market별 분리 데이터 추출
+// stock doc 안에 persona_by_market.{kr,us} 가 있어 KR/US 별도 비중 지원
 async function _fbGetStatus(market) {
   const fs = await _initFirebase();
   const bot = market === 'coin' ? 'coin' : 'stock';
   const snap = await fs.collection('trading_status').doc(bot).get();
-  return snap.exists ? snap.data() : null;
+  if (!snap.exists) return null;
+  const raw = snap.data();
+  // 신구 호환: persona_by_market 있으면 시장별 추출, 없으면 평면 필드
+  const pbm = raw.persona_by_market || {};
+  const m = pbm[market];
+  if (m) {
+    return {
+      ...raw,
+      persona_stats: m.stats || [],
+      persona_weights: m.weights,
+      persona_history: m.history,
+    };
+  }
+  return raw;  // 구버전 fallback
 }
 
 // WRITE: Firestore commands 발행 + onSnapshot 즉시 결과 캐치 (15초 timeout)
@@ -1361,26 +1375,29 @@ function renderHistory(items) {
 }
 
 async function loadCurrentWeights() {
+  let weights = null;
   try {
-    let data;
     if (USE_FIREBASE) {
       const st = await _fbGetStatus(currentTab);
-      data = (st && st.persona_weights) ? {weights: st.persona_weights} : null;
+      weights = (st && st.persona_weights) ? st.persona_weights : null;
     } else {
-      const res = await fetch(`${API_BASE}/api/personas/current-weight?market=${currentTab}`);
+      const res = await fetch(`${API_BASE}/api/personas/current-weight?market=${currentTab}&_=${Date.now()}`,
+        {cache:'no-store'});
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      data = await res.json();
-    }
-    if (data && data.weights) {
-      savedValues = { ...data.weights };
-      currentValues = { ...data.weights };
-      SLIDERS.forEach(s => {
-        document.getElementById(`slider-${s}`).value = data.weights[s];
-      });
+      const data = await res.json();
+      weights = data.weights || null;
     }
   } catch (e) {
-    console.warn('현재 비중 로드 실패, 기본값 사용:', e);
+    console.warn(`[${currentTab}] 비중 로드 실패, 기본값 사용:`, e);
   }
+  // 시장별 비중이 없으면 무조건 spec 기본값으로 (이전 시장 값 유지 방지)
+  if (!weights) weights = { coolma: 35, swing: 30, day: 25, hold: 10 };
+  savedValues = { ...weights };
+  currentValues = { ...weights };
+  SLIDERS.forEach(s => {
+    document.getElementById(`slider-${s}`).value = weights[s] ?? 25;
+  });
+  console.log(`[persona] ${currentTab} 비중 로드:`, weights);
 }
 
 // 슬라이더 input 시: 변경된 슬라이더 외 나머지에 차이 비례 분배 → 합 100 강제
@@ -1438,17 +1455,40 @@ document.querySelectorAll('.fine-btn').forEach(btn => {
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
+    if (btn.classList.contains('active')) return;  // 같은 탭 재클릭 무시
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
     currentSeed = SEED[currentTab];
-    
+    const tag = document.getElementById('header-market-tag');
+    if (tag) {
+      tag.textContent = currentTab.toUpperCase();
+      tag.style.background = currentTab === 'coin' ? 'var(--yellow-bg)'
+                           : currentTab === 'kr'   ? 'var(--blue-bg)'
+                                                   : 'var(--purple-bg)';
+      tag.style.color = currentTab === 'coin' ? '#b8860b'
+                      : currentTab === 'kr'   ? 'var(--blue)'
+                                              : 'var(--purple)';
+    }
+
+    // 시장 전환 시 즉시 UI 비활성화 표시 (loading)
+    document.getElementById('data-status').innerHTML = `<b>${currentTab.toUpperCase()}</b> 로딩<span class="loading"></span>`;
+    SLIDERS.forEach(s => {
+      const el = document.getElementById(`pct-${s}`);
+      if (el) el.style.opacity = '0.4';
+    });
+
     await loadCurrentWeights();
     await loadStats();
     await loadHistory();
     updateNextMarketTime();
     _loadChangesToday();
     updateUI();
+
+    SLIDERS.forEach(s => {
+      const el = document.getElementById(`pct-${s}`);
+      if (el) el.style.opacity = '1';
+    });
   });
 });
 
