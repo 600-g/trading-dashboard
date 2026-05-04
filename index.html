@@ -439,50 +439,96 @@
     #mobile_home{display:block !important}
     #view-home > .desktop-only{display:none !important}
 
-    /* ── 모바일 viewport 강제 (앱 버전) ── */
-    html, body, .app{
-      max-width:100vw !important; width:100vw !important;
+    /* ══════ 모바일 앱 버전 — 절대 잘림 X ══════ */
+    /* viewport는 100% (vw 안 씀, padding 충돌 방지) */
+    html, body{
+      max-width:100% !important; width:100% !important;
       overflow-x:hidden !important;
     }
-    .view, .card, .grid-2, .grid-4{
-      max-width:100% !important; box-sizing:border-box;
+    body{padding:0 !important; margin:0 !important}
+    .app{
+      width:100% !important; max-width:100% !important;
+      padding: env(safe-area-inset-top) 8px env(safe-area-inset-bottom) 8px !important;
+      box-sizing:border-box !important;
+    }
+    /* 모든 grid/flex 자식이 잘리지 않도록 min-width:0 강제 */
+    .grid-2, .grid-4, .m-grid, .filter-bar{
+      min-width:0 !important; width:100% !important;
+      box-sizing:border-box !important;
+    }
+    /* grid는 minmax(0,1fr)로 — 자식 강제 축소 허용 */
+    .grid-2{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; gap:6px !important}
+    .grid-4{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; gap:6px !important}
+    .m-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; gap:8px !important; margin-top:8px !important}
+
+    /* 모든 카드 안 잘림 보장 */
+    .card, .stat, .bot-card{
+      min-width:0 !important; max-width:100% !important;
+      box-sizing:border-box !important; overflow:hidden;
     }
     .card{padding:10px !important; margin:0 0 8px 0 !important; border-radius:10px !important}
-    .card.compact{padding:8px !important; margin-bottom:8px !important}
+    .card.compact{padding:8px !important}
 
-    /* 모든 텍스트 적정 사이즈 */
+    /* 텍스트 줄바꿈 보장 */
+    *{min-width:0}
+    .card *, .m-tile *{overflow-wrap:anywhere; word-break:break-word}
+
+    /* 폰트 적정 */
     h1{font-size:14px !important}
-    .card-title{font-size:11px !important}
-    table{font-size:10px !important}
-    th, td{padding:4px 3px !important}
+    .card-title{font-size:11px !important; flex-wrap:wrap}
+    table{font-size:10px !important; width:100% !important; table-layout:fixed}
+    th, td{padding:4px 3px !important; overflow:hidden; text-overflow:ellipsis}
 
-    /* 모바일 그리드 셀 작게 */
-    .m-grid{gap:8px !important; margin-top:8px !important}
-    .m-tile{padding:10px !important; border-radius:12px !important}
-    .m-tile-icon{font-size:24px !important}
-    .m-tile-label{font-size:11.5px !important}
-    .m-tile-value{font-size:15px !important}
-    .m-tile-sub{font-size:9.5px !important}
+    /* 모바일 정사각형 타일 */
+    .m-tile{padding:10px !important; border-radius:12px !important; min-width:0; overflow:hidden}
+    .m-tile-icon{font-size:22px !important}
+    .m-tile-label{font-size:11px !important}
+    .m-tile-value{font-size:14px !important; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+    .m-tile-sub{font-size:9px !important; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 
+    /* HERO */
     .m-hero{padding:14px !important; border-radius:12px !important}
-    .m-hero-balance{font-size:24px !important; margin:4px 0 !important}
-    .m-hero-pnl{font-size:13px !important}
+    .m-hero-balance{font-size:22px !important; margin:4px 0 !important}
+    .m-hero-pnl{font-size:12px !important}
 
-    /* 매도 완료 탭 + 청산 예약 버튼 */
+    /* 매도 완료 + 청산 버튼 */
     .sell-row{
       display:flex; justify-content:space-between; align-items:center;
-      padding:7px 9px; background:#0d1117; border:1px solid var(--line);
-      border-radius:6px; font-size:10.5px; margin-bottom:4px;
+      padding:6px 8px; background:#0d1117; border:1px solid var(--line);
+      border-radius:6px; font-size:10px; margin-bottom:4px;
+      min-width:0; overflow:hidden;
     }
+    .sell-row > div{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
     .close-btn{
       background:var(--down); color:#fff; border:none; border-radius:5px;
-      padding:5px 10px; font-size:10.5px; font-weight:700; cursor:pointer;
-      white-space:nowrap;
+      padding:4px 8px; font-size:10px; font-weight:700; cursor:pointer;
+      white-space:nowrap; flex-shrink:0;
     }
     .cancel-btn{
-      background:var(--muted); color:#fff; border:none; border-radius:5px;
-      padding:5px 10px; font-size:10.5px; cursor:pointer;
+      background:#6b7280; color:#fff; border:none; border-radius:5px;
+      padding:4px 8px; font-size:10px; cursor:pointer;
+      white-space:nowrap; flex-shrink:0;
     }
+
+    /* 모달 폰 풀스크린 */
+    .modal{
+      max-width:calc(100% - 12px) !important;
+      width:calc(100% - 12px) !important;
+      max-height:90vh; overflow-y:auto;
+      padding:12px !important;
+    }
+
+    /* topbar 잘림 방지 */
+    .topbar{
+      max-width:100% !important; box-sizing:border-box;
+      flex-wrap:nowrap; gap:6px; overflow:hidden;
+    }
+    .topbar > div{min-width:0; overflow:hidden}
+    .topbar h1{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px !important}
+
+    /* 사이드 메뉴 안 잘림 */
+    .menu{max-width:88vw !important; box-sizing:border-box}
+    .menu-item{min-width:0; overflow:hidden}
 
     /* 모바일 정사각형 그리드 */
     .m-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px}
@@ -1475,7 +1521,7 @@
   <!-- 메뉴 하단 footer (버전 + CC + 캐시 초기화 버튼) -->
   <div style="padding:14px 16px;border-top:1px solid var(--line);text-align:center;font-size:10.5px;color:var(--muted);line-height:1.7">
     <button onclick="hardReload()" style="width:100%;padding:9px;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--info);font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:8px" title="캐시 모두 삭제 + 강제 새로고침">
-      🔄 v4.5-toss-style · 캐시 초기화
+      🔄 v4.6-app-fit · 캐시 초기화
     </button>
     <div>© 2026 두근컴퍼니</div>
     <div style="font-size:9.5px;margin-top:2px;opacity:0.6">코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
@@ -1565,6 +1611,6 @@ async function hardReload() {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=4.5-toss-style" defer></script>
+<script src="app.js?v=4.6-app-fit" defer></script>
 </body>
 </html>
