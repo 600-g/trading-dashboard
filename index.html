@@ -1739,6 +1739,63 @@ function renderMobile(d){
 fetchAndRender();
 setInterval(fetchAndRender, 30000);
 
+// ─── 딥링크 라우팅 (외부 알림/에이전트 버튼에서 이 사이트로 진입) ───
+// 사용 예:
+//   ?open=alerts                      → 알림 시트
+//   ?open=settings                    → 설정 시트
+//   ?open=improve                     → 자가개선 시트
+//   ?open=calendar                    → 거래 달력
+//   ?open=calendar&date=2026-05-04    → 달력 + 해당 일자 상세
+//   ?open=bot&bot=coin                → 봇 컨트롤 (coin|stock)
+//   ?open=position&bot=coin&sym=KRW-BTC → 종목 상세
+//   ?open=persona&market=kr           → 페르소나 비중 페이지로 redirect
+//
+// 기존 동작 무영향: 파라미터 없으면 0 영향. 파싱은 데이터 도착 후 1회만.
+async function _runDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const open = params.get('open');
+  if (!open) return;
+  // 데이터 1회 로드 대기 (보유종목 인덱스 채워질 때까지)
+  for (let i = 0; i < 20; i++) {
+    if (STATE_CACHE.coin || STATE_CACHE.stock) break;
+    await new Promise(r => setTimeout(r, 250));
+  }
+  try {
+    switch (open) {
+      case 'alerts':   openAlertsSheet(); break;
+      case 'settings': openSettingsSheet(); break;
+      case 'improve':  openImproveSheet(); break;
+      case 'calendar': {
+        await openCalendarSheet();
+        const dt = params.get('date');
+        if (dt) setTimeout(() => renderCalDay(dt), 300);
+        break;
+      }
+      case 'bot': {
+        const bot = params.get('bot') || 'coin';
+        if (bot === 'coin' || bot === 'stock') openBotSheet(bot);
+        break;
+      }
+      case 'position': {
+        const bot = params.get('bot'), sym = params.get('sym');
+        if (bot && sym) openPositionSheet(bot, sym);
+        break;
+      }
+      case 'persona': {
+        const m = params.get('market') || 'coin';
+        location.href = `persona_settings.html?tab=${encodeURIComponent(m)}`;
+        break;
+      }
+    }
+    // URL 정리 (뒤로가기/공유 시 시트 재오픈 방지) — 옵션
+    if (params.get('keep') !== '1') {
+      const clean = location.pathname + location.hash;
+      history.replaceState({}, '', clean);
+    }
+  } catch (e) { console.warn('[deeplink]', e); }
+}
+_runDeepLink();
+
 // 데스크탑 사이즈로 리사이즈 시 index.html 로
 window.addEventListener('resize', () => {
   if (window.innerWidth >= 768 && window.location.pathname.includes('mobile')) {

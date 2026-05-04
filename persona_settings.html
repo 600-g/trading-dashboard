@@ -1747,6 +1747,19 @@ function showToast(msg, type) {
 }
 
 (async function init() {
+  // 딥링크: ?tab=coin|kr|us → 시작 탭 자동 선택
+  const urlTab = new URLSearchParams(location.search).get('tab');
+  if (urlTab && ['coin','kr','us'].includes(urlTab)) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    const tab = document.querySelector(`.tab-btn[data-tab="${urlTab}"]`);
+    if (tab) {
+      tab.classList.add('active');
+      currentTab = urlTab;
+      currentSeed = SEED[urlTab] || SEED.coin;
+      const tag = document.getElementById('header-market-tag');
+      if (tag) tag.textContent = urlTab.toUpperCase();
+    }
+  }
   await loadCurrentWeights();
   await loadStats();
   await loadHistory();
