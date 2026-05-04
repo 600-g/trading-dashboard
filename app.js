@@ -691,6 +691,45 @@ function renderMobileHome() {
   }
 }
 
+// 매도 완료 리스트 (토스 스타일)
+function renderMobileSells() {
+  const c = STATE.coin.status, s = STATE.stock.status;
+  const all = [];
+  (c?.recent_trades || []).forEach(t => {
+    if ((t.side || '').toLowerCase().includes('sell'))
+      all.push({...t, _bot:'🪙', _sym: t.coin});
+  });
+  (s?.recent_trades || []).forEach(t => {
+    if ((t.side || '').toUpperCase() === 'SELL')
+      all.push({...t, _bot:'📈', _sym: t.stock_name || t.stock});
+  });
+  all.sort((a,b) => (b.ts || b.created_at || '').localeCompare(a.ts || a.created_at || ''));
+  const totalPnl = all.reduce((acc,t) => acc + (t.pnl || 0), 0);
+  const cls = totalPnl > 0 ? 'up' : totalPnl < 0 ? 'down' : '';
+  const sumEl = document.getElementById('m_sells_summary');
+  if (sumEl) sumEl.innerHTML = all.length === 0
+    ? '<span style="color:var(--muted)">없음</span>'
+    : `<span class="${cls}">${all.length}건 합계 <b>${fmtSign(totalPnl)}</b></span>`;
+  const box = document.getElementById('m_sells_list');
+  if (!box) return;
+  if (all.length === 0) {
+    box.innerHTML = '<div class="empty">매도 내역 없음</div>';
+    return;
+  }
+  box.innerHTML = all.slice(0, 20).map(t => {
+    const ts = (t.ts || t.created_at || '').slice(5,16).replace('T',' ');
+    const cls = (t.pnl || 0) > 0 ? 'up' : (t.pnl || 0) < 0 ? 'down' : '';
+    const reason = (t.reason || '').slice(0,12);
+    return `<div class="sell-row">
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">
+        <span style="color:var(--muted);font-size:9.5px">${ts}</span> ${t._bot} <b>${t._sym}</b>
+        <span style="color:var(--muted);font-size:9px">${reason}</span>
+      </div>
+      <span class="${cls}" style="font-weight:700;white-space:nowrap;margin-left:6px">${fmtSign(t.pnl || 0)}</span>
+    </div>`;
+  }).join('');
+}
+
 function scrollToMobileHoldings() {
   document.getElementById('mobile_holdings')?.scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -698,7 +737,64 @@ function scrollToMobileCalendar() {
   document.getElementById('cal_grid')?.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-// ─── 모바일 핵심: 현재 보유 종목 (양봇 합산) ─────────────
+// ─── 청산 예약 (사용자 [청산] 버튼) ─────────────────────
+async function schedulePosClose(bot, symbol, name) {
+  if (!confirm(`${name} 청산 예약?\n다음 사이클 (60초 내) 자동 매도됩니다.`)) return;
+  try {
+    const r = await fetch(`${APIS.system}/api/positions/close`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({bot, symbol})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast(`✅ ${name} 청산 예약됨`);
+      setTimeout(loadAll, 1000);
+    } else toast(`❌ ${d.error || '실패'}`);
+  } catch (e) { toast(`❌ ${e.message}`); }
+}
+
+async function cancelPosClose(bot, symbol, name) {
+  try {
+    const r = await fetch(`${APIS.system}/api/positions/cancel`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({bot, symbol})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast(`↩️ ${name} 청산 취소`);
+      setTimeout(loadAll, 1000);
+    }
+  } catch (e) { toast(`❌ ${e.message}`); }
+}
+
+// 청산 예정 시점 추정
+function estimateCloseTime(p) {
+  const persona = p.persona || p.profile || '';
+  const enteredAt = p.entered_at || p.entry_ts;
+  if (!enteredAt) return '예측 불가';
+  if (persona === '박단타' || persona === '단타') {
+    const t = new Date(enteredAt);
+    t.setMinutes(t.getMinutes() + 60);
+    const now = new Date();
+    if (t <= now) return '곧 자동청산 (60분 캡)';
+    const min = Math.round((t - now) / 60000);
+    return `~${min}분 후 (60분 캡)`;
+  }
+  if (p.market === 'KR' && (persona === '단타' || p.profile === '단타')) return '17:50 강제청산';
+  if (p.market === 'US' && persona === '나스닥단타') return '04:50 강제청산';
+  return 'MA 트레일링 대기 (예측불가)';
+}
+
+// 청산 예약 목록 캐시
+let _scheduledClose = {coin:[], stock:[]};
+async function refreshScheduledList() {
+  try {
+    const r = await fetch(`${APIS.system}/api/positions/scheduled`);
+    if (r.ok) _scheduledClose = await r.json();
+  } catch {}
+}
+
+// ─── 모바일 핵심: 현재 보유 종목 + 청산 버튼 + 시점 ────────
 function renderMobileHoldings() {
   const c = STATE.coin.status, s = STATE.stock.status;
   const cPos = c?.current_positions || c?.positions || [];
@@ -731,14 +827,23 @@ function renderMobileHoldings() {
     const pnlText = pnl != null ? `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%` : '-';
     const inv = p.notional_krw || p.krw_invested ||
                 ((p.avg_price_krw || p.avg_price || 0) * (+p.amount || 0));
-    return `<div onclick="openStockHistoryModal('${p._bot}','${p._sym}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:7px 9px;background:#0d1117;border:1px solid var(--line);border-radius:6px">
-      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">
-        <span style="font-size:11px">${icon}</span> <b>${p._name}</b>
-        <span style="color:var(--muted);font-size:9.5px;margin-left:4px">${persona}</span>
+    const closeEta = estimateCloseTime(p);
+    const isScheduled = (_scheduledClose[p._bot] || []).includes(p._sym);
+    const btn = isScheduled
+      ? `<button class="cancel-btn" onclick="event.stopPropagation();cancelPosClose('${p._bot}','${p._sym}','${p._name}')">⏸ 예약취소</button>`
+      : `<button class="close-btn" onclick="event.stopPropagation();schedulePosClose('${p._bot}','${p._sym}','${p._name}')">🔴 청산</button>`;
+    const scheduledBadge = isScheduled ? '<span style="color:var(--down);font-size:9px;font-weight:700">⏳ 예약됨</span> · ' : '';
+    return `<div onclick="openStockHistoryModal('${p._bot}','${p._sym}')" style="cursor:pointer;padding:8px 10px;background:#0d1117;border:1px solid var(--line);border-radius:6px;margin-bottom:5px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">
+          <span>${icon}</span> <b>${p._name}</b>
+          <span style="color:var(--muted);font-size:9.5px;margin-left:4px">${persona}</span>
+        </div>
+        <span class="${cls}" style="font-weight:700;min-width:60px;text-align:right;font-size:12px">${pnlText}</span>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;white-space:nowrap;margin-left:6px">
-        <span style="font-size:10px;color:var(--muted)">${fmt(inv)}원</span>
-        <span class="${cls}" style="font-weight:700;min-width:60px;text-align:right">${pnlText}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:var(--muted)">
+        <span>${scheduledBadge}투자 ${fmt(inv)}원 · ${closeEta}</span>
+        ${btn}
       </div>
     </div>`;
   }).join('');
@@ -2293,8 +2398,9 @@ function renderHomeOverview() {
   renderHistoryCards();
   renderHomeCoreCards();
   renderBotProcesses();
-  renderMobileHoldings();
+  refreshScheduledList().then(() => renderMobileHoldings());
   renderMobileHome();
+  renderMobileSells();
 }
 
 function renderChart7d() {
