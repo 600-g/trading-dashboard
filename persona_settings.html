@@ -1375,29 +1375,53 @@ function renderHistory(items) {
 }
 
 async function loadCurrentWeights() {
-  let weights = null;
+  let weights = null, applied = null, pending = null, pendingAt = null;
   try {
     if (USE_FIREBASE) {
       const st = await _fbGetStatus(currentTab);
       weights = (st && st.persona_weights) ? st.persona_weights : null;
+      // Firebase doc 안의 persona_by_market[market] entry에 applied/pending 있음
+      const pbm = (st && st.persona_by_market) || {};
+      const m = pbm[currentTab] || {};
+      applied = m.applied || null; pending = m.pending || null; pendingAt = m.pending_apply_at || null;
     } else {
       const res = await fetch(`${API_BASE}/api/personas/current-weight?market=${currentTab}&_=${Date.now()}`,
         {cache:'no-store'});
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       weights = data.weights || null;
+      applied = data.applied || null;
+      pending = data.pending || null;
+      pendingAt = data.pending_apply_at || null;
     }
   } catch (e) {
     console.warn(`[${currentTab}] 비중 로드 실패, 기본값 사용:`, e);
   }
-  // 시장별 비중이 없으면 무조건 spec 기본값으로 (이전 시장 값 유지 방지)
   if (!weights) weights = { coolma: 35, swing: 30, day: 25, hold: 10 };
   savedValues = { ...weights };
   currentValues = { ...weights };
   SLIDERS.forEach(s => {
     document.getElementById(`slider-${s}`).value = weights[s] ?? 25;
   });
-  console.log(`[persona] ${currentTab} 비중 로드:`, weights);
+  // 예약된 변경 배너
+  let banner = document.getElementById('pending-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'pending-banner';
+    banner.style.cssText = 'margin:0 16px 12px;padding:10px 14px;background:var(--yellow-bg);color:#b8860b;border-radius:10px;font-size:12px;line-height:1.5';
+    const after = document.querySelector('.tab-bar') || document.querySelector('.info-box');
+    if (after && after.parentNode) after.parentNode.insertBefore(banner, after.nextSibling);
+  }
+  if (pending && applied && JSON.stringify(pending) !== JSON.stringify(applied)) {
+    const at = pendingAt ? new Date(pendingAt).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '다음 시장';
+    const diff = SLIDERS.filter(s => pending[s] !== applied[s])
+      .map(s => `${NAMES_KR[s]} ${applied[s]}→${pending[s]}%`).join(', ');
+    banner.innerHTML = `⏰ <b>${at}</b> 적용 예약됨<br><span style="font-size:11px">${diff}</span>`;
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+  console.log(`[persona] ${currentTab} 비중 로드:`, weights, 'pending:', pending);
 }
 
 // 슬라이더 input 시: 변경된 슬라이더 외 나머지에 차이 비례 분배 → 합 100 강제
