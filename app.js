@@ -639,6 +639,52 @@ function openStockModal(bot, stock) {
 
 function closeStockModal() { document.getElementById('stockModal').classList.remove('show'); }
 
+// ─── 모바일 핵심: 현재 보유 종목 (양봇 합산) ─────────────
+function renderMobileHoldings() {
+  const c = STATE.coin.status, s = STATE.stock.status;
+  const cPos = c?.current_positions || c?.positions || [];
+  const sPos = s?.positions || [];
+  const total = cPos.length + sPos.length;
+  const sumEl = document.getElementById('mobile_holdings_summary');
+  if (sumEl) sumEl.innerHTML = total === 0
+    ? '<span style="color:var(--muted)">없음</span>'
+    : `<span class="info">코인 ${cPos.length} + 주식 ${sPos.length} = <b>${total}건</b></span>`;
+  const box = document.getElementById('mobile_holdings_list');
+  if (!box) return;
+  if (total === 0) {
+    box.innerHTML = '<div class="empty">현재 보유 종목 없음</div>';
+    return;
+  }
+  const rows = [
+    ...cPos.map(p => ({...p, _bot:'coin', _sym: p.coin, _name: p.coin})),
+    ...sPos.map(p => ({...p, _bot:'stock', _sym: p.stock, _name: p.stock_name || p.stock})),
+  ];
+  box.innerHTML = rows.map(p => {
+    const icon = p._bot === 'coin' ? '🪙' : '📈';
+    const persona = p.persona || p.profile || '-';
+    let pnl = p.pnl_pct;
+    if (pnl == null && p._bot === 'stock') {
+      const cur = p.current_price || 0;
+      const avg = +p.avg_price || 0;
+      pnl = avg > 0 && cur > 0 ? ((cur - avg) / avg * 100) : null;
+    }
+    const cls = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
+    const pnlText = pnl != null ? `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%` : '-';
+    const inv = p.notional_krw || p.krw_invested ||
+                ((p.avg_price_krw || p.avg_price || 0) * (+p.amount || 0));
+    return `<div onclick="openStockHistoryModal('${p._bot}','${p._sym}')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:7px 9px;background:#0d1117;border:1px solid var(--line);border-radius:6px">
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">
+        <span style="font-size:11px">${icon}</span> <b>${p._name}</b>
+        <span style="color:var(--muted);font-size:9.5px;margin-left:4px">${persona}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;white-space:nowrap;margin-left:6px">
+        <span style="font-size:10px;color:var(--muted)">${fmt(inv)}원</span>
+        <span class="${cls}" style="font-weight:700;min-width:60px;text-align:right">${pnlText}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ─── 봇 가동 상태 + 홈 핵심 카드 ──────────────────────────
 async function fetchBotProcesses() {
   try {
@@ -2188,6 +2234,7 @@ function renderHomeOverview() {
   renderHistoryCards();
   renderHomeCoreCards();
   renderBotProcesses();
+  renderMobileHoldings();
 }
 
 function renderChart7d() {

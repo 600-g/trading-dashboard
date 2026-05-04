@@ -30,6 +30,9 @@
   }
   *, *::before, *::after { box-sizing: border-box; }
 
+  /* 데스크탑에서는 모바일 전용 카드 숨김 */
+  #mobile_holdings{display:none}
+
   /* ── 앱 셸 ─────────────────────────────────────── */
   .app{display:grid; grid-template-rows:auto 1fr; min-height:100vh}
 
@@ -430,6 +433,12 @@
     .bot-card .pnl{font-size:14px}
     .bot-card .meta{font-size:10px}
 
+    /* 모바일 핵심 UI — 비핵심 카드 숨김 (잔고+보유종목+캘린더만) */
+    .desktop-only{display:none !important}
+
+    /* 모바일 보유 종목 강조 카드 */
+    #mobile_holdings{display:block; margin-bottom:10px}
+
     /* 헤더 — 노치/펀치홀 안전영역 좌/우 모두 적용 */
     body{
       padding:
@@ -678,8 +687,14 @@
         </div>
       </div>
 
-      <!-- 시장 현황: 좌(코인) + 우(주식/거시) - 데스크탑 좌우, 모바일 위아래 -->
-      <div class="grid-2" style="margin-bottom:10px; gap:10px">
+      <!-- 📦 모바일 핵심: 현재 보유 종목 (사용자가 가장 자주 보는 정보) -->
+      <div class="card compact" id="mobile_holdings" style="border-left:3px solid var(--up)">
+        <div class="card-title">📦 현재 보유 <span id="mobile_holdings_summary" style="margin-left:auto;font-size:11px;font-weight:400"></span></div>
+        <div id="mobile_holdings_list" style="display:flex;flex-direction:column;gap:5px;font-size:11px"><div class="empty">로딩...</div></div>
+      </div>
+
+      <!-- 시장 현황 (데스크탑만) -->
+      <div class="grid-2 desktop-only" style="margin-bottom:10px; gap:10px">
         <div class="card compact">
           <div class="card-title"><svg class="ic" style="color:var(--coin)"><use href="#i-coin"/></svg>코인 시장</div>
           <div class="market-grid" style="grid-template-columns:repeat(3,1fr)">
@@ -699,8 +714,8 @@
         </div>
       </div>
 
-      <!-- 인사이트: 승률/RR/MDD 게이지 + LLM 토큰 -->
-      <div class="grid-2" style="margin-bottom:10px; gap:10px">
+      <!-- 인사이트 (데스크탑만) -->
+      <div class="grid-2 desktop-only" style="margin-bottom:10px; gap:10px">
         <div class="card compact">
           <div class="card-title"><svg class="ic"><use href="#i-bolt"/></svg>성과 지표</div>
           <div class="kpi-list">
@@ -752,14 +767,14 @@
       <!-- view-tune 의 중복 element 충돌 방지 (숨김 컨테이너) -->
       <div id="home_calendar" style="display:none"></div>
 
-      <!-- 7일 P&L 차트 -->
-      <div class="card compact">
+      <!-- 7일 P&L 차트 (데스크탑만) -->
+      <div class="card compact desktop-only">
         <div class="card-title"><svg class="ic"><use href="#i-trend"/></svg>7일 P&amp;L<span class="right" id="chart_total">-</span></div>
         <div class="chart-wrap" style="height:140px"><canvas id="chart7d"></canvas></div>
       </div>
 
-      <!-- 시간대별 활성도 + 페르소나 성과 -->
-      <div class="grid-2" style="margin-bottom:10px; gap:10px">
+      <!-- 시간대별 활성도 + 페르소나 성과 (데스크탑만) -->
+      <div class="grid-2 desktop-only" style="margin-bottom:10px; gap:10px">
         <div class="card compact">
           <div class="card-title"><svg class="ic"><use href="#i-clock"/></svg>시간대별 거래</div>
           <div class="hourly-grid" id="hourly_grid"></div>
@@ -1293,7 +1308,7 @@
   <!-- 메뉴 하단 footer (버전 + CC + 캐시 초기화 버튼) -->
   <div style="padding:14px 16px;border-top:1px solid var(--line);text-align:center;font-size:10.5px;color:var(--muted);line-height:1.7">
     <button onclick="hardReload()" style="width:100%;padding:9px;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--info);font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:8px" title="캐시 모두 삭제 + 강제 새로고침">
-      🔄 v4.2-mobile-safe · 캐시 초기화
+      🔄 v4.3-mobile-core · 캐시 초기화
     </button>
     <div>© 2026 두근컴퍼니</div>
     <div style="font-size:9.5px;margin-top:2px;opacity:0.6">코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
@@ -1383,6 +1398,6 @@ async function hardReload() {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=4.2-mobile-safe" defer></script>
+<script src="app.js?v=4.3-mobile-core" defer></script>
 </body>
 </html>
