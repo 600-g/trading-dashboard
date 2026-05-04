@@ -955,10 +955,10 @@ function initFirebase() {
     _fbDb = firebase.firestore();
     // 실시간 구독 (코인 + 주식)
     _fbDb.collection('trading_status').doc('coin').onSnapshot(snap => {
-      if (snap.exists) { _lastFb.coin = snap.data(); renderMobile(_lastFb); }
+      if (snap.exists) { const d = snap.data(); d._live = !!d.online; _lastFb.coin = d; renderMobile(_lastFb); }
     });
     _fbDb.collection('trading_status').doc('stock').onSnapshot(snap => {
-      if (snap.exists) { _lastFb.stock = snap.data(); renderMobile(_lastFb); }
+      if (snap.exists) { const d = snap.data(); d._live = !!d.online; _lastFb.stock = d; renderMobile(_lastFb); }
     });
     console.log('[mobile] Firebase 실시간 구독 시작');
   } catch (e) { console.error('Firebase init err', e); }

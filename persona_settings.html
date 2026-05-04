@@ -866,11 +866,68 @@ body {
 
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
 <script>
-// API base: file:// 또는 외부 호스트면 system_api 절대주소, localhost면 상대경로
+// 환경 분기: 로컬(127.x/192.x/file://) → system_api 직접. 외부(github.io) → Firebase 명령
 const _h = location.hostname;
-const API_BASE = (location.protocol === 'file:' || _h === '127.0.0.1' || _h === 'localhost' || _h.startsWith('192.'))
-  ? 'http://127.0.0.1:9000' : '';
+const IS_LOCAL = location.protocol === 'file:' || _h === '127.0.0.1' || _h === 'localhost' || _h.startsWith('192.');
+const API_BASE = IS_LOCAL ? 'http://127.0.0.1:9000' : '';
+const USE_FIREBASE = !IS_LOCAL;
+
+// Firebase 초기화 (외부 호스트만)
+let _firestore = null;
+async function _initFirebase() {
+  if (!USE_FIREBASE || _firestore) return _firestore;
+  if (typeof firebase === 'undefined') {
+    await new Promise((res, rej) => {
+      let n = 0;
+      const t = setInterval(() => {
+        if (typeof firebase !== 'undefined') { clearInterval(t); res(); }
+        else if (++n > 30) { clearInterval(t); rej(new Error('firebase SDK 미로드')); }
+      }, 100);
+    });
+  }
+  try {
+    const r = await fetch('firebase-config.json', {cache:'no-store'});
+    const cfg = await r.json();
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    _firestore = firebase.firestore();
+    return _firestore;
+  } catch (e) {
+    console.error('firebase init', e);
+    throw e;
+  }
+}
+
+// READ: 외부 호스트는 Firestore에서 status doc fetch (system_api 대신)
+async function _fbGetStatus(market) {
+  const fs = await _initFirebase();
+  const bot = market === 'coin' ? 'coin' : 'stock';
+  const snap = await fs.collection('trading_status').doc(bot).get();
+  return snap.exists ? snap.data() : null;
+}
+
+// WRITE: 외부 호스트는 Firestore commands 컬렉션에 발행
+async function _fbSendCommand(payload) {
+  const fs = await _initFirebase();
+  const docRef = await fs.collection('trading_commands').add({
+    ...payload,
+    status: 'pending',
+    created_at: new Date().toISOString(),
+    origin: 'persona_settings',
+  });
+  // bridge가 처리할 때까지 polling (최대 8초)
+  for (let i = 0; i < 16; i++) {
+    await new Promise(r => setTimeout(r, 500));
+    const s = await docRef.get();
+    const d = s.data();
+    if (d.status === 'processed') return {ok: true, result: d.result};
+    if (d.status === 'failed')    return {ok: false, error: d.result?.error || 'failed'};
+  }
+  return {ok: false, error: 'timeout (8s)'};
+}
 
 function goBack() {
   // file://는 history 없을 수 있어 index.html로 명시 이동
@@ -1099,11 +1156,28 @@ function updateNextMarketTime() {
 
 async function loadStats() {
   document.getElementById('data-status').innerHTML = '로딩중<span class="loading"></span>';
-  
+
   try {
-    const res = await fetch(`${API_BASE}/api/personas/stats?market=${currentTab}&days=30`);
-    if (!res.ok) throw new Error('API 호출 실패');
-    const data = await res.json();
+    let data;
+    if (USE_FIREBASE) {
+      // Firestore의 status doc 안에 persona_stats 배열 사용 (system_api 직접 호출 불가)
+      const st = await _fbGetStatus(currentTab);
+      const arr = (st && st.persona_stats) || [];
+      data = {};
+      arr.forEach(p => {
+        data[p.persona] = {
+          total: p.trades || 0, wins: p.wins || 0,
+          winrate: p.winrate || 0, rr: p.rr || 0,
+          avg_pnl_pct: p.avg_pnl_pct || 0, total_pnl: p.total_pnl || 0,
+        };
+      });
+      data.current_pnl_30d = arr.reduce((a,p) => a + (p.total_pnl||0), 0);
+    } else {
+      const res = await fetch(`${API_BASE}/api/personas/stats?market=${currentTab}&days=30`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      data = await res.json();
+      if (data.error) throw new Error(data.error);
+    }
     
     SLIDERS.forEach(s => {
       const dbName = NAMES_DB[s];
@@ -1158,14 +1232,19 @@ function renderStats() {
 
 async function loadHistory() {
   try {
-    const res = await fetch(`${API_BASE}/api/personas/weight-history?market=${currentTab}&limit=5`);
-    if (!res.ok) throw new Error();
-    const history = await res.json();
-    
-    changesToday = history.changes_today || 0;
+    let history;
+    if (USE_FIREBASE) {
+      const st = await _fbGetStatus(currentTab);
+      history = (st && st.persona_history) || {items:[], changes_today:0};
+    } else {
+      const res = await fetch(`${API_BASE}/api/personas/weight-history?market=${currentTab}&limit=5`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      history = await res.json();
+    }
+    if (!USE_FIREBASE) changesToday = history.changes_today || 0;
     renderHistory(history.items || []);
   } catch (e) {
-    document.getElementById('history-list').innerHTML = 
+    document.getElementById('history-list').innerHTML =
       '<div class="history-empty">이력 없음</div>';
   }
   updateChangesCounter();
@@ -1204,11 +1283,16 @@ function renderHistory(items) {
 
 async function loadCurrentWeights() {
   try {
-    const res = await fetch(`${API_BASE}/api/personas/current-weight?market=${currentTab}`);
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    
-    if (data.weights) {
+    let data;
+    if (USE_FIREBASE) {
+      const st = await _fbGetStatus(currentTab);
+      data = (st && st.persona_weights) ? {weights: st.persona_weights} : null;
+    } else {
+      const res = await fetch(`${API_BASE}/api/personas/current-weight?market=${currentTab}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      data = await res.json();
+    }
+    if (data && data.weights) {
       savedValues = { ...data.weights };
       currentValues = { ...data.weights };
       SLIDERS.forEach(s => {
@@ -1216,7 +1300,7 @@ async function loadCurrentWeights() {
       });
     }
   } catch (e) {
-    console.warn('현재 비중 로드 실패, 기본값 사용');
+    console.warn('현재 비중 로드 실패, 기본값 사용:', e);
   }
 }
 
@@ -1386,16 +1470,29 @@ document.getElementById('btn-apply').addEventListener('click', async () => {
   btn.textContent = '저장 중...';
 
   try {
-    const res = await fetch(API_BASE+'/api/personas/weight', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ market: currentTab, weights: v })
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`HTTP ${res.status}: ${txt.slice(0,100)}`);
+    let result;
+    if (USE_FIREBASE) {
+      const r = await _fbSendCommand({
+        target: 'system',
+        action: 'api/personas/weight',
+        method: 'POST',
+        body: { market: currentTab, weights: v },
+      });
+      if (!r.ok) throw new Error(r.error || 'Firebase command failed');
+      try { result = JSON.parse(r.result?.response || '{}'); } catch { result = {}; }
+    } else {
+      const res = await fetch(API_BASE+'/api/personas/weight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ market: currentTab, weights: v })
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status}: ${txt.slice(0,100)}`);
+      }
+      result = await res.json();
+      if (result.error) throw new Error(result.error);
     }
-    const result = await res.json();
     savedValues = { ...v };
     _bumpChangesToday();
     btn.textContent = '✅ 적용 완료';
