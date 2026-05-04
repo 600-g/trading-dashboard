@@ -1634,21 +1634,23 @@ function renderMobile(d){
   const altInd = (c.alt_market || {}).individual || [];
   const ethCoin = altInd.find(x => x.coin === 'ETH');
   const mkts = [
-    {name:'KOSPI',  v: macro.kospi?.value,  ch: macro.kospi?.chg_pct},
-    {name:'KOSDAQ', v: macro.kosdaq?.value, ch: macro.kosdaq?.chg_pct},
-    {name:'NASDAQ', v: macro.nasdaq?.value, ch: macro.nasdaq?.chg_pct},
-    {name:'S&P500', v: macro.spx?.value,    ch: macro.spx?.chg_pct},
-    {name:'BTC',    v: btcM.price || (macro.btc?.value),  ch: btcM.change_24h ?? macro.btc?.chg_pct},
-    {name:'ETH',    v: ethCoin?.price,      ch: ethCoin?.change_24h},
-    {name:'USD/KRW',v: macro.usdkrw?.value, ch: macro.usdkrw?.chg_pct},
-    {name:'VIX',    v: macro.vix?.value,    ch: macro.vix?.chg_pct},
+    {name:'KOSPI',  src: macro.kospi},
+    {name:'KOSDAQ', src: macro.kosdaq},
+    {name:'NASDAQ', src: macro.nasdaq},
+    {name:'S&P500', src: macro.spx},
+    {name:'BTC',    src: {value: btcM.price || macro.btc?.value, chg_pct: btcM.change_24h ?? macro.btc?.chg_pct}},
+    {name:'ETH',    src: {value: ethCoin?.price, chg_pct: ethCoin?.change_24h}},
+    {name:'USD/KRW',src: macro.usdkrw},
+    {name:'VIX',    src: macro.vix},
   ];
   const mGrid = document.getElementById('m-market-grid');
   if (mGrid) {
     mGrid.innerHTML = mkts.map(m => {
-      const v = m.v, ch = m.ch;
+      const src = m.src || {};
+      const v = src.value, ch = src.chg_pct;
+      const stale = src.stale ? '<span title="장 마감 / 마지막 종가" style="display:inline-block;width:5px;height:5px;background:var(--text-3);border-radius:50%;margin-left:3px;vertical-align:middle"></span>' : '';
       return `<div class="market-cell">
-        <div class="market-name">${m.name}</div>
+        <div class="market-name">${m.name}${stale}</div>
         <div class="market-value">${v != null ? fmtPrice(v) : '-'}</div>
         <div class="market-change ${pnlClass(ch || 0)}">${ch != null ? (ch>=0?'+':'') + (+ch).toFixed(2) + '%' : '-'}</div>
       </div>`;
