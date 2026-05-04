@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#FFFFFF">
+<title>페르소나 비중 설정 - 두근 트레이딩</title>
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+:root {
+  --bg: #F2F4F6;
+  --surface: #FFFFFF;
+  --line: #E5E8EB;
+  --text-1: #191F28;
+  --text-2: #4E5968;
+  --text-3: #8B95A1;
+  --text-4: #B0B8C1;
+  --blue: #3182F6;
+  --blue-bg: #E8F3FF;
+  --red: #F04452;
+  --red-bg: #FFE9EA;
+  --green: #1B9856;
+  --green-bg: #E5F5EC;
+  --yellow: #F8AE3C;
+  --yellow-bg: #FFF4D6;
+  --purple: #8B5CF6;
+  --purple-bg: #F0EBFF;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html { font-size: 15px; }
+
+body {
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 500;
+  line-height: 1.4;
+  max-width: 420px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: 100px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.back-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-right: 4px;
+}
+.back-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--text-1);
+}
+.header-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+.header-sub {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.refresh-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.refresh-btn:active { background: var(--line); }
+.refresh-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--text-2);
+}
+
+.tab-bar {
+  display: flex;
+  background: var(--surface);
+  margin: 0 16px 12px;
+  border-radius: 10px;
+  padding: 4px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.tab-btn.active {
+  background: var(--text-1);
+  color: var(--surface);
+}
+
+.info-box {
+  margin: 0 16px 12px;
+  background: var(--blue-bg);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--blue);
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.info-box svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.change-counter {
+  margin: 0 16px 12px;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.change-counter.warning { color: var(--yellow); background: var(--yellow-bg); }
+.change-counter.danger { color: var(--red); background: var(--red-bg); }
+
+.preset-row {
+  margin: 0 16px 12px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+.preset-row::-webkit-scrollbar { display: none; }
+.preset-btn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.preset-btn:active { transform: scale(0.96); }
+.preset-btn.active {
+  background: var(--text-1);
+  color: var(--surface);
+  border-color: var(--text-1);
+}
+
+.section {
+  background: var(--surface);
+  margin: 0 16px 12px;
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.section-title-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.persona-row {
+  margin-bottom: 18px;
+}
+.persona-row:last-child { margin-bottom: 0; }
+
+.persona-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.persona-name-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.persona-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.persona-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.persona-stats {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+.persona-stats.no-data { color: var(--text-4); font-style: italic; }
+.confidence-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+.conf-low { background: var(--red-bg); color: var(--red); }
+.conf-mid { background: var(--yellow-bg); color: #b8860b; }
+.conf-high { background: var(--green-bg); color: var(--green); }
+
+.persona-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fine-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fine-btn:active { transform: scale(0.92); }
+.fine-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.persona-pct {
+  font-size: 15px;
+  font-weight: 800;
+  min-width: 40px;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.slider-wrap {
+  position: relative;
+  margin: 4px 0 6px;
+}
+.slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--surface);
+}
+
+.persona-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.compare-section {
+  background: var(--surface);
+  margin: 0 16px 12px;
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.compare-card {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px;
+}
+.compare-label {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.compare-value {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.compare-sub {
+  font-size: 10px;
+  color: var(--text-3);
+}
+.compare-arrow {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+  margin: 8px 0;
+}
+.compare-diff {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-top: 8px;
+}
+.compare-diff.up { color: var(--green); background: var(--green-bg); }
+.compare-diff.down { color: var(--red); background: var(--red-bg); }
+.compare-diff.same { color: var(--text-3); }
+
+.total-box {
+  margin: 0 16px 12px;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 14px 18px;
+}
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.total-row.ok { color: var(--green); }
+.total-row.error { color: var(--red); }
+.total-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  margin: 0 16px 12px;
+}
+.btn {
+  flex: 1;
+  padding: 12px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: var(--surface);
+  color: var(--text-2);
+  transition: all 0.2s;
+}
+.btn:active { transform: scale(0.98); }
+.btn-outline {
+  background: var(--surface);
+  border: 1px solid var(--blue);
+  color: var(--blue);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.history-section {
+  background: var(--surface);
+  margin: 0 16px 12px;
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.history-empty {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 16px 0;
+}
+.history-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.history-item:last-child { border-bottom: none; }
+.history-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.history-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.history-body {
+  flex: 1;
+  min-width: 0;
+}
+.history-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.history-detail {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+.history-time {
+  font-size: 10px;
+  color: var(--text-4);
+  flex-shrink: 0;
+}
+
+.apply-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0));
+  border-top: 1px solid var(--line);
+  z-index: 100;
+}
+.apply-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  background: var(--blue);
+  color: var(--surface);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.apply-btn:active { transform: scale(0.98); }
+.apply-btn:disabled {
+  background: var(--text-4);
+  cursor: not-allowed;
+  transform: none;
+}
+.apply-info {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 24px 20px 20px;
+  max-width: 320px;
+  width: 100%;
+}
+.modal-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--red-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+.modal-icon svg {
+  width: 28px;
+  height: 28px;
+  stroke: var(--red);
+}
+.modal-title {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.modal-message {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.modal-suggest {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.modal-suggest-title {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+.suggest-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.suggest-row:last-child { margin-bottom: 0; }
+.suggest-row.recommended {
+  color: var(--purple);
+  font-weight: 700;
+}
+.suggest-row.dim { color: var(--text-3); }
+.modal-actions {
+  display: flex;
+  gap: 8px;
+}
+.modal-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-2);
+}
+.modal-btn-primary {
+  background: var(--blue);
+  color: var(--surface);
+  border: 1px solid var(--blue);
+}
+
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-1);
+  color: var(--surface);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 300;
+  display: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.toast.show { display: block; animation: slideUp 0.3s ease; }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+@keyframes slideUp {
+  from { transform: translate(-50%, 20px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.loading {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--line);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="back-btn">
+    <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </div>
+  <div class="header-title">페르소나 비중</div>
+  <div class="header-sub">
+    <span id="data-status">실데이터</span>
+    <div class="refresh-btn" id="btn-refresh" title="데이터 새로고침">
+      <svg fill="none" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <div class="tab-btn active" data-tab="coin">코인봇</div>
+  <div class="tab-btn" data-tab="kr">주식 KR</div>
+  <div class="tab-btn" data-tab="us">주식 US</div>
+</div>
+
+<div class="info-box">
+  <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+  <div>
+    승률은 <strong>최근 30일 실거래 데이터</strong> 기반.<br>
+    변경은 다음 시장 진입부터 적용됩니다.
+  </div>
+</div>
+
+<div class="change-counter" id="change-counter">
+  <span>오늘 변경 횟수</span>
+  <span><strong id="changes-today">0</strong> / 3회</span>
+</div>
+
+<div class="preset-row">
+  <button class="preset-btn" data-preset="default">기본값</button>
+  <button class="preset-btn" data-preset="aggressive">공격적</button>
+  <button class="preset-btn" data-preset="balanced">균형</button>
+  <button class="preset-btn" data-preset="defensive">방어적</button>
+  <button class="preset-btn" data-preset="auto">승률 자동</button>
+</div>
+
+<div class="section">
+  <div class="section-title">
+    <span>비중 조정</span>
+    <span class="section-title-sub" id="seed-info">시드 200만</span>
+  </div>
+
+  <div class="persona-row" id="row-coolma">
+    <div class="persona-head">
+      <div class="persona-name-group">
+        <div class="persona-dot" style="background: #8B5CF6;"></div>
+        <div class="persona-name">쿨마봇</div>
+        <span class="persona-stats" id="stats-coolma">로딩중<span class="loading"></span></span>
+      </div>
+      <div class="persona-controls">
+        <button class="fine-btn" data-persona="coolma" data-delta="-1">−</button>
+        <div class="persona-pct" style="color: #8B5CF6;" id="pct-coolma">35%</div>
+        <button class="fine-btn" data-persona="coolma" data-delta="1">+</button>
+      </div>
+    </div>
+    <div class="slider-wrap">
+      <input type="range" min="5" max="60" value="35" step="1" 
+             class="slider" id="slider-coolma" data-persona="coolma">
+    </div>
+    <div class="persona-foot">
+      <span id="amount-coolma">70만원</span>
+      <span id="contrib-coolma">기여도 측정중</span>
+    </div>
+  </div>
+
+  <div class="persona-row" id="row-swing">
+    <div class="persona-head">
+      <div class="persona-name-group">
+        <div class="persona-dot" style="background: #1B9856;"></div>
+        <div class="persona-name">스윙맨</div>
+        <span class="persona-stats" id="stats-swing">로딩중<span class="loading"></span></span>
+      </div>
+      <div class="persona-controls">
+        <button class="fine-btn" data-persona="swing" data-delta="-1">−</button>
+        <div class="persona-pct" style="color: #1B9856;" id="pct-swing">30%</div>
+        <button class="fine-btn" data-persona="swing" data-delta="1">+</button>
+      </div>
+    </div>
+    <div class="slider-wrap">
+      <input type="range" min="5" max="60" value="30" step="1" 
+             class="slider" id="slider-swing" data-persona="swing">
+    </div>
+    <div class="persona-foot">
+      <span id="amount-swing">60만원</span>
+      <span id="contrib-swing">기여도 측정중</span>
+    </div>
+  </div>
+
+  <div class="persona-row" id="row-day">
+    <div class="persona-head">
+      <div class="persona-name-group">
+        <div class="persona-dot" style="background: #3182F6;"></div>
+        <div class="persona-name">단타맨</div>
+        <span class="persona-stats" id="stats-day">로딩중<span class="loading"></span></span>
+      </div>
+      <div class="persona-controls">
+        <button class="fine-btn" data-persona="day" data-delta="-1">−</button>
+        <div class="persona-pct" style="color: #3182F6;" id="pct-day">25%</div>
+        <button class="fine-btn" data-persona="day" data-delta="1">+</button>
+      </div>
+    </div>
+    <div class="slider-wrap">
+      <input type="range" min="5" max="60" value="25" step="1" 
+             class="slider" id="slider-day" data-persona="day">
+    </div>
+    <div class="persona-foot">
+      <span id="amount-day">50만원</span>
+      <span id="contrib-day">기여도 측정중</span>
+    </div>
+  </div>
+
+  <div class="persona-row" id="row-hold">
+    <div class="persona-head">
+      <div class="persona-name-group">
+        <div class="persona-dot" style="background: #F8AE3C;"></div>
+        <div class="persona-name">존버맨</div>
+        <span class="persona-stats" id="stats-hold">로딩중<span class="loading"></span></span>
+      </div>
+      <div class="persona-controls">
+        <button class="fine-btn" data-persona="hold" data-delta="-1">−</button>
+        <div class="persona-pct" style="color: #F8AE3C;" id="pct-hold">10%</div>
+        <button class="fine-btn" data-persona="hold" data-delta="1">+</button>
+      </div>
+    </div>
+    <div class="slider-wrap">
+      <input type="range" min="5" max="60" value="10" step="1" 
+             class="slider" id="slider-hold" data-persona="hold">
+    </div>
+    <div class="persona-foot">
+      <span id="amount-hold">20만원</span>
+      <span id="contrib-hold">기여도 측정중</span>
+    </div>
+  </div>
+</div>
+
+<div class="compare-section">
+  <div class="section-title">
+    <span>현재 vs 변경 후</span>
+    <span class="section-title-sub">예상 (30일 평균 기준)</span>
+  </div>
+  <div class="compare-grid">
+    <div class="compare-card">
+      <div class="compare-label">현재 비중 P&L</div>
+      <div class="compare-value" id="current-pnl">+0.00%</div>
+      <div class="compare-sub">월 예상 수익</div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-label">변경 후 P&L</div>
+      <div class="compare-value" id="new-pnl">+0.00%</div>
+      <div class="compare-sub">월 예상 수익</div>
+    </div>
+  </div>
+  <div class="compare-diff same" id="compare-diff">변경 없음</div>
+</div>
+
+<div class="total-box">
+  <div class="total-row ok" id="total-row">
+    <span>합계</span>
+    <span id="total-pct">100%</span>
+  </div>
+  <div class="total-sub">
+    <span id="total-amount">총 시드 200만원</span>
+  </div>
+</div>
+
+<div class="action-buttons">
+  <button class="btn" id="btn-reset">현재값 복원</button>
+  <button class="btn btn-outline" id="btn-auto">승률 기반 자동</button>
+</div>
+
+<div class="history-section">
+  <div class="section-title">
+    <span>최근 변경 이력</span>
+  </div>
+  <div id="history-list">
+    <div class="history-empty">이력 로딩중...</div>
+  </div>
+</div>
+
+<div class="apply-bar">
+  <button class="apply-btn" id="btn-apply">다음 시장부터 적용</button>
+  <div class="apply-info">
+    적용 시점: <span id="next-market">계산중...</span>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-error">
+  <div class="modal">
+    <div class="modal-icon">
+      <svg fill="none" stroke-width="2.5" viewBox="0 0 24 24">
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+      </svg>
+    </div>
+    <div class="modal-title" id="modal-title">합계가 100%가 아닙니다</div>
+    <div class="modal-message" id="modal-message"></div>
+    <div class="modal-suggest" id="modal-suggest">
+      <div class="modal-suggest-title">자동 분배 추천</div>
+      <div class="suggest-row recommended" id="suggest-1"></div>
+      <div class="suggest-row dim" id="suggest-2"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modal-cancel">직접 조정</button>
+      <button class="modal-btn modal-btn-primary" id="modal-auto">자동 적용</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SLIDERS = ['coolma', 'swing', 'day', 'hold'];
+const COLORS = {
+  coolma: '#8B5CF6',
+  swing: '#1B9856',
+  day: '#3182F6',
+  hold: '#F8AE3C'
+};
+const NAMES_KR = {
+  coolma: '쿨마봇',
+  swing: '스윙맨',
+  day: '단타맨',
+  hold: '존버맨'
+};
+const NAMES_DB = {
+  coolma: '쿨마봇',
+  swing: '스윙맨',
+  day: '단타맨',
+  hold: '존버맨'
+};
+const SEED = { coin: 2000000, kr: 6000000, us: 4000000 };
+
+const PRESETS = {
+  default:    { coolma: 35, swing: 30, day: 25, hold: 10 },
+  aggressive: { coolma: 45, swing: 30, day: 20, hold: 5 },
+  balanced:   { coolma: 25, swing: 25, day: 25, hold: 25 },
+  defensive:  { coolma: 20, swing: 20, day: 20, hold: 40 }
+};
+
+let STATS = {
+  coolma: { winrate: 0, rr: 0, total: 0, avg_pnl_pct: 0 },
+  swing:  { winrate: 0, rr: 0, total: 0, avg_pnl_pct: 0 },
+  day:    { winrate: 0, rr: 0, total: 0, avg_pnl_pct: 0 },
+  hold:   { winrate: 0, rr: 0, total: 0, avg_pnl_pct: 0 }
+};
+
+let currentTab = 'coin';
+let currentSeed = SEED.coin;
+let currentValues = { ...PRESETS.default };
+let savedValues = { ...PRESETS.default };
+let changesToday = 0;
+let lastRealPnl = 0;
+
+function getValues() {
+  const v = {};
+  SLIDERS.forEach(s => {
+    v[s] = parseInt(document.getElementById(`slider-${s}`).value);
+  });
+  return v;
+}
+
+function getTotal() {
+  const v = getValues();
+  return v.coolma + v.swing + v.day + v.hold;
+}
+
+function formatKRW(value) {
+  if (value >= 10000) return Math.round(value/10000) + '만원';
+  return value.toLocaleString() + '원';
+}
+
+function getConfidenceLevel(total) {
+  if (total < 10) return { label: '낮음', class: 'conf-low' };
+  if (total < 30) return { label: '중간', class: 'conf-mid' };
+  if (total < 100) return { label: '높음', class: 'conf-high' };
+  return { label: '매우높음', class: 'conf-high' };
+}
+
+function updateSliderTrack(id, value, color) {
+  const max = 60, min = 5;
+  const pct = ((value - min) / (max - min)) * 100;
+  const slider = document.getElementById(id);
+  slider.style.background = `linear-gradient(to right, ${color} ${pct}%, var(--line) ${pct}%)`;
+  
+  const thumbStyle = document.getElementById(`thumb-style-${id}`) || (() => {
+    const s = document.createElement('style');
+    s.id = `thumb-style-${id}`;
+    document.head.appendChild(s);
+    return s;
+  })();
+  thumbStyle.textContent = `
+    #${id}::-webkit-slider-thumb { background: ${color}; }
+    #${id}::-moz-range-thumb { background: ${color}; }
+  `;
+}
+
+function calculateExpectedPnl(values) {
+  let totalPnl = 0;
+  SLIDERS.forEach(s => {
+    const stat = STATS[s];
+    if (stat.total < 5) return;
+    const weight = values[s] / 100;
+    const dailyPnl = stat.avg_pnl_pct * stat.total / 30;
+    totalPnl += dailyPnl * weight;
+  });
+  return totalPnl * 30;
+}
+
+function updateUI() {
+  const v = getValues();
+  const total = getTotal();
+  
+  SLIDERS.forEach(s => {
+    document.getElementById(`pct-${s}`).textContent = v[s] + '%';
+    document.getElementById(`amount-${s}`).textContent = 
+      formatKRW(currentSeed * v[s] / 100);
+    updateSliderTrack(`slider-${s}`, v[s], COLORS[s]);
+    
+    const stat = STATS[s];
+    if (stat.total < 5) {
+      document.getElementById(`contrib-${s}`).textContent = `데이터 ${stat.total}건`;
+    } else {
+      const monthlyContrib = (stat.avg_pnl_pct * stat.total / 30 * 30 * v[s] / 100).toFixed(2);
+      const sign = monthlyContrib >= 0 ? '+' : '';
+      document.getElementById(`contrib-${s}`).textContent = 
+        `예상 월 ${sign}${monthlyContrib}%`;
+    }
+  });
+  
+  const totalEl = document.getElementById('total-pct');
+  const totalRow = document.getElementById('total-row');
+  totalEl.textContent = total + '%';
+  
+  if (total === 100) {
+    totalRow.classList.remove('error');
+    totalRow.classList.add('ok');
+  } else {
+    totalRow.classList.remove('ok');
+    totalRow.classList.add('error');
+  }
+  
+  document.getElementById('total-amount').textContent = 
+    `총 시드 ${formatKRW(currentSeed)}`;
+  
+  const currentPnl = lastRealPnl;
+  const newPnl = calculateExpectedPnl(v);
+  const diff = newPnl - currentPnl;
+  
+  document.getElementById('current-pnl').textContent = 
+    (currentPnl >= 0 ? '+' : '') + currentPnl.toFixed(2) + '%';
+  document.getElementById('current-pnl').style.color = 
+    currentPnl >= 0 ? 'var(--red)' : 'var(--blue)';
+  
+  document.getElementById('new-pnl').textContent = 
+    (newPnl >= 0 ? '+' : '') + newPnl.toFixed(2) + '%';
+  document.getElementById('new-pnl').style.color = 
+    newPnl >= 0 ? 'var(--red)' : 'var(--blue)';
+  
+  const diffEl = document.getElementById('compare-diff');
+  diffEl.classList.remove('up', 'down', 'same');
+  if (Math.abs(diff) < 0.01) {
+    diffEl.classList.add('same');
+    diffEl.textContent = '변경 없음';
+  } else if (diff > 0) {
+    diffEl.classList.add('up');
+    diffEl.textContent = `+${diff.toFixed(2)}% 상승 예상`;
+  } else {
+    diffEl.classList.add('down');
+    diffEl.textContent = `${diff.toFixed(2)}% 하락 예상`;
+  }
+  
+  updatePresetActive(v);
+  updateChangesCounter();
+}
+
+function updatePresetActive(v) {
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+  
+  for (const [name, preset] of Object.entries(PRESETS)) {
+    if (SLIDERS.every(s => v[s] === preset[s])) {
+      document.querySelector(`[data-preset="${name}"]`)?.classList.add('active');
+      return;
+    }
+  }
+}
+
+function updateChangesCounter() {
+  const counter = document.getElementById('change-counter');
+  const num = document.getElementById('changes-today');
+  num.textContent = changesToday;
+  
+  counter.classList.remove('warning', 'danger');
+  if (changesToday >= 3) {
+    counter.classList.add('danger');
+  } else if (changesToday >= 2) {
+    counter.classList.add('warning');
+  }
+  
+  document.getElementById('btn-apply').disabled = changesToday >= 3;
+}
+
+function updateNextMarketTime() {
+  const now = new Date();
+  let next;
+  
+  if (currentTab === 'coin') {
+    next = new Date(now);
+    next.setHours(24, 0, 0, 0);
+  } else if (currentTab === 'kr') {
+    next = new Date(now);
+    if (now.getHours() >= 9 && now.getMinutes() >= 30) {
+      next.setDate(next.getDate() + 1);
+    }
+    next.setHours(9, 30, 0, 0);
+    while (next.getDay() === 0 || next.getDay() === 6) {
+      next.setDate(next.getDate() + 1);
+    }
+  } else {
+    next = new Date(now);
+    if (now.getHours() >= 22 && now.getMinutes() >= 30) {
+      next.setDate(next.getDate() + 1);
+    }
+    next.setHours(22, 30, 0, 0);
+  }
+  
+  const opts = { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+  document.getElementById('next-market').textContent = 
+    next.toLocaleString('ko-KR', opts) + ' KST';
+}
+
+async function loadStats() {
+  document.getElementById('data-status').innerHTML = '로딩중<span class="loading"></span>';
+  
+  try {
+    const res = await fetch(`/api/personas/stats?market=${currentTab}&days=30`);
+    if (!res.ok) throw new Error('API 호출 실패');
+    const data = await res.json();
+    
+    SLIDERS.forEach(s => {
+      const dbName = NAMES_DB[s];
+      const stat = data[dbName];
+      
+      if (stat && stat.total > 0) {
+        STATS[s] = {
+          winrate: stat.winrate || 0,
+          rr: stat.rr || 0,
+          total: stat.total || 0,
+          avg_pnl_pct: stat.avg_pnl_pct || 0
+        };
+      } else {
+        STATS[s] = { winrate: 0, rr: 0, total: 0, avg_pnl_pct: 0 };
+      }
+    });
+    
+    if (data.current_pnl_30d !== undefined) {
+      lastRealPnl = data.current_pnl_30d;
+    }
+    
+    document.getElementById('data-status').textContent = '실데이터';
+  } catch (e) {
+    console.error('승률 데이터 로드 실패:', e);
+    document.getElementById('data-status').textContent = '오프라인';
+    showToast('데이터 로드 실패. 캐시 사용.', 'error');
+  }
+  
+  renderStats();
+  updateUI();
+}
+
+function renderStats() {
+  SLIDERS.forEach(s => {
+    const stat = STATS[s];
+    const el = document.getElementById(`stats-${s}`);
+    
+    if (stat.total === 0) {
+      el.innerHTML = `<span class="no-data">데이터 누적 중</span>`;
+    } else if (stat.total < 5) {
+      el.innerHTML = `통계 부족 (${stat.total}건)`;
+    } else {
+      const conf = getConfidenceLevel(stat.total);
+      el.innerHTML = `
+        승률 ${stat.winrate}% · R:R ${stat.rr}
+        <span class="confidence-badge ${conf.class}">${conf.label}</span>
+        <span style="color: var(--text-4); font-size: 10px;">${stat.total}건</span>
+      `;
+    }
+  });
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch(`/api/personas/weight-history?market=${currentTab}&limit=5`);
+    if (!res.ok) throw new Error();
+    const history = await res.json();
+    
+    changesToday = history.changes_today || 0;
+    renderHistory(history.items || []);
+  } catch (e) {
+    document.getElementById('history-list').innerHTML = 
+      '<div class="history-empty">이력 없음</div>';
+  }
+  updateChangesCounter();
+}
+
+function renderHistory(items) {
+  const container = document.getElementById('history-list');
+  
+  if (items.length === 0) {
+    container.innerHTML = '<div class="history-empty">변경 이력 없음</div>';
+    return;
+  }
+  
+  container.innerHTML = items.map(item => {
+    const isApplied = item.applied;
+    const iconBg = isApplied ? 'var(--green-bg)' : 'var(--blue-bg)';
+    const iconColor = isApplied ? 'var(--green)' : 'var(--blue)';
+    const icon = isApplied
+      ? '<polyline points="20 6 9 17 4 12"></polyline>'
+      : '<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>';
+    
+    return `
+      <div class="history-item">
+        <div class="history-icon" style="background: ${iconBg};">
+          <svg fill="none" stroke="${iconColor}" stroke-width="2" viewBox="0 0 24 24">${icon}</svg>
+        </div>
+        <div class="history-body">
+          <div class="history-title">${item.summary}</div>
+          <div class="history-detail">${item.detail}</div>
+        </div>
+        <div class="history-time">${item.time_ago}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadCurrentWeights() {
+  try {
+    const res = await fetch(`/api/personas/current-weight?market=${currentTab}`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    
+    if (data.weights) {
+      savedValues = { ...data.weights };
+      currentValues = { ...data.weights };
+      SLIDERS.forEach(s => {
+        document.getElementById(`slider-${s}`).value = data.weights[s];
+      });
+    }
+  } catch (e) {
+    console.warn('현재 비중 로드 실패, 기본값 사용');
+  }
+}
+
+SLIDERS.forEach(s => {
+  document.getElementById(`slider-${s}`).addEventListener('input', updateUI);
+});
+
+document.querySelectorAll('.fine-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const persona = btn.dataset.persona;
+    const delta = parseInt(btn.dataset.delta);
+    const slider = document.getElementById(`slider-${persona}`);
+    const newVal = Math.max(5, Math.min(60, parseInt(slider.value) + delta));
+    slider.value = newVal;
+    updateUI();
+  });
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    currentSeed = SEED[currentTab];
+    
+    await loadCurrentWeights();
+    await loadStats();
+    await loadHistory();
+    updateNextMarketTime();
+  });
+});
+
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const preset = btn.dataset.preset;
+    
+    if (preset === 'auto') {
+      applyAutoMode();
+      return;
+    }
+    
+    const values = PRESETS[preset];
+    SLIDERS.forEach(s => {
+      document.getElementById(`slider-${s}`).value = values[s];
+    });
+    updateUI();
+  });
+});
+
+function applyAutoMode() {
+  const validStats = SLIDERS.filter(s => STATS[s].total >= 5);
+  
+  if (validStats.length < 2) {
+    showToast('데이터 부족. 더 많은 거래 후 시도하세요.', 'error');
+    return;
+  }
+  
+  const sorted = [...validStats].sort((a, b) => 
+    (STATS[b].winrate * STATS[b].rr) - (STATS[a].winrate * STATS[a].rr)
+  );
+  
+  const allocation = [40, 30, 20, 10];
+  const result = { coolma: 5, swing: 5, day: 5, hold: 5 };
+  
+  sorted.forEach((s, i) => {
+    result[s] = allocation[i] || 5;
+  });
+  
+  let total = Object.values(result).reduce((a, b) => a + b, 0);
+  if (total !== 100) {
+    const diff = 100 - total;
+    result[sorted[0]] += diff;
+  }
+  
+  SLIDERS.forEach(s => {
+    document.getElementById(`slider-${s}`).value = result[s];
+  });
+  updateUI();
+  showToast('승률 기반 자동 적용', 'success');
+}
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  SLIDERS.forEach(s => {
+    document.getElementById(`slider-${s}`).value = savedValues[s];
+  });
+  updateUI();
+});
+
+document.getElementById('btn-auto').addEventListener('click', applyAutoMode);
+
+document.getElementById('btn-refresh').addEventListener('click', async () => {
+  await loadStats();
+  await loadHistory();
+  showToast('데이터 새로고침 완료', 'success');
+});
+
+document.getElementById('btn-apply').addEventListener('click', async () => {
+  if (changesToday >= 3) {
+    showToast('하루 변경 한도 초과 (3회)', 'error');
+    return;
+  }
+  
+  const total = getTotal();
+  if (total !== 100) {
+    showErrorModal();
+    return;
+  }
+  
+  const v = getValues();
+  const maxChange = Math.max(...SLIDERS.map(s => Math.abs(v[s] - savedValues[s])));
+  if (maxChange > 20) {
+    showToast(`한 번에 20%p 이상 변경 불가 (현재 ${maxChange}%p)`, 'error');
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/personas/weight', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        market: currentTab,
+        weights: v
+      })
+    });
+    
+    if (!res.ok) throw new Error('저장 실패');
+    
+    const result = await res.json();
+    showToast(`다음 시장(${result.apply_at_kr})부터 적용됩니다`, 'success');
+    
+    savedValues = { ...v };
+    changesToday++;
+    updateChangesCounter();
+    await loadHistory();
+  } catch (e) {
+    showToast('저장 실패. 다시 시도해주세요.', 'error');
+    console.error(e);
+  }
+});
+
+function showErrorModal() {
+  const total = getTotal();
+  const diff = 100 - total;
+  
+  document.getElementById('modal-message').innerHTML = `
+    현재 합계: <strong>${total}%</strong><br>
+    ${diff > 0 ? `남은 ${diff}%` : `초과된 ${Math.abs(diff)}%`}를 어떻게 할까요?
+  `;
+  
+  const validStats = SLIDERS.filter(s => STATS[s].total >= 5);
+  const sorted = [...validStats].sort((a, b) => 
+    (STATS[b].winrate * STATS[b].rr) - (STATS[a].winrate * STATS[a].rr)
+  );
+  
+  if (sorted.length === 0) {
+    document.getElementById('modal-suggest').style.display = 'none';
+  } else {
+    document.getElementById('modal-suggest').style.display = 'block';
+    const sign = diff > 0 ? '+' : '';
+    document.getElementById('suggest-1').innerHTML = `
+      <span>${NAMES_KR[sorted[0]]} (승률 ${STATS[sorted[0]].winrate}%)</span>
+      <span>${sign}${diff}% 추천</span>
+    `;
+    if (sorted.length > 1) {
+      document.getElementById('suggest-2').innerHTML = `
+        <span>${NAMES_KR[sorted[1]]} (승률 ${STATS[sorted[1]].winrate}%)</span>
+        <span>${sign}${Math.round(diff/2)}% / ${sign}${Math.round(diff/2)}%</span>
+      `;
+      document.getElementById('suggest-2').style.display = 'flex';
+    } else {
+      document.getElementById('suggest-2').style.display = 'none';
+    }
+  }
+  
+  document.getElementById('modal-error').classList.add('active');
+}
+
+document.getElementById('modal-cancel').addEventListener('click', () => {
+  document.getElementById('modal-error').classList.remove('active');
+});
+
+document.getElementById('modal-auto').addEventListener('click', () => {
+  const total = getTotal();
+  const diff = 100 - total;
+  
+  const validStats = SLIDERS.filter(s => STATS[s].total >= 5);
+  const sorted = [...validStats].sort((a, b) => 
+    (STATS[b].winrate * STATS[b].rr) - (STATS[a].winrate * STATS[a].rr)
+  );
+  
+  if (sorted.length > 0) {
+    const topSlider = document.getElementById(`slider-${sorted[0]}`);
+    const newValue = Math.max(5, Math.min(60, parseInt(topSlider.value) + diff));
+    topSlider.value = newValue;
+  }
+  
+  document.getElementById('modal-error').classList.remove('active');
+  updateUI();
+});
+
+document.getElementById('modal-error').addEventListener('click', (e) => {
+  if (e.target.id === 'modal-error') {
+    document.getElementById('modal-error').classList.remove('active');
+  }
+});
+
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = `toast show ${type || ''}`;
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+(async function init() {
+  await loadCurrentWeights();
+  await loadStats();
+  await loadHistory();
+  updateNextMarketTime();
+  setInterval(updateNextMarketTime, 60000);
+})();
+</script>
+
+</body>
+</html>
