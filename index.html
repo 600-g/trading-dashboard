@@ -20,12 +20,15 @@
     --ok:#3fb950; --danger:#ff6b6b; --info:#58a6ff;
   }
   *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent}
-  html, body{overflow-x:hidden; height:100%}
+  html, body{overflow-x:hidden; height:100%; max-width:100vw}
   body{
     background:var(--bg); color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Apple SD Gothic Neo",sans-serif;
     min-height:100vh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
   }
+  *, *::before, *::after { box-sizing: border-box; }
 
   /* ── 앱 셸 ─────────────────────────────────────── */
   .app{display:grid; grid-template-rows:auto 1fr; min-height:100vh}
@@ -427,9 +430,22 @@
     .bot-card .pnl{font-size:14px}
     .bot-card .meta{font-size:10px}
 
-    /* 헤더 */
-    body{padding:max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom))}
-    .topbar{padding:max(10px, env(safe-area-inset-top)) 12px 10px}
+    /* 헤더 — 노치/펀치홀 안전영역 좌/우 모두 적용 */
+    body{
+      padding:
+        max(10px, env(safe-area-inset-top))
+        max(10px, env(safe-area-inset-right))
+        max(10px, env(safe-area-inset-bottom))
+        max(10px, env(safe-area-inset-left));
+    }
+    .topbar{
+      padding-top: max(10px, env(safe-area-inset-top));
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+      padding-bottom: 10px;
+    }
+    /* 앱 컨테이너 자체도 안전영역 보장 */
+    .app{padding-left:max(0px, env(safe-area-inset-left)); padding-right:max(0px, env(safe-area-inset-right))}
     .topbar h1{font-size:14px}
     .topbar h1 span{display:none}  /* 이모지 숨김 */
     .menu-btn{width:34px; height:34px}
@@ -1277,7 +1293,7 @@
   <!-- 메뉴 하단 footer (버전 + CC + 캐시 초기화 버튼) -->
   <div style="padding:14px 16px;border-top:1px solid var(--line);text-align:center;font-size:10.5px;color:var(--muted);line-height:1.7">
     <button onclick="hardReload()" style="width:100%;padding:9px;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--info);font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:8px" title="캐시 모두 삭제 + 강제 새로고침">
-      🔄 v4.1-cal-modal · 캐시 초기화
+      🔄 v4.2-mobile-safe · 캐시 초기화
     </button>
     <div>© 2026 두근컴퍼니</div>
     <div style="font-size:9.5px;margin-top:2px;opacity:0.6">코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
@@ -1367,6 +1383,6 @@ async function hardReload() {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=4.1-cal-modal" defer></script>
+<script src="app.js?v=4.2-mobile-safe" defer></script>
 </body>
 </html>
