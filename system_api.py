@@ -341,6 +341,24 @@ async def persona_update_weight(payload: dict):
             "message":"다음 시장 진입부터 적용"}
 
 
+@app.get("/status/{bot}")
+async def get_bot_status(bot: str) -> dict:
+    """봇 status.json 직접 서빙 (모바일 대시보드용)."""
+    paths = {
+        "coin": "/Users/600mac/coinbot/docs/status.json",
+        "stock": "/Users/600mac/Desktop/주식 자동봇/docs/status.json",
+    }
+    p = paths.get(bot)
+    if not p:
+        return {"error": "invalid bot"}
+    try:
+        import json as _j
+        with open(p) as f:
+            return _j.load(f)
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.post("/api/positions/cancel")
 async def cancel_close(req: dict) -> dict:
     """청산 예약 취소."""
