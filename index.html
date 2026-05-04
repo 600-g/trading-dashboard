@@ -684,9 +684,9 @@
     <div style="margin-bottom:14px">
       <div style="font-size:12px;color:var(--text-2);margin-bottom:6px;font-weight:700">운영 모드</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-        <button onclick="ctrlBot('run')" style="padding:12px;background:var(--green-bg);color:var(--green);border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">▶ 러닝</button>
-        <button onclick="ctrlBot('soft')" style="padding:12px;background:var(--yellow-bg);color:var(--yellow);border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">⏸ 정리중지</button>
-        <button onclick="ctrlBot('stop')" style="padding:12px;background:var(--red-bg);color:var(--red);border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">⏹ 완전종료</button>
+        <button data-mode="run" onclick="ctrlBot('run')" style="padding:12px;background:var(--green-bg);color:var(--green);border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">▶ 러닝</button>
+        <button data-mode="soft" onclick="ctrlBot('soft')" style="padding:12px;background:var(--yellow-bg);color:var(--yellow);border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">⏸ 정리중지</button>
+        <button data-mode="stop" onclick="ctrlBot('stop')" style="padding:12px;background:var(--red-bg);color:var(--red);border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">⏹ 완전종료</button>
       </div>
     </div>
 
@@ -694,10 +694,10 @@
       <div style="font-size:12px;color:var(--text-2);margin-bottom:6px;font-weight:700">거래 모드</div>
       <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--bg);border-radius:10px">
         <div>
-          <div id="sheet-mode-name" style="font-size:15px;font-weight:800">DEMO</div>
-          <div style="font-size:11px;color:var(--text-3)">시뮬레이션</div>
+          <div id="sheet-mode-name" style="font-size:15px;font-weight:800">-</div>
+          <div data-mode-sub style="font-size:11px;color:var(--text-3)">로딩...</div>
         </div>
-        <button onclick="toggleTrade()" id="sheet-mode-btn" style="padding:10px 18px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer">REAL 전환</button>
+        <button onclick="toggleTrade()" id="sheet-mode-btn" style="padding:10px 18px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer">전환</button>
       </div>
     </div>
 
@@ -721,6 +721,36 @@ function openBotSheet(bot){
   document.getElementById('sheet-title').textContent = bot === 'coin' ? '🪙 코인봇 컨트롤' : '📈 주식봇 컨트롤';
   document.getElementById('bot-sheet').style.display = 'flex';
   refreshSheetPositions();
+  refreshSheetMode();
+}
+
+async function refreshSheetMode(){
+  if (!_currentBot) return;
+  try {
+    const r = await fetch(`${BOT_APIS[_currentBot]}/health`, {signal:AbortSignal.timeout(2500)});
+    if (!r.ok) return;
+    const d = await r.json();
+    const botMode = d.bot_mode || 'unknown';
+    const tradeMode = (d.trade_mode || 'demo').toUpperCase();
+    // 운영 모드 active highlight
+    ['run','soft','stop'].forEach(m => {
+      const btn = document.querySelector(`#bot-sheet button[data-mode="${m}"]`);
+      if (btn) {
+        const active = (m==='run' && botMode==='running') || (m==='soft' && botMode==='soft_stop') || (m==='stop' && botMode==='stopped');
+        btn.style.outline = active ? '2.5px solid var(--text-1)' : 'none';
+        btn.style.outlineOffset = active ? '-2.5px' : '0';
+      }
+    });
+    // 거래 모드 라벨 + 버튼
+    setText('sheet-mode-name', tradeMode);
+    const subEl = document.querySelector('#bot-sheet [data-mode-sub]');
+    if (subEl) subEl.textContent = tradeMode === 'DEMO' ? '시뮬레이션 (가상매매)' : '⚠️ 실전매매 (진짜돈)';
+    const tradeBtn = document.getElementById('sheet-mode-btn');
+    if (tradeBtn) {
+      tradeBtn.textContent = tradeMode === 'DEMO' ? 'REAL 전환' : 'DEMO 전환';
+      tradeBtn.style.background = tradeMode === 'DEMO' ? 'var(--red)' : 'var(--blue)';
+    }
+  } catch (e) { console.error('mode fetch', e); }
 }
 function closeBotSheet(){
   document.getElementById('bot-sheet').style.display = 'none';
@@ -728,34 +758,42 @@ function closeBotSheet(){
 }
 async function ctrlBot(action){
   if (!_currentBot) return;
-  if (action === 'stop' && !confirm('봇 완전 종료?')) return;
+  const labels = {run:'러닝 시작', soft:'정리중지 (보유는 청산까지)', stop:'완전 종료'};
+  if (action === 'stop' && !confirm(`${_currentBot} 봇 ${labels[action]}?`)) return;
+  if (action === 'soft' && !confirm(`${labels[action]}?`)) return;
   try {
     const r = await fetch(`${BOT_APIS[_currentBot]}/mode/${action}`, {method:'POST'});
-    if (r.ok) alert(`✅ ${_currentBot} ${action}`);
-    else alert(`❌ ${r.status}`);
-    setTimeout(fetchAndRender, 1000);
+    if (r.ok) {
+      alert(`✅ ${labels[action]}`);
+      refreshSheetMode();
+      setTimeout(fetchAndRender, 1500);
+    } else alert(`❌ HTTP ${r.status}`);
   } catch (e) { alert(`❌ ${e.message}`); }
 }
 async function toggleTrade(){
   if (!_currentBot) return;
   const cur = document.getElementById('sheet-mode-name').textContent;
   const target = cur === 'DEMO' ? 'real' : 'demo';
-  if (target === 'real' && !confirm('REAL 모드로? 진짜 돈입니다!')) return;
+  if (target === 'real' && !confirm('⚠️ REAL 모드 = 진짜 돈으로 매매!\n진행하시겠습니까?')) return;
   try {
     const r = await fetch(`${BOT_APIS[_currentBot]}/trade/${target}`, {method:'POST'});
     if (r.ok) {
-      document.getElementById('sheet-mode-name').textContent = target.toUpperCase();
-      alert(`✅ ${target.toUpperCase()} 모드`);
-    }
+      alert(`✅ ${target.toUpperCase()} 모드 전환됨`);
+      refreshSheetMode();
+      setTimeout(fetchAndRender, 1500);
+    } else alert(`❌ HTTP ${r.status}`);
   } catch (e) { alert(`❌ ${e.message}`); }
 }
 async function emergencyBot(){
   if (!_currentBot) return;
-  if (!confirm('🚨 보유 전량 즉시 청산. 정말?')) return;
+  if (!confirm('🚨 보유 전량 즉시 청산.\n취소 불가, 진행?')) return;
   try {
     const r = await fetch(`${BOT_APIS[_currentBot]}/emergency`, {method:'POST'});
-    if (r.ok) alert(`🚨 긴급청산 실행`);
-    setTimeout(fetchAndRender, 1500);
+    if (r.ok) {
+      alert(`🚨 긴급청산 실행`);
+      refreshSheetPositions();
+      setTimeout(fetchAndRender, 2000);
+    }
   } catch (e) { alert(`❌ ${e.message}`); }
 }
 async function refreshSheetPositions(){
@@ -891,8 +929,11 @@ function renderMobile(d){
     const stEl = document.getElementById(`m-${bot}-status`);
     if (stEl) {
       const running = (data.bot_mode === 'running');
+      const trade = (data.trade_mode || 'demo').toUpperCase();
       stEl.className = 'bot-status ' + (running ? 'running' : 'stopped');
-      stEl.innerHTML = `<span class="status-dot"></span><span>${running ? '운영중' : '정지'}</span>`;
+      const badgeColor = trade === 'REAL' ? 'var(--red)' : 'var(--blue)';
+      stEl.innerHTML = `<span class="status-dot"></span><span>${running ? '운영중' : '정지'}</span>
+        <span style="margin-left:4px;padding:1px 5px;background:${badgeColor};color:#fff;border-radius:4px;font-size:9px;font-weight:800">${trade}</span>`;
     }
   });
 
