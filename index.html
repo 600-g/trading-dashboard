@@ -550,9 +550,9 @@
   </div>
 </div>
 
-<!-- 봇 2개 카드 -->
+<!-- 봇 2개 카드 — 클릭 시 컨트롤 시트 -->
 <div class="bot-row">
-  <div class="bot-card">
+  <div class="bot-card" onclick="openBotSheet('coin')">
     <div class="bot-head">
       <div class="bot-name">
         <svg class="ico coin-ico"><use href="#i-coin"/></svg>
@@ -565,8 +565,9 @@
     </div>
     <div class="bot-amount" id="m-coin-balance">-</div>
     <div class="bot-pnl" id="m-coin-pnl">-</div>
+    <div style="margin-top:6px;font-size:10px;color:var(--text-3);text-align:right">탭 → 컨트롤</div>
   </div>
-  <div class="bot-card">
+  <div class="bot-card" onclick="openBotSheet('stock')">
     <div class="bot-head">
       <div class="bot-name">
         <svg class="ico stock-ico"><use href="#i-trending"/></svg>
@@ -579,6 +580,7 @@
     </div>
     <div class="bot-amount" id="m-stock-balance">-</div>
     <div class="bot-pnl" id="m-stock-pnl">-</div>
+    <div style="margin-top:6px;font-size:10px;color:var(--text-3);text-align:right">탭 → 컨트롤</div>
   </div>
 </div>
 
@@ -757,7 +759,129 @@
 </div>
 
 <!-- ─── status.json 데이터 바인딩 (가이드 §10 추가 작업) ─── -->
+<!-- ─── 봇 컨트롤 시트 (봇 카드 클릭 시 풀스크린 모달) ─── -->
+<div id="bot-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeBotSheet()">
+  <div style="background:var(--surface);width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom));max-height:85vh;overflow-y:auto">
+    <div style="text-align:center;margin-bottom:12px"><div style="width:36px;height:4px;background:var(--text-4);border-radius:2px;margin:0 auto 14px"></div></div>
+    <div id="sheet-title" style="font-size:18px;font-weight:800;margin-bottom:14px"></div>
+
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--text-2);margin-bottom:6px;font-weight:700">운영 모드</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        <button onclick="ctrlBot('run')" style="padding:12px;background:var(--green-bg);color:var(--green);border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">▶ 러닝</button>
+        <button onclick="ctrlBot('soft')" style="padding:12px;background:var(--yellow-bg);color:var(--yellow);border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">⏸ 정리중지</button>
+        <button onclick="ctrlBot('stop')" style="padding:12px;background:var(--red-bg);color:var(--red);border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">⏹ 완전종료</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--text-2);margin-bottom:6px;font-weight:700">거래 모드</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--bg);border-radius:10px">
+        <div>
+          <div id="sheet-mode-name" style="font-size:15px;font-weight:800">DEMO</div>
+          <div style="font-size:11px;color:var(--text-3)">시뮬레이션</div>
+        </div>
+        <button onclick="toggleTrade()" id="sheet-mode-btn" style="padding:10px 18px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer">REAL 전환</button>
+      </div>
+    </div>
+
+    <button onclick="emergencyBot()" style="width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:14px">🚨 긴급청산 (전량 즉시)</button>
+
+    <!-- 현재 보유 종목 + 청산 버튼 -->
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:6px;font-weight:700">현재 보유</div>
+    <div id="sheet-positions" style="display:flex;flex-direction:column;gap:6px"></div>
+
+    <button onclick="closeBotSheet()" style="width:100%;padding:12px;background:var(--bg);color:var(--text-2);border:none;border-radius:10px;font-weight:700;font-size:13px;margin-top:14px;cursor:pointer">닫기</button>
+  </div>
+</div>
+
 <script>
+const SYS_API = 'http://127.0.0.1:9000';
+const BOT_APIS = {coin: 'http://127.0.0.1:9001', stock: 'http://127.0.0.1:9002'};
+let _currentBot = null;
+
+function openBotSheet(bot){
+  _currentBot = bot;
+  document.getElementById('sheet-title').textContent = bot === 'coin' ? '🪙 코인봇 컨트롤' : '📈 주식봇 컨트롤';
+  document.getElementById('bot-sheet').style.display = 'flex';
+  refreshSheetPositions();
+}
+function closeBotSheet(){
+  document.getElementById('bot-sheet').style.display = 'none';
+  _currentBot = null;
+}
+async function ctrlBot(action){
+  if (!_currentBot) return;
+  if (action === 'stop' && !confirm('봇 완전 종료?')) return;
+  try {
+    const r = await fetch(`${BOT_APIS[_currentBot]}/mode/${action}`, {method:'POST'});
+    if (r.ok) alert(`✅ ${_currentBot} ${action}`);
+    else alert(`❌ ${r.status}`);
+    setTimeout(fetchAndRender, 1000);
+  } catch (e) { alert(`❌ ${e.message}`); }
+}
+async function toggleTrade(){
+  if (!_currentBot) return;
+  const cur = document.getElementById('sheet-mode-name').textContent;
+  const target = cur === 'DEMO' ? 'real' : 'demo';
+  if (target === 'real' && !confirm('REAL 모드로? 진짜 돈입니다!')) return;
+  try {
+    const r = await fetch(`${BOT_APIS[_currentBot]}/trade/${target}`, {method:'POST'});
+    if (r.ok) {
+      document.getElementById('sheet-mode-name').textContent = target.toUpperCase();
+      alert(`✅ ${target.toUpperCase()} 모드`);
+    }
+  } catch (e) { alert(`❌ ${e.message}`); }
+}
+async function emergencyBot(){
+  if (!_currentBot) return;
+  if (!confirm('🚨 보유 전량 즉시 청산. 정말?')) return;
+  try {
+    const r = await fetch(`${BOT_APIS[_currentBot]}/emergency`, {method:'POST'});
+    if (r.ok) alert(`🚨 긴급청산 실행`);
+    setTimeout(fetchAndRender, 1500);
+  } catch (e) { alert(`❌ ${e.message}`); }
+}
+async function refreshSheetPositions(){
+  if (!_currentBot) return;
+  try {
+    const r = await fetch(`${SYS_API}/status/${_currentBot}`, {signal:AbortSignal.timeout(2500)});
+    if (!r.ok) return;
+    const d = await r.json();
+    const pos = d.current_positions || d.positions || [];
+    const box = document.getElementById('sheet-positions');
+    if (pos.length === 0) {
+      box.innerHTML = '<div style="text-align:center;color:var(--text-3);padding:14px;font-size:12px">보유 없음</div>';
+      return;
+    }
+    box.innerHTML = pos.map(p => {
+      const sym = p.coin || p.stock_name || p.stock || '-';
+      const symKey = p.coin || p.stock;
+      const pnl = p.pnl_pct != null ? p.pnl_pct : 0;
+      const pnlSign = pnl >= 0 ? '+' : '';
+      const cls = pnl > 0 ? 'pnl-up' : pnl < 0 ? 'pnl-down' : 'pnl-flat';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg);border-radius:10px">
+        <div style="overflow:hidden;flex:1">
+          <div style="font-weight:700;font-size:13px">${sym}</div>
+          <div class="${cls}" style="font-size:11px">${pnlSign}${pnl.toFixed(2)}%</div>
+        </div>
+        <button onclick="closePos('${symKey}','${sym}')" style="padding:8px 14px;background:var(--red);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer">청산</button>
+      </div>`;
+    }).join('');
+  } catch (e) { console.error(e); }
+}
+async function closePos(symbol, name){
+  if (!confirm(`${name} 청산 예약?\n다음 사이클(60초 내) 자동 매도.`)) return;
+  try {
+    const r = await fetch(`${SYS_API}/api/positions/close`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({bot:_currentBot, symbol})
+    });
+    const d = await r.json();
+    if (d.ok) { alert(`✅ ${name} 청산 예약됨`); refreshSheetPositions(); }
+    else alert(`❌ ${d.error || '실패'}`);
+  } catch (e) { alert(`❌ ${e.message}`); }
+}
 function fmtKRW(v){
   if (v == null || isNaN(v)) return '-';
   v = Math.round(+v);
