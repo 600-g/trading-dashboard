@@ -1220,8 +1220,44 @@ async function loadCurrentWeights() {
   }
 }
 
+// 슬라이더 input 시: 변경된 슬라이더 외 나머지에 차이 비례 분배 → 합 100 강제
+let _adjusting = false;
+function rebalanceFrom(changed) {
+  if (_adjusting) return;
+  _adjusting = true;
+  const v = getValues();
+  const total = v.coolma + v.swing + v.day + v.hold;
+  const diff = total - 100;
+  if (diff !== 0) {
+    const others = SLIDERS.filter(s => s !== changed);
+    const sumOthers = others.reduce((a, s) => a + v[s], 0);
+    if (sumOthers > 0) {
+      let remaining = diff;
+      others.forEach((s, i) => {
+        const share = i === others.length - 1 ? remaining
+          : Math.round(diff * (v[s] / sumOthers));
+        const newVal = Math.max(5, Math.min(60, v[s] - share));
+        const actualDelta = v[s] - newVal;
+        document.getElementById(`slider-${s}`).value = newVal;
+        v[s] = newVal;
+        remaining -= actualDelta;
+      });
+    }
+    // 미세 오차: changed 슬라이더에서 흡수
+    const newTotal = SLIDERS.reduce((a, s) => a + parseInt(document.getElementById(`slider-${s}`).value), 0);
+    if (newTotal !== 100) {
+      const cur = parseInt(document.getElementById(`slider-${changed}`).value);
+      document.getElementById(`slider-${changed}`).value = Math.max(5, Math.min(80, cur + (100 - newTotal)));
+    }
+  }
+  _adjusting = false;
+  updateUI();
+}
+
 SLIDERS.forEach(s => {
-  document.getElementById(`slider-${s}`).addEventListener('input', updateUI);
+  const el = document.getElementById(`slider-${s}`);
+  el.max = 80;
+  el.addEventListener('input', () => rebalanceFrom(s));
 });
 
 document.querySelectorAll('.fine-btn').forEach(btn => {
@@ -1229,9 +1265,9 @@ document.querySelectorAll('.fine-btn').forEach(btn => {
     const persona = btn.dataset.persona;
     const delta = parseInt(btn.dataset.delta);
     const slider = document.getElementById(`slider-${persona}`);
-    const newVal = Math.max(5, Math.min(60, parseInt(slider.value) + delta));
+    const newVal = Math.max(5, Math.min(80, parseInt(slider.value) + delta));
     slider.value = newVal;
-    updateUI();
+    rebalanceFrom(persona);
   });
 });
 
@@ -1246,6 +1282,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     await loadStats();
     await loadHistory();
     updateNextMarketTime();
+    _loadChangesToday();
+    updateUI();
   });
 });
 
@@ -1313,47 +1351,67 @@ document.getElementById('btn-refresh').addEventListener('click', async () => {
   showToast('데이터 새로고침 완료', 'success');
 });
 
+// changesToday: localStorage + 자정 KST 리셋
+function _changesKey() {
+  const kst = new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10);
+  return `persona_changes_${currentTab}_${kst}`;
+}
+function _loadChangesToday() {
+  const v = parseInt(localStorage.getItem(_changesKey()) || '0');
+  changesToday = isNaN(v) ? 0 : v;
+  updateChangesCounter();
+}
+function _bumpChangesToday() {
+  changesToday++;
+  localStorage.setItem(_changesKey(), String(changesToday));
+  updateChangesCounter();
+}
+
 document.getElementById('btn-apply').addEventListener('click', async () => {
   if (changesToday >= 3) {
-    showToast('하루 변경 한도 초과 (3회)', 'error');
-    return;
+    if (!confirm(`오늘 이미 ${changesToday}회 변경됨. 그래도 진행?`)) return;
   }
-  
   const total = getTotal();
   if (total !== 100) {
     showErrorModal();
     return;
   }
-  
   const v = getValues();
-  const maxChange = Math.max(...SLIDERS.map(s => Math.abs(v[s] - savedValues[s])));
-  if (maxChange > 20) {
-    showToast(`한 번에 20%p 이상 변경 불가 (현재 ${maxChange}%p)`, 'error');
-    return;
-  }
-  
+  const diffs = SLIDERS.map(s => `${NAMES_KR[s]} ${savedValues[s]}→${v[s]}%`);
+  if (!confirm(`다음 시장 진입부터 적용:\n\n${diffs.join('\n')}\n\n진행?`)) return;
+
+  const btn = document.getElementById('btn-apply');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+
   try {
     const res = await fetch(API_BASE+'/api/personas/weight', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        market: currentTab,
-        weights: v
-      })
+      body: JSON.stringify({ market: currentTab, weights: v })
     });
-    
-    if (!res.ok) throw new Error('저장 실패');
-    
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`HTTP ${res.status}: ${txt.slice(0,100)}`);
+    }
     const result = await res.json();
-    showToast(`다음 시장(${result.apply_at_kr})부터 적용됩니다`, 'success');
-    
     savedValues = { ...v };
-    changesToday++;
-    updateChangesCounter();
+    _bumpChangesToday();
+    btn.textContent = '✅ 적용 완료';
+    btn.style.background = 'var(--green)';
+    showToast(`✅ ${result.apply_at_kr || '다음 시장'} 적용 예약 완료`, 'success');
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.style.background = '';
+      btn.disabled = false;
+    }, 2500);
     await loadHistory();
   } catch (e) {
-    showToast('저장 실패. 다시 시도해주세요.', 'error');
-    console.error(e);
+    btn.disabled = false;
+    btn.textContent = orig;
+    showToast(`❌ 저장 실패: ${e.message}`, 'error');
+    console.error('[persona save]', e);
   }
 });
 
@@ -1435,6 +1493,8 @@ function showToast(msg, type) {
   await loadStats();
   await loadHistory();
   updateNextMarketTime();
+  _loadChangesToday();
+  updateUI();
   setInterval(updateNextMarketTime, 60000);
 })();
 </script>
