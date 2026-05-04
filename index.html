@@ -30,7 +30,8 @@
   }
   *, *::before, *::after { box-sizing: border-box; }
 
-  /* 데스크탑에서는 모바일 전용 카드 숨김 */
+  /* 데스크탑에서는 모바일 전용 화면 숨김 */
+  #mobile_home{display:none}
   #mobile_holdings{display:none}
 
   /* ── 앱 셸 ─────────────────────────────────────── */
@@ -433,11 +434,45 @@
     .bot-card .pnl{font-size:14px}
     .bot-card .meta{font-size:10px}
 
-    /* 모바일 핵심 UI — 비핵심 카드 숨김 (잔고+보유종목+캘린더만) */
+    /* 모바일 전용 화면 — 데스크탑 home 숨김 */
     .desktop-only{display:none !important}
+    #mobile_home{display:block !important}
+    #view-home > .desktop-only{display:none !important}
 
-    /* 모바일 보유 종목 강조 카드 */
-    #mobile_holdings{display:block; margin-bottom:10px}
+    /* 모바일 정사각형 그리드 */
+    .m-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px}
+    .m-tile{
+      aspect-ratio:1; background:var(--card); border:1px solid var(--line); border-radius:14px;
+      padding:14px; display:flex; flex-direction:column; justify-content:space-between;
+      cursor:pointer; transition:all .15s; position:relative;
+    }
+    .m-tile:active{transform:scale(0.97); border-color:var(--info)}
+    .m-tile-icon{font-size:28px}
+    .m-tile-label{font-size:13px; font-weight:700; color:var(--text)}
+    .m-tile-value{font-size:18px; font-weight:700; font-variant-numeric:tabular-nums}
+    .m-tile-sub{font-size:10px; color:var(--muted)}
+    .m-tile.coin{border-top:3px solid var(--coin)}
+    .m-tile.stock{border-top:3px solid var(--stock)}
+    .m-tile.calendar{border-top:3px solid var(--info)}
+    .m-tile.improve{border-top:3px solid var(--warn)}
+
+    /* 모바일 HERO */
+    .m-hero{
+      background:linear-gradient(135deg,#1a1f2e,#0d1117);
+      border:1px solid var(--line); border-radius:14px;
+      padding:18px; text-align:center; margin-bottom:10px;
+    }
+    .m-hero-label{font-size:11px; color:var(--muted)}
+    .m-hero-balance{font-size:28px; font-weight:800; margin:6px 0; font-variant-numeric:tabular-nums}
+    .m-hero-pnl{font-size:14px; font-weight:700; font-variant-numeric:tabular-nums}
+
+    /* 모바일에서 모든 카드/리스트 가로 폭 100% 보장 */
+    .card{max-width:100%; box-sizing:border-box; overflow-wrap:anywhere}
+    .card *{max-width:100%}
+    table{table-layout:fixed; width:100%; word-break:break-word}
+    th, td{overflow:hidden; text-overflow:ellipsis; max-width:100%}
+    /* 모달 폰 풀스크린 */
+    .modal{max-width:calc(100vw - 20px) !important; width:calc(100vw - 20px) !important; max-height:90vh; overflow-y:auto}
 
     /* 헤더 — 노치/펀치홀 안전영역 좌/우 모두 적용 */
     body{
@@ -617,8 +652,89 @@
     <!-- ─── 메인 뷰: 종합 대시보드 (컴팩트 + 위젯) ────── -->
     <div class="view active" id="view-home">
 
+      <!-- ═══════════════ 📱 모바일 전용 홈 ═══════════════ -->
+      <div id="mobile_home">
+        <!-- 잔고 HERO -->
+        <div class="m-hero">
+          <div class="m-hero-label">총 잔고</div>
+          <div class="m-hero-balance" id="m_balance">-</div>
+          <div>
+            <span class="m-hero-pnl" id="m_today_pnl">-</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:6px">오늘</span>
+          </div>
+        </div>
+
+        <!-- 정사각형 그리드 6개 버튼 -->
+        <div class="m-grid">
+          <div class="m-tile coin" onclick="goView('coin')">
+            <div>
+              <div class="m-tile-icon">🪙</div>
+              <div class="m-tile-label" style="margin-top:6px">코인봇</div>
+            </div>
+            <div>
+              <div class="m-tile-value" id="m_coin_pnl">-</div>
+              <div class="m-tile-sub" id="m_coin_meta">-</div>
+            </div>
+          </div>
+          <div class="m-tile stock" onclick="goView('stock')">
+            <div>
+              <div class="m-tile-icon">📈</div>
+              <div class="m-tile-label" style="margin-top:6px">주식봇</div>
+            </div>
+            <div>
+              <div class="m-tile-value" id="m_stock_pnl">-</div>
+              <div class="m-tile-sub" id="m_stock_meta">-</div>
+            </div>
+          </div>
+          <div class="m-tile" onclick="scrollToMobileHoldings()">
+            <div>
+              <div class="m-tile-icon">📦</div>
+              <div class="m-tile-label" style="margin-top:6px">보유 종목</div>
+            </div>
+            <div>
+              <div class="m-tile-value" id="m_holdings_count">-</div>
+              <div class="m-tile-sub">전체 합산</div>
+            </div>
+          </div>
+          <div class="m-tile calendar" onclick="scrollToMobileCalendar()">
+            <div>
+              <div class="m-tile-icon">🗓</div>
+              <div class="m-tile-label" style="margin-top:6px">캘린더</div>
+            </div>
+            <div>
+              <div class="m-tile-value" id="m_today_trades" style="font-size:14px">-</div>
+              <div class="m-tile-sub">오늘 거래</div>
+            </div>
+          </div>
+          <div class="m-tile improve" onclick="goView('improvement')">
+            <div>
+              <div class="m-tile-icon">🤖</div>
+              <div class="m-tile-label" style="margin-top:6px">자가개선</div>
+            </div>
+            <div>
+              <div class="m-tile-value" id="m_tune_count" style="font-size:14px">-</div>
+              <div class="m-tile-sub">변경 건수</div>
+            </div>
+          </div>
+          <div class="m-tile" onclick="goView('history')">
+            <div>
+              <div class="m-tile-icon">📅</div>
+              <div class="m-tile-label" style="margin-top:6px">히스토리</div>
+            </div>
+            <div>
+              <div class="m-tile-value" id="m_total_pnl" style="font-size:14px">-</div>
+              <div class="m-tile-sub">누적 P&L</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 보유 종목 리스트 (그리드 아래) -->
+        <div id="mobile_holdings_anchor" style="margin-top:14px"></div>
+      </div>
+      <!-- ═══════════════ 모바일 끝 ═══════════════ -->
+
       <!-- HERO: 잔고 (메인) + 시드 + 누적 P&L -->
-      <div class="hero hero-compact">
+      <div class="hero hero-compact desktop-only">
         <div class="hero-row">
           <div>
             <div class="hero-label">합산 잔고 (현재)</div>
@@ -638,8 +754,8 @@
         </div>
       </div>
 
-      <!-- 봇 카드 (잔고 + 시드 + 변동 직관 표시) -->
-      <div class="grid-2" style="margin-bottom:10px; gap:8px">
+      <!-- 봇 카드 (데스크탑만) -->
+      <div class="grid-2 desktop-only" style="margin-bottom:10px; gap:8px">
         <div class="bot-card coin" onclick="goView('coin')">
           <div class="top">
             <div class="name" style="color:var(--coin); font-size:12px">
@@ -1308,7 +1424,7 @@
   <!-- 메뉴 하단 footer (버전 + CC + 캐시 초기화 버튼) -->
   <div style="padding:14px 16px;border-top:1px solid var(--line);text-align:center;font-size:10.5px;color:var(--muted);line-height:1.7">
     <button onclick="hardReload()" style="width:100%;padding:9px;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--info);font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:8px" title="캐시 모두 삭제 + 강제 새로고침">
-      🔄 v4.3-mobile-core · 캐시 초기화
+      🔄 v4.4-mobile-tiles · 캐시 초기화
     </button>
     <div>© 2026 두근컴퍼니</div>
     <div style="font-size:9.5px;margin-top:2px;opacity:0.6">코인봇:9001 · 주식봇:9002 · 시스템:9000</div>
@@ -1398,6 +1514,6 @@ async function hardReload() {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" defer></script>
-<script src="app.js?v=4.3-mobile-core" defer></script>
+<script src="app.js?v=4.4-mobile-tiles" defer></script>
 </body>
 </html>

@@ -639,6 +639,65 @@ function openStockModal(bot, stock) {
 
 function closeStockModal() { document.getElementById('stockModal').classList.remove('show'); }
 
+// ─── 모바일 홈 (정사각형 그리드 6개) ──────────────────────
+function renderMobileHome() {
+  const c = STATE.coin.status, s = STATE.stock.status;
+  const totalBal = (c?.balance || 0) + (s?.balance || 0);
+  const todayPnl = (c?.today_pnl || 0) + (s?.today_pnl || 0);
+  const totalPnl = ((c?.total_pnl) || (c?.balance - c?.initial_balance || 0))
+                 + ((s?.total_pnl) || (s?.balance - s?.initial_balance || 0));
+  const cPnlCls = (c?.today_pnl || 0) > 0 ? 'up' : (c?.today_pnl || 0) < 0 ? 'down' : '';
+  const sPnlCls = (s?.today_pnl || 0) > 0 ? 'up' : (s?.today_pnl || 0) < 0 ? 'down' : '';
+  const totalCls = todayPnl > 0 ? 'up' : todayPnl < 0 ? 'down' : '';
+  const totalAccCls = totalPnl > 0 ? 'up' : totalPnl < 0 ? 'down' : '';
+
+  const setText = (id, txt, cls) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = txt;
+      if (cls !== undefined) {
+        el.classList.remove('up', 'down');
+        if (cls) el.classList.add(cls);
+      }
+    }
+  };
+  setText('m_balance', fmt(totalBal) + '원', totalCls);
+  setText('m_today_pnl', fmtSign(todayPnl) + '원', totalCls);
+  setText('m_coin_pnl', fmtSign(c?.today_pnl || 0), cPnlCls);
+  setText('m_coin_meta', `잔고 ${fmt(c?.balance || 0)}`);
+  setText('m_stock_pnl', fmtSign(s?.today_pnl || 0), sPnlCls);
+  setText('m_stock_meta', `잔고 ${fmt(s?.balance || 0)}`);
+
+  const cPos = c?.current_positions || c?.positions || [];
+  const sPos = s?.positions || [];
+  setText('m_holdings_count', `${cPos.length + sPos.length}건`);
+
+  const cT = c?.today_pnl != null ? (c?.recent_trades || []).length : 0;
+  const sT = s?.today_pnl != null ? (s?.recent_trades || []).length : 0;
+  const today = new Date().toISOString().slice(0,10);
+  const todayTradesN = [...(c?.recent_trades||[]), ...(s?.recent_trades||[])]
+    .filter(t => (t.ts || t.created_at || '').startsWith(today)).length;
+  setText('m_today_trades', `${todayTradesN}건`);
+
+  const tunes = [...(c?.tune_history||[]), ...(s?.tune_history||[])];
+  setText('m_tune_count', `${tunes.length}건`);
+  setText('m_total_pnl', fmtSign(totalPnl), totalAccCls);
+
+  // mobile_holdings 카드를 mobile_home anchor 안으로 이동 (한번만)
+  const anchor = document.getElementById('mobile_holdings_anchor');
+  const hCard = document.getElementById('mobile_holdings');
+  if (anchor && hCard && hCard.parentElement !== anchor) {
+    anchor.appendChild(hCard);
+  }
+}
+
+function scrollToMobileHoldings() {
+  document.getElementById('mobile_holdings')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function scrollToMobileCalendar() {
+  document.getElementById('cal_grid')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
 // ─── 모바일 핵심: 현재 보유 종목 (양봇 합산) ─────────────
 function renderMobileHoldings() {
   const c = STATE.coin.status, s = STATE.stock.status;
@@ -2235,6 +2294,7 @@ function renderHomeOverview() {
   renderHomeCoreCards();
   renderBotProcesses();
   renderMobileHoldings();
+  renderMobileHome();
 }
 
 function renderChart7d() {
