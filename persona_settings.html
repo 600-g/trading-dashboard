@@ -876,7 +876,15 @@ const IS_LOCAL = location.protocol === 'file:' || _h === '127.0.0.1' || _h === '
 const API_BASE = IS_LOCAL ? 'http://127.0.0.1:9000' : '';
 const USE_FIREBASE = !IS_LOCAL;
 
-// Firebase 초기화 (외부 호스트만)
+// Firebase 초기화 (외부 호스트만) — config inline (fetch 의존 제거)
+const _FB_CFG = {
+  apiKey: "AIzaSyAF6096bC-Q04qWXh5MjVsuJGhYBy76agM",
+  authDomain: "datemap-759bf.firebaseapp.com",
+  projectId: "datemap-759bf",
+  storageBucket: "datemap-759bf.firebasestorage.app",
+  messagingSenderId: "833273999923",
+  appId: "1:833273999923:web:2696d0363c223c6bbbe946"
+};
 let _firestore = null;
 async function _initFirebase() {
   if (!USE_FIREBASE || _firestore) return _firestore;
@@ -885,20 +893,14 @@ async function _initFirebase() {
       let n = 0;
       const t = setInterval(() => {
         if (typeof firebase !== 'undefined') { clearInterval(t); res(); }
-        else if (++n > 30) { clearInterval(t); rej(new Error('firebase SDK 미로드')); }
+        else if (++n > 50) { clearInterval(t); rej(new Error('firebase SDK 미로드 (5s)')); }
       }, 100);
     });
   }
-  try {
-    const r = await fetch('firebase-config.json', {cache:'no-store'});
-    const cfg = await r.json();
-    if (!firebase.apps.length) firebase.initializeApp(cfg);
-    _firestore = firebase.firestore();
-    return _firestore;
-  } catch (e) {
-    console.error('firebase init', e);
-    throw e;
-  }
+  if (!firebase.apps.length) firebase.initializeApp(_FB_CFG);
+  _firestore = firebase.firestore();
+  console.log('[persona] firebase ready');
+  return _firestore;
 }
 
 // READ: 외부 호스트는 Firestore에서 status doc fetch (system_api 대신)
@@ -909,7 +911,7 @@ async function _fbGetStatus(market) {
   return snap.exists ? snap.data() : null;
 }
 
-// WRITE: 외부 호스트는 Firestore commands 컬렉션에 발행
+// WRITE: Firestore commands 발행 + onSnapshot 즉시 결과 캐치 (15초 timeout)
 async function _fbSendCommand(payload) {
   const fs = await _initFirebase();
   const docRef = await fs.collection('trading_commands').add({
@@ -918,15 +920,28 @@ async function _fbSendCommand(payload) {
     created_at: new Date().toISOString(),
     origin: 'persona_settings',
   });
-  // bridge가 처리할 때까지 polling (최대 8초)
-  for (let i = 0; i < 16; i++) {
-    await new Promise(r => setTimeout(r, 500));
-    const s = await docRef.get();
-    const d = s.data();
-    if (d.status === 'processed') return {ok: true, result: d.result};
-    if (d.status === 'failed')    return {ok: false, error: d.result?.error || 'failed'};
-  }
-  return {ok: false, error: 'timeout (8s)'};
+  console.log('[persona] cmd 발행:', docRef.id);
+  return new Promise((resolve) => {
+    let unsub = null;
+    const timer = setTimeout(() => {
+      if (unsub) unsub();
+      resolve({ok: false, error: 'timeout (15s) — bridge 응답 없음'});
+    }, 15000);
+    unsub = docRef.onSnapshot((s) => {
+      const d = s.data();
+      if (!d) return;
+      if (d.status === 'processed') {
+        clearTimeout(timer); unsub();
+        resolve({ok: true, result: d.result});
+      } else if (d.status === 'failed') {
+        clearTimeout(timer); unsub();
+        resolve({ok: false, error: d.result?.error || 'failed'});
+      }
+    }, (err) => {
+      clearTimeout(timer);
+      resolve({ok: false, error: 'snapshot 실패: ' + err.message});
+    });
+  });
 }
 
 function goBack() {
