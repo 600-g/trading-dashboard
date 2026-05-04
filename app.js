@@ -1052,16 +1052,58 @@ function openStockHistoryModal(bot, stock) {
   if (!item) return;
   const trades = item.history || [];
 
+  // 현재 보유 중인지 확인
+  const positions = bot === 'coin'
+    ? (status?.current_positions || status?.positions || [])
+    : (status?.positions || []);
+  const heldPos = positions.find(p => (p.coin || p.stock) === stock);
+  const isScheduled = (_scheduledClose[bot] || []).includes(stock);
+
   document.getElementById('stockModalTitle').innerHTML =
     `${bot === 'coin' ? '🪙' : '📈'} ${item.stock_name || stock} <span style="font-size:11px;color:var(--muted)">${stock}</span>`;
 
+  // 보유 중이면 손절선/익절선/예정/청산버튼
+  let holdHtml = '';
+  if (heldPos) {
+    const avg = +(heldPos.entry_price || heldPos.avg_price || 0);
+    const cur = +(heldPos.current_price || 0);
+    const pnl = heldPos.pnl_pct != null ? heldPos.pnl_pct
+              : (avg > 0 && cur > 0 ? ((cur-avg)/avg*100) : 0);
+    const slPct = heldPos.stop_loss_pct;
+    const tpPct = heldPos.take_profit_pct;
+    const slPrice = heldPos.stop_loss || (slPct ? avg * (1+slPct) : null);
+    const tpPrice = heldPos.take_profit || (tpPct ? avg * (1+tpPct) : null);
+    const closeEta = estimateCloseTime(heldPos);
+    const beActive = heldPos.trailing_active === 1;
+    const persona = heldPos.persona || heldPos.profile || '-';
+
+    holdHtml = `<div style="background:#0d1117;border:1px solid var(--info);border-radius:8px;padding:10px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--info);margin-bottom:6px">📍 현재 보유 중</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-size:11px">
+        <div><span style="color:var(--muted)">평단</span> <b>${fmt(avg)}</b></div>
+        <div><span style="color:var(--muted)">현재가</span> <b>${cur > 0 ? fmt(cur) : '-'}</b></div>
+        <div><span style="color:var(--muted)">손절선</span> <b class="down">${slPrice ? fmt(slPrice) : '-'}</b>${slPct?` (${(slPct*100).toFixed(2)}%)`:''}</div>
+        <div><span style="color:var(--muted)">익절선</span> <b class="up">${tpPrice ? fmt(tpPrice) : '-'}</b>${tpPct?` (${(tpPct*100).toFixed(2)}%)`:''}</div>
+        <div><span style="color:var(--muted)">전략</span> <b>${persona}</b></div>
+        <div><span style="color:var(--muted)">BE</span> <b>${beActive?'🟢활성':'⚪미활성'}</b></div>
+        <div style="grid-column:1/-1"><span style="color:var(--muted)">청산 예정</span> <b>${closeEta}</b></div>
+      </div>
+      <div style="margin-top:10px">
+        ${isScheduled
+          ? `<button class="cancel-btn" style="width:100%;padding:10px;font-size:13px" onclick="cancelPosClose('${bot}','${stock}','${item.stock_name||stock}')">⏸ 청산 예약 취소</button>`
+          : `<button class="close-btn" style="width:100%;padding:10px;font-size:13px" onclick="schedulePosClose('${bot}','${stock}','${item.stock_name||stock}')">🔴 지금 청산 (다음 사이클 자동 매도)</button>`
+        }
+      </div>
+    </div>`;
+  }
+
   const totalCls = item.total_pnl > 0 ? 'up' : 'down';
   const summary = `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
-      <div class="stat" style="padding:8px"><div class="stat-label">거래수</div><div style="font-size:14px;font-weight:700">${item.trades}건</div></div>
-      <div class="stat" style="padding:8px"><div class="stat-label">승률</div><div style="font-size:14px;font-weight:700">${item.winrate}%</div></div>
-      <div class="stat" style="padding:8px"><div class="stat-label">최고/최악</div><div style="font-size:11px;font-weight:700"><span class="up">${fmtSign(item.best_pnl||0)}</span><br><span class="down">${fmtSign(item.worst_pnl||0)}</span></div></div>
-      <div class="stat" style="padding:8px"><div class="stat-label">누적P&L</div><div class="${totalCls}" style="font-size:14px;font-weight:700">${fmtSign(item.total_pnl)}</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">
+      <div class="stat" style="padding:7px"><div class="stat-label">거래수</div><div style="font-size:13px;font-weight:700">${item.trades}건</div></div>
+      <div class="stat" style="padding:7px"><div class="stat-label">승률</div><div style="font-size:13px;font-weight:700">${item.winrate}%</div></div>
+      <div class="stat" style="padding:7px"><div class="stat-label">최고/최악</div><div style="font-size:10px;font-weight:700"><span class="up">${fmtSign(item.best_pnl||0)}</span><br><span class="down">${fmtSign(item.worst_pnl||0)}</span></div></div>
+      <div class="stat" style="padding:7px"><div class="stat-label">누적P&L</div><div class="${totalCls}" style="font-size:13px;font-weight:700">${fmtSign(item.total_pnl)}</div></div>
     </div>
   `;
 
@@ -1077,7 +1119,8 @@ function openStockHistoryModal(bot, stock) {
         return `<tr><td>${ts}</td><td>${sideEmoji}${t.side}</td><td class="num">${t.amount || '-'}</td><td class="num">${fmt(t.price || 0)}</td><td style="font-size:9.5px">${persona}</td><td style="font-size:9.5px;color:var(--muted)">${reason}</td><td class="num ${cls}">${fmtSign(t.pnl || 0)}</td></tr>`;
       }).join('') + '</tbody></table>';
 
-  document.getElementById('stockModalBody').innerHTML = summary + `<div style="font-size:10px;color:var(--muted);margin-bottom:6px">전체 거래 ${trades.length}건 (DB 누적)</div>` + tradesHtml;
+  document.getElementById('stockModalBody').innerHTML = holdHtml + summary +
+    `<div style="font-size:10px;color:var(--muted);margin-bottom:6px">전체 거래 ${trades.length}건 (DB 누적)</div>` + tradesHtml;
   document.getElementById('stockModal').classList.add('show');
 }
 
@@ -2235,7 +2278,11 @@ function applyStatusUI(bot, status) {
         const pct = p.pnl_pct != null ? +p.pnl_pct : (invested > 0 ? (pnl / invested * 100) : 0);
         const pctCls = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
         const sign = pnl >= 0 ? '+' : '';
-        return `<tr class="row-coin" onclick="openPosModal('coin','${p.coin}')" style="cursor:pointer"><td><b>${p.coin}</b>${personaBadge(p.persona)}</td>` +
+        const isSched = (_scheduledClose.coin || []).includes(p.coin);
+        const closeBtn = isSched
+          ? `<button class="cancel-btn" style="margin-top:3px;font-size:9px;padding:3px 6px" onclick="event.stopPropagation();cancelPosClose('coin','${p.coin}','${p.coin}')">⏸취소</button>`
+          : `<button class="close-btn" style="margin-top:3px;font-size:9px;padding:3px 6px" onclick="event.stopPropagation();schedulePosClose('coin','${p.coin}','${p.coin}')">🔴청산</button>`;
+        return `<tr class="row-coin" onclick="openStockHistoryModal('coin','${p.coin}')" style="cursor:pointer"><td><b>${p.coin}</b>${personaBadge(p.persona)}<div>${closeBtn}</div></td>` +
                `<td class="num">${avg > 0 ? fmt(avg) : '-'}</td>` +
                `<td class="num">${amount.toFixed(4)}</td>` +
                `<td class="num">${fmt(invested)}원</td>` +
@@ -2265,7 +2312,11 @@ function applyStatusUI(bot, status) {
                                        '<span class="badge b-kr" style="font-size:9px;padding:1px 5px">KR</span>';
         const priceUsd = isUsd ? ` <span style="opacity:0.6;font-size:10px">($${avg.toFixed(2)})</span>` : '';
         const noPnl = !(cur > 0);
-        return `<tr class="${rowCls}" onclick="openPosModal('stock','${p.stock}')" style="cursor:pointer"><td>${mkBadge} <b>${p.stock_name || p.stock}</b> <span style="color:var(--muted);font-size:9px">${p.stock}</span>${personaBadge(p.profile)}</td>` +
+        const isSched = (_scheduledClose.stock || []).includes(p.stock);
+        const closeBtn = isSched
+          ? `<button class="cancel-btn" style="margin-top:3px;font-size:9px;padding:3px 6px" onclick="event.stopPropagation();cancelPosClose('stock','${p.stock}','${p.stock_name||p.stock}')">⏸취소</button>`
+          : `<button class="close-btn" style="margin-top:3px;font-size:9px;padding:3px 6px" onclick="event.stopPropagation();schedulePosClose('stock','${p.stock}','${p.stock_name||p.stock}')">🔴청산</button>`;
+        return `<tr class="${rowCls}" onclick="openStockHistoryModal('stock','${p.stock}')" style="cursor:pointer"><td>${mkBadge} <b>${p.stock_name || p.stock}</b> <span style="color:var(--muted);font-size:9px">${p.stock}</span>${personaBadge(p.profile)}<div>${closeBtn}</div></td>` +
                `<td class="num">${fmt(avgKrw)}${priceUsd}</td>` +
                `<td class="num">${amount}</td>` +
                `<td class="num">${fmt(invested)}원</td>` +
