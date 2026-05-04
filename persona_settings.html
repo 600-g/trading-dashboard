@@ -945,9 +945,73 @@ async function _fbSendCommand(payload) {
 }
 
 function goBack() {
-  // file://는 history 없을 수 있어 index.html로 명시 이동
   if (history.length > 1 && document.referrer) history.back();
   else location.href = 'index.html';
+}
+
+// ─── 커스텀 다이얼로그 (iOS 네이티브 대체) ───
+function _ensureDialogRoot(){
+  let r = document.getElementById('app-dialog');
+  if (r) return r;
+  r = document.createElement('div');
+  r.id = 'app-dialog';
+  r.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;padding:20px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)';
+  document.body.appendChild(r);
+  const s = document.createElement('style');
+  s.textContent = '@keyframes dlgIn { from { opacity:0; transform:scale(.92) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }';
+  document.head.appendChild(s);
+  return r;
+}
+function _closeDialog(){ const r = _ensureDialogRoot(); r.style.display = 'none'; r.innerHTML = ''; }
+function appConfirm(opts){
+  return new Promise(resolve => {
+    const r = _ensureDialogRoot();
+    const o = typeof opts === 'string' ? {message: opts} : (opts || {});
+    const danger = !!o.danger;
+    const primary = o.primaryLabel || (danger ? '진행' : '확인');
+    const cancel = o.cancelLabel || '취소';
+    const icon = o.icon || (danger ? '⚠️' : '❓');
+    const accent = danger ? 'var(--red)' : 'var(--blue)';
+    r.innerHTML = `
+      <div style="background:var(--surface);border-radius:18px;width:100%;max-width:340px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.35);animation:dlgIn .18s ease-out">
+        <div style="padding:22px 22px 16px;text-align:center">
+          <div style="font-size:34px;line-height:1;margin-bottom:10px">${icon}</div>
+          ${o.title ? `<div style="font-size:16px;font-weight:800;margin-bottom:6px;color:var(--text-1)">${o.title}</div>` : ''}
+          <div style="font-size:13px;color:var(--text-2);line-height:1.55;white-space:pre-wrap;text-align:left">${o.message || ''}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)">
+          <button id="_dlg_cancel" style="padding:14px;background:var(--surface);border:none;font-size:14px;font-weight:700;color:var(--text-2);cursor:pointer">${cancel}</button>
+          <button id="_dlg_ok" style="padding:14px;background:var(--surface);border:none;font-size:14px;font-weight:800;color:${accent};cursor:pointer">${primary}</button>
+        </div>
+      </div>`;
+    r.style.display = 'flex';
+    r.querySelector('#_dlg_ok').onclick = () => { _closeDialog(); resolve(true); };
+    r.querySelector('#_dlg_cancel').onclick = () => { _closeDialog(); resolve(false); };
+    r.onclick = (e) => { if (e.target === r) { _closeDialog(); resolve(false); } };
+  });
+}
+function appAlert(opts){
+  return new Promise(resolve => {
+    const r = _ensureDialogRoot();
+    const o = typeof opts === 'string' ? {message: opts} : (opts || {});
+    const kind = o.kind || 'info';
+    const icon = o.icon || ({info:'ℹ️', success:'✅', error:'❌', warn:'⚠️'}[kind]);
+    const accent = ({info:'var(--blue)', success:'var(--green)', error:'var(--red)', warn:'var(--yellow)'}[kind]);
+    r.innerHTML = `
+      <div style="background:var(--surface);border-radius:18px;width:100%;max-width:340px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.35);animation:dlgIn .18s ease-out">
+        <div style="padding:22px 22px 16px;text-align:center">
+          <div style="font-size:34px;line-height:1;margin-bottom:10px">${icon}</div>
+          ${o.title ? `<div style="font-size:16px;font-weight:800;margin-bottom:6px;color:var(--text-1)">${o.title}</div>` : ''}
+          <div style="font-size:13px;color:var(--text-2);line-height:1.55;white-space:pre-wrap">${o.message || ''}</div>
+        </div>
+        <button id="_dlg_ok" style="width:100%;padding:14px;background:var(--surface);border:none;border-top:1px solid var(--line);font-size:14px;font-weight:800;color:${accent};cursor:pointer">확인</button>
+      </div>`;
+    r.style.display = 'flex';
+    const close = () => { _closeDialog(); resolve(); };
+    r.querySelector('#_dlg_ok').onclick = close;
+    r.onclick = (e) => { if (e.target === r) close(); };
+    if (o.autoCloseMs) setTimeout(close, o.autoCloseMs);
+  });
 }
 
 const SLIDERS = ['coolma', 'swing', 'day', 'hold'];
@@ -1468,7 +1532,12 @@ function _bumpChangesToday() {
 
 document.getElementById('btn-apply').addEventListener('click', async () => {
   if (changesToday >= 3) {
-    if (!confirm(`오늘 이미 ${changesToday}회 변경됨. 그래도 진행?`)) return;
+    const ok = await appConfirm({
+      title:'일일 변경 한도 초과', icon:'⚠️', danger:true,
+      message:`오늘 이미 ${changesToday}회 변경됨.\n그래도 진행하시겠습니까?`,
+      primaryLabel:'계속 진행',
+    });
+    if (!ok) return;
   }
   const total = getTotal();
   if (total !== 100) {
@@ -1476,8 +1545,19 @@ document.getElementById('btn-apply').addEventListener('click', async () => {
     return;
   }
   const v = getValues();
-  const diffs = SLIDERS.map(s => `${NAMES_KR[s]} ${savedValues[s]}→${v[s]}%`);
-  if (!confirm(`다음 시장 진입부터 적용:\n\n${diffs.join('\n')}\n\n진행?`)) return;
+  const diffLines = SLIDERS
+    .filter(s => v[s] !== savedValues[s])
+    .map(s => `${NAMES_KR[s]}  ${savedValues[s]}% → ${v[s]}%`);
+  if (diffLines.length === 0) {
+    appAlert({kind:'info', title:'변경 사항 없음', message:'기존 비중과 동일합니다.', autoCloseMs:1500});
+    return;
+  }
+  const ok = await appConfirm({
+    title:'페르소나 비중 변경', icon:'🎭',
+    message: '다음 시장 진입부터 적용됩니다.\n\n' + diffLines.join('\n'),
+    primaryLabel:'적용',
+  });
+  if (!ok) return;
 
   const btn = document.getElementById('btn-apply');
   const orig = btn.textContent;
@@ -1522,7 +1602,7 @@ document.getElementById('btn-apply').addEventListener('click', async () => {
   } catch (e) {
     btn.disabled = false;
     btn.textContent = orig;
-    showToast(`❌ 저장 실패: ${e.message}`, 'error');
+    appAlert({kind:'error', title:'저장 실패', message: e.message || '알 수 없는 오류'});
     console.error('[persona save]', e);
   }
 });
