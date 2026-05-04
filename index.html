@@ -673,9 +673,9 @@
     <svg class="ico"><use href="#i-home"/></svg>
     <div class="tab-label">홈</div>
   </div>
-  <div class="tab" onclick="document.querySelector('.market-grid').scrollIntoView({behavior:'smooth'})">
+  <div class="tab" onclick="openCalendarSheet()">
     <svg class="ico"><use href="#i-bar-chart"/></svg>
-    <div class="tab-label">시장</div>
+    <div class="tab-label">달력</div>
   </div>
   <div class="tab" onclick="openBotSheet('coin')">
     <svg class="ico"><use href="#i-bot"/></svg>
@@ -688,6 +688,33 @@
   <div class="tab" onclick="openSettingsSheet()">
     <svg class="ico"><use href="#i-menu"/></svg>
     <div class="tab-label">더보기</div>
+  </div>
+</div>
+
+<!-- 달력 시트 -->
+<div id="calendar-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-end" onclick="if(event.target===this)closeSheet('calendar-sheet')">
+  <div style="background:var(--surface);width:100%;max-width:420px;margin:0 auto;border-radius:20px 20px 0 0;padding:14px 18px max(18px,env(safe-area-inset-bottom));max-height:90vh;overflow-y:auto">
+    <div style="text-align:center;margin-bottom:8px"><div style="width:36px;height:4px;background:var(--text-4);border-radius:2px;margin:0 auto"></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 12px">
+      <div style="font-size:18px;font-weight:800">📅 거래 달력</div>
+      <select id="cal-market" onchange="renderCalendar()" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:12px;font-weight:700;background:var(--surface)">
+        <option value="all">양봇 합산</option>
+        <option value="coin">🪙 코인봇</option>
+        <option value="kr">📈 주식 KR</option>
+        <option value="us">🇺🇸 주식 US</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button onclick="calMove(-1)" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:8px;font-size:14px;cursor:pointer">◀</button>
+      <div id="cal-title" style="font-size:14px;font-weight:800"></div>
+      <button onclick="calMove(1)" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:8px;font-size:14px;cursor:pointer">▶</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:10px;color:var(--text-3);text-align:center;font-weight:700;margin-bottom:4px">
+      <div style="color:var(--red)">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:var(--blue)">토</div>
+    </div>
+    <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+    <div id="cal-day-detail" style="margin-top:14px"></div>
+    <button onclick="closeSheet('calendar-sheet')" style="width:100%;padding:12px;background:var(--bg);border:none;border-radius:10px;font-weight:700;font-size:13px;margin-top:14px;cursor:pointer">닫기</button>
   </div>
 </div>
 
@@ -790,6 +817,141 @@ let _currentBot = null;
 function openBotSheet(bot){
   document.getElementById('bot-sheet').style.display = 'flex';
   switchBotSheet(bot);
+}
+
+// ─── 거래 달력 ───
+let _calData = null, _calMonth = null;  // {year, month}
+
+async function openCalendarSheet(){
+  openSheet('calendar-sheet');
+  const now = new Date();
+  _calMonth = {year: now.getFullYear(), month: now.getMonth()};
+  document.getElementById('cal-day-detail').innerHTML = '';
+  await renderCalendar();
+}
+
+function calMove(delta){
+  if (!_calMonth) return;
+  _calMonth.month += delta;
+  if (_calMonth.month < 0) { _calMonth.month = 11; _calMonth.year -= 1; }
+  if (_calMonth.month > 11) { _calMonth.month = 0; _calMonth.year += 1; }
+  document.getElementById('cal-day-detail').innerHTML = '';
+  renderCalendar();
+}
+
+async function renderCalendar(){
+  if (!_calMonth) return;
+  const mkt = document.getElementById('cal-market').value;
+  const title = document.getElementById('cal-title');
+  title.textContent = `${_calMonth.year}년 ${_calMonth.month + 1}월`;
+
+  // 데이터 fetch (최근 60일 이내)
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-3);font-size:12px">불러오는 중...</div>';
+  let data = {days: {}, tunes: {}};
+  if (IS_LOCAL) {
+    try {
+      const r = await fetch(`${SYS_API}/api/calendar?market=${mkt}&days=60`, {signal:AbortSignal.timeout(4000)});
+      if (r.ok) data = await r.json();
+    } catch (e) { console.warn('calendar fetch', e); }
+  } else if (_fbDb) {
+    // Firebase: status doc의 daily_pnl_7d만 사용 (제한적)
+    const c = STATE_CACHE.coin || {}, s = STATE_CACHE.stock || {};
+    const merge = (arr, tag) => (arr || []).forEach(d => {
+      const k = d.date; if (!k) return;
+      const day = data.days[k] = data.days[k] || {trades:0, wins:0, losses:0, pnl:0, by_persona:[], symbols:[]};
+      day.trades += d.trades || 0; day.wins += d.wins || 0;
+      day.losses += d.losses || 0; day.pnl += d.pnl || 0;
+    });
+    if (mkt === 'coin' || mkt === 'all') merge(c.daily_pnl_7d, 'coin');
+    if (mkt === 'kr' || mkt === 'us' || mkt === 'all') merge(s.daily_pnl_7d, 'stock');
+  }
+  _calData = data;
+
+  // 그리드 빌드
+  const first = new Date(_calMonth.year, _calMonth.month, 1);
+  const lastDay = new Date(_calMonth.year, _calMonth.month + 1, 0).getDate();
+  const startDow = first.getDay();
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push('<div></div>');
+  const today = new Date();
+  for (let d = 1; d <= lastDay; d++) {
+    const dt = new Date(_calMonth.year, _calMonth.month, d);
+    const ymd = `${_calMonth.year}-${String(_calMonth.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const day = (data.days || {})[ymd];
+    const tunes = (data.tunes || {})[ymd];
+    const isToday = dt.toDateString() === today.toDateString();
+    const isFuture = dt > today;
+    let cellBg = 'var(--bg)', pnlTxt = '', tradesTxt = '';
+    if (day) {
+      const pnl = day.pnl || 0;
+      if (pnl > 0)     { cellBg = 'rgba(240,68,82,0.15)'; pnlTxt = `<div style="font-size:9px;color:var(--red);font-weight:800;margin-top:1px">+${(pnl/10000).toFixed(1)}만</div>`; }
+      else if (pnl < 0){ cellBg = 'rgba(49,130,246,0.15)'; pnlTxt = `<div style="font-size:9px;color:var(--blue);font-weight:800;margin-top:1px">${(pnl/10000).toFixed(1)}만</div>`; }
+      else             { cellBg = 'rgba(139,151,161,0.10)'; }
+      tradesTxt = `<div style="font-size:9px;color:var(--text-3);margin-top:1px">${day.trades}건</div>`;
+    }
+    if (isFuture) cellBg = 'transparent';
+    const dotTune = tunes ? '<span style="position:absolute;top:3px;right:4px;width:5px;height:5px;background:var(--purple);border-radius:50%"></span>' : '';
+    const todayBd = isToday ? 'border:2px solid var(--text-1)' : 'border:1px solid transparent';
+    const dCol = dt.getDay() === 0 ? 'var(--red)' : dt.getDay() === 6 ? 'var(--blue)' : 'var(--text-1)';
+    cells.push(`<div onclick="renderCalDay('${ymd}')" style="position:relative;background:${cellBg};${todayBd};border-radius:6px;padding:5px 2px;text-align:center;cursor:${isFuture?'default':'pointer'};min-height:48px;opacity:${isFuture?0.3:1}">
+      <div style="font-size:11px;font-weight:700;color:${dCol}">${d}</div>
+      ${pnlTxt}${tradesTxt}${dotTune}
+    </div>`);
+  }
+  grid.innerHTML = cells.join('');
+}
+
+function renderCalDay(ymd){
+  if (!_calData) return;
+  const day = (_calData.days || {})[ymd];
+  const tunes = (_calData.tunes || {})[ymd] || [];
+  const box = document.getElementById('cal-day-detail');
+  if (!day && tunes.length === 0) {
+    box.innerHTML = `<div style="background:var(--bg);padding:14px;border-radius:10px;text-align:center;color:var(--text-3);font-size:12px">${ymd}<br><span style="font-size:11px">거래 없음</span></div>`;
+    return;
+  }
+  let h = `<div style="background:var(--bg);padding:12px;border-radius:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800">${ymd}</div>
+      ${day ? `<div class="${pnlClass(day.pnl)}" style="font-size:14px;font-weight:800">${day.pnl >= 0 ? '+' : ''}${fmtKRW(day.pnl)}원</div>` : ''}
+    </div>`;
+  if (day) {
+    h += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">
+      <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center">
+        <div style="font-size:10px;color:var(--text-3)">거래</div>
+        <div style="font-size:13px;font-weight:800">${day.trades}건</div>
+      </div>
+      <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center">
+        <div style="font-size:10px;color:var(--text-3)">익절</div>
+        <div style="font-size:13px;font-weight:800;color:var(--red)">${day.wins}</div>
+      </div>
+      <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center">
+        <div style="font-size:10px;color:var(--text-3)">손절</div>
+        <div style="font-size:13px;font-weight:800;color:var(--blue)">${day.losses}</div>
+      </div>
+    </div>`;
+    if (day.by_persona && day.by_persona.length > 0) {
+      h += '<div style="font-size:11px;font-weight:700;margin-bottom:4px">🎭 페르소나별</div>';
+      h += day.by_persona.map(p => `<div style="display:flex;justify-content:space-between;padding:6px 8px;background:var(--surface);border-radius:6px;margin-bottom:3px;font-size:11px">
+        <span><b>${p.persona}</b> ${p.trades}건</span>
+        <span class="${pnlClass(p.pnl)}" style="font-weight:700">${p.pnl >= 0 ? '+' : ''}${fmtKRW(p.pnl)}원</span>
+      </div>`).join('');
+    }
+    if (day.symbols && day.symbols.length > 0) {
+      h += `<div style="margin-top:8px;font-size:10px;color:var(--text-3)">종목: ${day.symbols.slice(0, 8).join(', ')}${day.symbols.length > 8 ? ` +${day.symbols.length - 8}` : ''}</div>`;
+    }
+  }
+  if (tunes.length > 0) {
+    h += '<div style="font-size:11px;font-weight:700;margin:10px 0 4px;color:var(--purple)">🔧 자가개선</div>';
+    h += tunes.map(t => `<div style="padding:6px 8px;background:var(--purple-bg, #F0EBFF);border-radius:6px;margin-bottom:3px;font-size:11px">
+      <b>${t.market === 'coin' ? '🪙' : '📈'} ${t.param || t.pattern}</b>: ${t.old} → <b style="color:var(--purple)">${t.new}</b>
+    </div>`).join('');
+  }
+  h += '</div>';
+  box.innerHTML = h;
+  // 부드러운 스크롤
+  setTimeout(() => box.scrollIntoView({behavior:'smooth', block:'nearest'}), 50);
 }
 
 // ─── 종목 상세 시트 ───
