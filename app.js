@@ -397,10 +397,15 @@ function clearAllAlerts() {
 // ─── 페르소나 / 카테고리 메타 ─────────────────────────────────────
 // trait = 한글 특성 (이모지로는 안 보이는 핵심 행동 요약)
 const PERSONA_META = {
-  // UPGRADE_SPEC v1.0 — 신규 3 페르소나
-  '이단타':       {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'당일청산·4h캡·-1%조기손절'},
-  '김안전':       {icon:'🛡', cls:'p-risk',     group:'risk',     trait:'1~3일 스윙·모멘텀 청산'},
-  '쿨마매기봇':   {icon:'🚀', cls:'p-momentum', group:'momentum', trait:'정통 EP/Breakout 라이딩'},
+  // 가이드 4페르소나 (단타맨/스윙맨/쿨마봇/존버맨)
+  '단타맨':   {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'당일청산·4h캡'},
+  '스윙맨':   {icon:'🛡', cls:'p-risk',     group:'risk',     trait:'1~3일 스윙'},
+  '쿨마봇':   {icon:'🚀', cls:'p-momentum', group:'momentum', trait:'정통 EP/Breakout'},
+  '존버맨':   {icon:'🌳', cls:'p-long',     group:'long',     trait:'5~30일 장기 보유'},
+  // 구버전 호환 (히스토리)
+  '이단타':       {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'(구) 당일청산'},
+  '김안전':       {icon:'🛡', cls:'p-risk',     group:'risk',     trait:'(구) 스윙'},
+  '쿨마매기봇':   {icon:'🚀', cls:'p-momentum', group:'momentum', trait:'(구) EP'},
   // 구버전 호환 (히스토리 표시용)
   '박단타':       {icon:'⚡', cls:'p-dayta',    group:'dayta',    trait:'(구) 초단타'},
   '최모멘텀':     {icon:'🚀', cls:'p-momentum', group:'momentum', trait:'(구) 급등추격'},

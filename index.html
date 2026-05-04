@@ -532,16 +532,16 @@
 
 <!-- 상단 헤더 -->
 <div class="header">
-  <div class="logo">
+  <div class="logo" onclick="location.reload()">
     <svg class="ico"><use href="#i-chart"/></svg>
     두근 트레이딩
   </div>
   <div class="header-icons">
-    <div class="icon-btn">
+    <div class="icon-btn" onclick="openAlertsSheet()">
       <svg class="ico"><use href="#i-bell"/></svg>
-      <span class="badge">3</span>
+      <span class="badge" id="m-alerts-badge" style="display:none">0</span>
     </div>
-    <div class="icon-btn">
+    <div class="icon-btn" onclick="openSettingsSheet()">
       <svg class="ico"><use href="#i-settings"/></svg>
     </div>
   </div>
@@ -593,29 +593,21 @@
 
 <!-- 빠른 메뉴 -->
 <div class="quick-menu">
-  <div class="quick-item">
-    <div class="quick-icon qi-blue">
-      <svg class="ico"><use href="#i-activity"/></svg>
-    </div>
-    <div class="quick-label">실시간</div>
+  <div class="quick-item" onclick="openBotSheet('coin')">
+    <div class="quick-icon qi-blue"><svg class="ico"><use href="#i-activity"/></svg></div>
+    <div class="quick-label">코인봇</div>
   </div>
-  <div class="quick-item">
-    <div class="quick-icon qi-green">
-      <svg class="ico"><use href="#i-wallet"/></svg>
-    </div>
-    <div class="quick-label">수익</div>
+  <div class="quick-item" onclick="openBotSheet('stock')">
+    <div class="quick-icon qi-green"><svg class="ico"><use href="#i-wallet"/></svg></div>
+    <div class="quick-label">주식봇</div>
   </div>
-  <div class="quick-item">
-    <div class="quick-icon qi-red">
-      <svg class="ico"><use href="#i-cpu"/></svg>
-    </div>
-    <div class="quick-label">개선</div>
+  <div class="quick-item" onclick="openImproveSheet()">
+    <div class="quick-icon qi-red"><svg class="ico"><use href="#i-cpu"/></svg></div>
+    <div class="quick-label">자가개선</div>
   </div>
-  <div class="quick-item">
-    <div class="quick-icon qi-yellow">
-      <svg class="ico"><use href="#i-calendar"/></svg>
-    </div>
-    <div class="quick-label">캘린더</div>
+  <div class="quick-item" onclick="window.location.href='persona_settings.html'">
+    <div class="quick-icon qi-yellow"><svg class="ico"><use href="#i-calendar"/></svg></div>
+    <div class="quick-label">페르소나</div>
   </div>
 </div>
 
@@ -623,9 +615,9 @@
 <div class="section">
   <div class="section-head">
     <div class="section-title">시장</div>
-    <div class="section-link">실시간</div>
+    <div class="section-link" onclick="fetchAndRender()" style="cursor:pointer">↻ 새로고침</div>
   </div>
-  <div class="market-grid" id="m-market-grid">
+  <div class="market-grid" id="m-market-grid" onclick="fetchAndRender()" style="cursor:pointer"
     <div class="market-cell"><div class="market-name">BTC</div><div class="market-value">-</div><div class="market-change">-</div></div>
     <div class="market-cell"><div class="market-name">KOSPI</div><div class="market-value">-</div><div class="market-change">-</div></div>
     <div class="market-cell"><div class="market-name">NASDAQ</div><div class="market-value">-</div><div class="market-change">-</div></div>
@@ -656,25 +648,59 @@
 
 <!-- 하단 탭바 -->
 <div class="tabbar">
-  <div class="tab active">
+  <div class="tab active" onclick="window.scrollTo({top:0,behavior:'smooth'})">
     <svg class="ico"><use href="#i-home"/></svg>
     <div class="tab-label">홈</div>
   </div>
-  <div class="tab">
+  <div class="tab" onclick="document.querySelector('.market-grid').scrollIntoView({behavior:'smooth'})">
     <svg class="ico"><use href="#i-bar-chart"/></svg>
     <div class="tab-label">시장</div>
   </div>
-  <div class="tab">
+  <div class="tab" onclick="openBotSheet('coin')">
     <svg class="ico"><use href="#i-bot"/></svg>
     <div class="tab-label">봇</div>
   </div>
-  <div class="tab">
+  <div class="tab" onclick="openImproveSheet()">
     <svg class="ico"><use href="#i-analytics"/></svg>
     <div class="tab-label">분석</div>
   </div>
-  <div class="tab">
+  <div class="tab" onclick="openSettingsSheet()">
     <svg class="ico"><use href="#i-menu"/></svg>
     <div class="tab-label">더보기</div>
+  </div>
+</div>
+
+<!-- 알림 시트 -->
+<div id="alerts-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-end" onclick="if(event.target===this)closeSheet('alerts-sheet')">
+  <div style="background:var(--surface);width:100%;max-width:420px;margin:0 auto;border-radius:20px 20px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom));max-height:85vh;overflow-y:auto">
+    <div style="text-align:center;margin-bottom:12px"><div style="width:36px;height:4px;background:var(--text-4);border-radius:2px;margin:0 auto 14px"></div></div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:14px">🔔 알림</div>
+    <div id="alerts-list">로딩...</div>
+    <button onclick="closeSheet('alerts-sheet')" style="width:100%;padding:12px;background:var(--bg);border:none;border-radius:10px;font-weight:700;font-size:13px;margin-top:14px;cursor:pointer">닫기</button>
+  </div>
+</div>
+
+<!-- 자가개선 시트 -->
+<div id="improve-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-end" onclick="if(event.target===this)closeSheet('improve-sheet')">
+  <div style="background:var(--surface);width:100%;max-width:420px;margin:0 auto;border-radius:20px 20px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom));max-height:85vh;overflow-y:auto">
+    <div style="text-align:center;margin-bottom:12px"><div style="width:36px;height:4px;background:var(--text-4);border-radius:2px;margin:0 auto 14px"></div></div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:14px">🤖 자가개선</div>
+    <div id="improve-content">로딩...</div>
+    <button onclick="closeSheet('improve-sheet')" style="width:100%;padding:12px;background:var(--bg);border:none;border-radius:10px;font-weight:700;font-size:13px;margin-top:14px;cursor:pointer">닫기</button>
+  </div>
+</div>
+
+<!-- 설정 시트 -->
+<div id="settings-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-end" onclick="if(event.target===this)closeSheet('settings-sheet')">
+  <div style="background:var(--surface);width:100%;max-width:420px;margin:0 auto;border-radius:20px 20px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom));max-height:85vh;overflow-y:auto">
+    <div style="text-align:center;margin-bottom:12px"><div style="width:36px;height:4px;background:var(--text-4);border-radius:2px;margin:0 auto 14px"></div></div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:14px">⚙️ 설정</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button onclick="window.location.href='persona_settings.html'" style="padding:14px;background:var(--bg);border:none;border-radius:10px;font-weight:700;font-size:14px;text-align:left;cursor:pointer">🎭 페르소나 비중 설정</button>
+      <button onclick="hardReload()" style="padding:14px;background:var(--bg);border:none;border-radius:10px;font-weight:700;font-size:14px;text-align:left;cursor:pointer">🔄 캐시 초기화 + 새로고침</button>
+      <button onclick="alert('두근 트레이딩 v5.3\\n\\n페르소나: 단타맨/스윙맨/쿨마봇/존버맨\\n봇: 코인 + KR/US 주식\\n자동매매: Qullamaggie 정통 추격매수')" style="padding:14px;background:var(--bg);border:none;border-radius:10px;font-weight:700;font-size:14px;text-align:left;cursor:pointer">ℹ️ 버전 정보</button>
+    </div>
+    <button onclick="closeSheet('settings-sheet')" style="width:100%;padding:12px;background:var(--bg);border:none;border-radius:10px;font-weight:700;font-size:13px;margin-top:14px;cursor:pointer">닫기</button>
   </div>
 </div>
 
@@ -897,6 +923,87 @@ async function fetchAndRender(){
   initFirebase();
 }
 
+// 시트 헬퍼
+function closeSheet(id){ document.getElementById(id).style.display = 'none'; }
+function openSheet(id){ document.getElementById(id).style.display = 'flex'; }
+
+function openAlertsSheet(){
+  openSheet('alerts-sheet');
+  const c = STATE_CACHE.coin || {}, s = STATE_CACHE.stock || {};
+  const all = [
+    ...(c.alerts || []).slice(0, 20).map(a => ({...a, _bot:'🪙'})),
+    ...(s.alerts || []).slice(0, 20).map(a => ({...a, _bot:'📈'})),
+  ].sort((a,b) => (b.ts || '').localeCompare(a.ts || '')).slice(0, 30);
+  const box = document.getElementById('alerts-list');
+  if (all.length === 0) {
+    box.innerHTML = '<div style="color:var(--text-3);text-align:center;padding:20px">알림 없음</div>';
+  } else {
+    box.innerHTML = all.map(a => {
+      const sev = a.severity || 'info';
+      const bg = sev === 'danger' ? 'var(--red-bg)' : sev === 'warn' ? 'var(--yellow-bg)' : 'var(--bg)';
+      return `<div style="padding:10px;background:${bg};border-radius:8px;margin-bottom:6px;font-size:12px">
+        <div style="font-weight:700">${a._bot} ${a.title || ''}</div>
+        <div style="color:var(--text-2);margin-top:2px">${a.body || ''}</div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:4px">${(a.ts || '').slice(5,16).replace('T',' ')}</div>
+      </div>`;
+    }).join('');
+  }
+  // 알림 카운트 갱신
+  const badge = document.getElementById('m-alerts-badge');
+  if (badge && all.length > 0) {
+    badge.textContent = all.length > 99 ? '99+' : all.length;
+    badge.style.display = 'flex';
+  }
+}
+
+function openImproveSheet(){
+  openSheet('improve-sheet');
+  const c = STATE_CACHE.coin || {}, s = STATE_CACHE.stock || {};
+  const tunes = [...(c.tune_history || []), ...(s.tune_history || [])];
+  const meta = c.meta_diagnosis || s.meta_diagnosis || {};
+  const personas = [...(c.persona_stats || []), ...(s.persona_stats || [])];
+  let html = '<div style="font-size:13px;font-weight:700;margin-bottom:8px">🔬 메타진단</div>';
+  html += `<div style="background:var(--bg);padding:10px;border-radius:8px;font-size:11px;margin-bottom:12px">${meta.summary || '데이터 누적 중'}</div>`;
+  html += '<div style="font-size:13px;font-weight:700;margin-bottom:8px">🛠 자가개선 변경 로그</div>';
+  if (tunes.length === 0) {
+    html += '<div style="color:var(--text-3);font-size:12px;padding:12px;text-align:center">변경 없음</div>';
+  } else {
+    html += tunes.slice(0, 5).map(t => `<div style="padding:8px;background:var(--bg);border-radius:6px;margin-bottom:4px;font-size:11px">
+      <b>${t.param || t.pattern}</b>: ${t.old_value} → <span style="color:var(--blue)">${t.new_value}</span>
+    </div>`).join('');
+  }
+  html += '<div style="font-size:13px;font-weight:700;margin:12px 0 8px">🎭 페르소나별 성과</div>';
+  if (personas.length === 0) {
+    html += '<div style="color:var(--text-3);font-size:12px;padding:12px;text-align:center">데이터 없음</div>';
+  } else {
+    html += personas.map(p => `<div style="display:flex;justify-content:space-between;padding:8px;background:var(--bg);border-radius:6px;margin-bottom:4px;font-size:11px">
+      <span><b>${p.persona}</b> ${p.trades}건 (${p.winrate}%)</span>
+      <span class="${pnlClass(p.total_pnl)}" style="font-weight:700">${p.total_pnl >= 0 ? '+' : ''}${fmtKRW(p.total_pnl)}원</span>
+    </div>`).join('');
+  }
+  document.getElementById('improve-content').innerHTML = html;
+}
+
+function openSettingsSheet(){ openSheet('settings-sheet'); }
+
+async function hardReload(){
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) await r.unregister();
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    const url = new URL(location.href);
+    url.searchParams.set('_cb', Date.now());
+    location.replace(url.toString());
+  } catch (e) { location.reload(true); }
+}
+
+const STATE_CACHE = {coin:null, stock:null};
+
 function fmtPrice(v){
   if (v == null) return '-';
   if (Math.abs(v) >= 100000000) return (v/100000000).toFixed(2) + '억';
@@ -907,6 +1014,16 @@ function pnlClass(v){ return v > 0 ? 'pnl-up' : v < 0 ? 'pnl-down' : 'pnl-flat';
 
 function renderMobile(d){
   const c = d.coin || {}, s = d.stock || {};
+  STATE_CACHE.coin = c; STATE_CACHE.stock = s;
+  // 알림 카운트 업데이트
+  const totalAlerts = (c.alerts || []).length + (s.alerts || []).length;
+  const badge = document.getElementById('m-alerts-badge');
+  if (badge) {
+    if (totalAlerts > 0) {
+      badge.textContent = totalAlerts > 99 ? '99+' : totalAlerts;
+      badge.style.display = 'flex';
+    } else { badge.style.display = 'none'; }
+  }
   const totalBal = (c.balance || 0) + (s.balance || 0);
   const todayPnl = (c.today_pnl || 0) + (s.today_pnl || 0);
   const totalSeed = (c.initial_balance || 0) + (s.initial_balance || 0);
