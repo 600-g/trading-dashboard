@@ -325,15 +325,17 @@
   /* 시장 미니 카드 */
   .market-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border-radius: 8px;
+    overflow: hidden;
   }
   .market-cell {
-    padding: 14px 8px;
+    padding: 12px 6px;
     text-align: center;
-    border-right: 1px solid var(--line);
+    background: var(--card);
   }
-  .market-cell:last-child { border-right: none; }
   .market-name {
     font-size: 11px;
     color: var(--text-3);
@@ -709,7 +711,16 @@
 <div id="bot-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeBotSheet()">
   <div style="background:var(--surface);width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom));max-height:85vh;overflow-y:auto">
     <div style="text-align:center;margin-bottom:12px"><div style="width:36px;height:4px;background:var(--text-4);border-radius:2px;margin:0 auto 14px"></div></div>
-    <div id="sheet-title" style="font-size:18px;font-weight:800;margin-bottom:14px"></div>
+    <div id="sheet-title" style="font-size:18px;font-weight:800;margin-bottom:10px"></div>
+
+    <!-- 봇 선택 토글 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;background:var(--bg);padding:4px;border-radius:12px">
+      <button id="sheet-tab-coin" onclick="switchBotSheet('coin')" style="padding:10px;border:none;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer">🪙 코인봇</button>
+      <button id="sheet-tab-stock" onclick="switchBotSheet('stock')" style="padding:10px;border:none;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer">📈 주식봇</button>
+    </div>
+
+    <!-- 잔고/오늘 손익 -->
+    <div id="sheet-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px"></div>
 
     <div style="margin-bottom:14px">
       <div style="font-size:12px;color:var(--text-2);margin-bottom:6px;font-weight:700">운영 모드</div>
@@ -747,11 +758,55 @@ const BOT_APIS = {coin: 'http://127.0.0.1:9001', stock: 'http://127.0.0.1:9002'}
 let _currentBot = null;
 
 function openBotSheet(bot){
+  document.getElementById('bot-sheet').style.display = 'flex';
+  switchBotSheet(bot);
+}
+
+function switchBotSheet(bot){
   _currentBot = bot;
   document.getElementById('sheet-title').textContent = bot === 'coin' ? '🪙 코인봇 컨트롤' : '📈 주식봇 컨트롤';
-  document.getElementById('bot-sheet').style.display = 'flex';
+  // 탭 active 스타일
+  ['coin','stock'].forEach(b => {
+    const el = document.getElementById(`sheet-tab-${b}`);
+    if (!el) return;
+    if (b === bot) {
+      el.style.background = 'var(--surface)';
+      el.style.color = 'var(--text-1)';
+      el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+    } else {
+      el.style.background = 'transparent';
+      el.style.color = 'var(--text-3)';
+      el.style.boxShadow = 'none';
+    }
+  });
+  refreshSheetSummary();
   refreshSheetPositions();
   refreshSheetMode();
+}
+
+function refreshSheetSummary(){
+  if (!_currentBot) return;
+  const d = STATE_CACHE[_currentBot] || {};
+  const bal = d.balance || 0;
+  const pnl = d.today_pnl || 0;
+  const posCount = (d.current_positions || d.positions || []).length;
+  const tradeCount = (d.recent_trades || []).length;
+  const cls = pnlClass(pnl);
+  const sign = pnl >= 0 ? '+' : '';
+  const html = `
+    <div style="background:var(--bg);padding:10px;border-radius:10px;text-align:center">
+      <div style="font-size:10px;color:var(--text-3);margin-bottom:2px">잔고</div>
+      <div style="font-size:13px;font-weight:800">${fmtKRW(bal)}원</div>
+    </div>
+    <div style="background:var(--bg);padding:10px;border-radius:10px;text-align:center">
+      <div style="font-size:10px;color:var(--text-3);margin-bottom:2px">오늘</div>
+      <div class="${cls}" style="font-size:13px;font-weight:800">${sign}${fmtKRW(pnl)}원</div>
+    </div>
+    <div style="background:var(--bg);padding:10px;border-radius:10px;text-align:center">
+      <div style="font-size:10px;color:var(--text-3);margin-bottom:2px">보유/거래</div>
+      <div style="font-size:13px;font-weight:800">${posCount}건 / ${tradeCount}회</div>
+    </div>`;
+  document.getElementById('sheet-summary').innerHTML = html;
 }
 
 async function refreshSheetMode(){
@@ -910,16 +965,29 @@ function initFirebase() {
 }
 const _lastFb = {coin:null, stock:null};
 
+async function _mergeHealth(bot, data){
+  if (!data) return data;
+  try {
+    const h = await fetch(`${BOT_APIS[bot]}/health`, {signal:AbortSignal.timeout(2000)});
+    if (h.ok) {
+      const hd = await h.json();
+      if (!data.bot_mode) data.bot_mode = hd.bot_mode;
+      if (!data.trade_mode) data.trade_mode = hd.trade_mode;
+      data._live = true;
+    }
+  } catch { data._live = false; }
+  return data;
+}
+
 async function fetchAndRender(){
-  // 1. 로컬: system_api 직접 fetch
   if (IS_LOCAL) {
     let coin = null, stock = null;
     try { const r = await fetch('http://127.0.0.1:9000/status/coin', {signal:AbortSignal.timeout(2500)}); if (r.ok) coin = await r.json(); } catch {}
     try { const r = await fetch('http://127.0.0.1:9000/status/stock', {signal:AbortSignal.timeout(2500)}); if (r.ok) stock = await r.json(); } catch {}
+    await Promise.all([_mergeHealth('coin', coin), _mergeHealth('stock', stock)]);
     if (coin || stock) renderMobile({coin, stock});
     return;
   }
-  // 2. 외부: Firebase 구독 (자동, onSnapshot)
   initFirebase();
 }
 
@@ -1044,35 +1112,49 @@ function renderMobile(d){
   const sEl = document.getElementById('m-stock-pnl');
   if (sEl) { sEl.textContent = (sPnl >= 0 ? '+' : '') + fmtKRW(sPnl) + '원 오늘'; sEl.className = 'bot-pnl ' + pnlClass(sPnl); }
 
-  // 봇 가동 상태
+  // 봇 가동 상태 (live 우선, 없으면 heartbeat fallback)
   ['coin','stock'].forEach((bot, i) => {
     const data = i === 0 ? c : s;
     const stEl = document.getElementById(`m-${bot}-status`);
-    if (stEl) {
-      const running = (data.bot_mode === 'running');
-      const trade = (data.trade_mode || 'demo').toUpperCase();
-      stEl.className = 'bot-status ' + (running ? 'running' : 'stopped');
-      const badgeColor = trade === 'REAL' ? 'var(--red)' : 'var(--blue)';
-      stEl.innerHTML = `<span class="status-dot"></span><span>${running ? '운영중' : '정지'}</span>
-        <span style="margin-left:4px;padding:1px 5px;background:${badgeColor};color:#fff;border-radius:4px;font-size:9px;font-weight:800">${trade}</span>`;
-    }
+    if (!stEl) return;
+    const live = data._live;
+    const mode = data.bot_mode;
+    let label, klass;
+    if (mode === 'running')        { label = '온라인'; klass = 'running'; }
+    else if (mode === 'soft_stop') { label = '정리중'; klass = 'running'; }
+    else if (mode === 'stopped')   { label = '정지';   klass = 'stopped'; }
+    else if (live)                 { label = '온라인'; klass = 'running'; }
+    else                           { label = '오프라인'; klass = 'stopped'; }
+    const trade = (data.trade_mode || 'demo').toUpperCase();
+    const badgeColor = trade === 'REAL' ? 'var(--red)' : 'var(--blue)';
+    stEl.className = 'bot-status ' + klass;
+    stEl.innerHTML = `<span class="status-dot"></span><span>${label}</span>
+      <span style="margin-left:4px;padding:1px 5px;background:${badgeColor};color:#fff;border-radius:4px;font-size:9px;font-weight:800">${trade}</span>`;
   });
 
-  // 시장 (macro)
-  const macro = c.macro || s.macro || {};
+  // 시장 (주식봇 macro + 코인봇 btc_market 통합)
+  const macro = s.macro || c.macro || {};
+  const btcM = c.btc_market || {};
+  const altInd = (c.alt_market || {}).individual || [];
+  const ethCoin = altInd.find(x => x.coin === 'ETH');
   const mkts = [
-    {key:'btc', name:'BTC', src: macro.btc},
-    {key:'kospi', name:'KOSPI', src: macro.kospi},
-    {key:'nasdaq', name:'NASDAQ', src: macro.nasdaq},
+    {name:'KOSPI',  v: macro.kospi?.value,  ch: macro.kospi?.chg_pct},
+    {name:'KOSDAQ', v: macro.kosdaq?.value, ch: macro.kosdaq?.chg_pct},
+    {name:'NASDAQ', v: macro.nasdaq?.value, ch: macro.nasdaq?.chg_pct},
+    {name:'S&P500', v: macro.spx?.value,    ch: macro.spx?.chg_pct},
+    {name:'BTC',    v: btcM.price || (macro.btc?.value),  ch: btcM.change_24h ?? macro.btc?.chg_pct},
+    {name:'ETH',    v: ethCoin?.price,      ch: ethCoin?.change_24h},
+    {name:'USD/KRW',v: macro.usdkrw?.value, ch: macro.usdkrw?.chg_pct},
+    {name:'VIX',    v: macro.vix?.value,    ch: macro.vix?.chg_pct},
   ];
   const mGrid = document.getElementById('m-market-grid');
   if (mGrid) {
     mGrid.innerHTML = mkts.map(m => {
-      const v = m.src?.value, ch = m.src?.chg_pct;
+      const v = m.v, ch = m.ch;
       return `<div class="market-cell">
         <div class="market-name">${m.name}</div>
-        <div class="market-value">${fmtPrice(v)}</div>
-        <div class="market-change ${pnlClass(ch || 0)}">${ch != null ? (ch>=0?'+':'') + ch.toFixed(2) + '%' : '-'}</div>
+        <div class="market-value">${v != null ? fmtPrice(v) : '-'}</div>
+        <div class="market-change ${pnlClass(ch || 0)}">${ch != null ? (ch>=0?'+':'') + (+ch).toFixed(2) + '%' : '-'}</div>
       </div>`;
     }).join('');
   }

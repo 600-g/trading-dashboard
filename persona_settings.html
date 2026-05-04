@@ -644,7 +644,7 @@ body {
 <body>
 
 <div class="header">
-  <div class="back-btn">
+  <div class="back-btn" onclick="goBack()" style="cursor:pointer">
     <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
   </div>
   <div class="header-title">페르소나 비중</div>
@@ -867,6 +867,17 @@ body {
 <div class="toast" id="toast"></div>
 
 <script>
+// API base: file:// 또는 외부 호스트면 system_api 절대주소, localhost면 상대경로
+const _h = location.hostname;
+const API_BASE = (location.protocol === 'file:' || _h === '127.0.0.1' || _h === 'localhost' || _h.startsWith('192.'))
+  ? 'http://127.0.0.1:9000' : '';
+
+function goBack() {
+  // file://는 history 없을 수 있어 index.html로 명시 이동
+  if (history.length > 1 && document.referrer) history.back();
+  else location.href = 'index.html';
+}
+
 const SLIDERS = ['coolma', 'swing', 'day', 'hold'];
 const COLORS = {
   coolma: '#8B5CF6',
@@ -1090,7 +1101,7 @@ async function loadStats() {
   document.getElementById('data-status').innerHTML = '로딩중<span class="loading"></span>';
   
   try {
-    const res = await fetch(`/api/personas/stats?market=${currentTab}&days=30`);
+    const res = await fetch(`${API_BASE}/api/personas/stats?market=${currentTab}&days=30`);
     if (!res.ok) throw new Error('API 호출 실패');
     const data = await res.json();
     
@@ -1147,7 +1158,7 @@ function renderStats() {
 
 async function loadHistory() {
   try {
-    const res = await fetch(`/api/personas/weight-history?market=${currentTab}&limit=5`);
+    const res = await fetch(`${API_BASE}/api/personas/weight-history?market=${currentTab}&limit=5`);
     if (!res.ok) throw new Error();
     const history = await res.json();
     
@@ -1193,7 +1204,7 @@ function renderHistory(items) {
 
 async function loadCurrentWeights() {
   try {
-    const res = await fetch(`/api/personas/current-weight?market=${currentTab}`);
+    const res = await fetch(`${API_BASE}/api/personas/current-weight?market=${currentTab}`);
     if (!res.ok) throw new Error();
     const data = await res.json();
     
@@ -1322,7 +1333,7 @@ document.getElementById('btn-apply').addEventListener('click', async () => {
   }
   
   try {
-    const res = await fetch('/api/personas/weight', {
+    const res = await fetch(API_BASE+'/api/personas/weight', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
