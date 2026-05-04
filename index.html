@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#FFFFFF">
 <title>두근 트레이딩</title>
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
   @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
@@ -616,71 +619,23 @@
 <div class="section">
   <div class="section-head">
     <div class="section-title">시장</div>
-    <div class="section-link">
-      상세
-      <svg class="ico"><use href="#i-chevron-right"/></svg>
-    </div>
+    <div class="section-link">실시간</div>
   </div>
-  <div class="market-grid">
-    <div class="market-cell">
-      <div class="market-name">BTC</div>
-      <div class="market-value">1.5억</div>
-      <div class="market-change pnl-down">-0.8%</div>
-    </div>
-    <div class="market-cell">
-      <div class="market-name">KOSPI</div>
-      <div class="market-value">3,290</div>
-      <div class="market-change pnl-up">+0.5%</div>
-    </div>
-    <div class="market-cell">
-      <div class="market-name">NASDAQ</div>
-      <div class="market-value">22,450</div>
-      <div class="market-change pnl-up">+1.2%</div>
-    </div>
+  <div class="market-grid" id="m-market-grid">
+    <div class="market-cell"><div class="market-name">BTC</div><div class="market-value">-</div><div class="market-change">-</div></div>
+    <div class="market-cell"><div class="market-name">KOSPI</div><div class="market-value">-</div><div class="market-change">-</div></div>
+    <div class="market-cell"><div class="market-name">NASDAQ</div><div class="market-value">-</div><div class="market-change">-</div></div>
   </div>
 </div>
 
 <!-- 보유 종목 -->
 <div class="section">
   <div class="section-head">
-    <div class="section-title">보유 종목</div>
-    <div class="section-link">
-      전체
-      <svg class="ico"><use href="#i-chevron-right"/></svg>
-    </div>
+    <div class="section-title">보유 종목 <span id="m-holdings-count" style="color:var(--text-3);font-weight:500;font-size:12px"></span></div>
+    <div class="section-link">전체</div>
   </div>
-  <div class="item">
-    <div class="item-icon eth">ETH</div>
-    <div class="item-body">
-      <div class="item-name">이더리움</div>
-      <div class="item-sub">3,388,000원 · 0.85개</div>
-    </div>
-    <div class="item-right">
-      <div class="item-amount">2,879,800원</div>
-      <div class="item-change pnl-up">+1.2%</div>
-    </div>
-  </div>
-  <div class="item">
-    <div class="item-icon sent">SENT</div>
-    <div class="item-body">
-      <div class="item-name">센티언트</div>
-      <div class="item-sub">27원 · 448,660개</div>
-    </div>
-    <div class="item-right">
-      <div class="item-amount">12,114,820원</div>
-      <div class="item-change pnl-down">-40.7%</div>
-    </div>
-  </div>
-  <div class="item">
-    <div class="item-icon usd">SD</div>
-    <div class="item-body">
-      <div class="item-name">SanDisk</div>
-      <div class="item-sub">$165 · 1주</div>
-    </div>
-    <div class="item-right">
-      <div class="item-amount">230,000원</div>
-      <div class="item-change pnl-up">+16.0%</div>
-    </div>
+  <div id="m-holdings-list">
+    <div class="item"><div class="item-body"><div class="item-name" style="color:var(--text-3)">로딩...</div></div></div>
   </div>
 </div>
 
@@ -688,49 +643,10 @@
 <div class="section">
   <div class="section-head">
     <div class="section-title">최근 거래</div>
-    <div class="section-link">
-      전체
-      <svg class="ico"><use href="#i-chevron-right"/></svg>
-    </div>
+    <div class="section-link">전체</div>
   </div>
-  <div class="item">
-    <div class="item-icon buy">
-      <svg class="ico"><use href="#i-plus"/></svg>
-    </div>
-    <div class="item-body">
-      <div class="item-name">DOGE</div>
-      <div class="item-sub">14:23 · 박단타</div>
-    </div>
-    <div class="item-right">
-      <div class="item-amount pnl-up">+1,234원</div>
-      <div class="item-change pnl-up">+0.3%</div>
-    </div>
-  </div>
-  <div class="item">
-    <div class="item-icon sell">
-      <svg class="ico"><use href="#i-minus"/></svg>
-    </div>
-    <div class="item-body">
-      <div class="item-name">SOL</div>
-      <div class="item-sub">14:18 · 김리스크</div>
-    </div>
-    <div class="item-right">
-      <div class="item-amount pnl-down">-2,150원</div>
-      <div class="item-change pnl-down">-1.5%</div>
-    </div>
-  </div>
-  <div class="item">
-    <div class="item-icon buy">
-      <svg class="ico"><use href="#i-plus"/></svg>
-    </div>
-    <div class="item-body">
-      <div class="item-name">BTC</div>
-      <div class="item-sub">14:05 · 이패턴</div>
-    </div>
-    <div class="item-right">
-      <div class="item-amount pnl-up">+5,420원</div>
-      <div class="item-change pnl-up">+1.8%</div>
-    </div>
+  <div id="m-trades-list">
+    <div class="item"><div class="item-body"><div class="item-name" style="color:var(--text-3)">로딩...</div></div></div>
   </div>
 </div>
 
@@ -898,32 +814,54 @@ function setText(id, txt){
   if (el) el.textContent = txt;
 }
 
-// status.json fetch (양봇)
-async function fetchAndRender(){
+// 외부 사이트는 Firebase, 로컬은 직접 fetch
+const IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.startsWith('192.168');
+const FIREBASE_CFG = {
+  apiKey: "AIzaSyAF6096bC-Q04qWXh5MjVsuJGhYBy76agM",
+  authDomain: "datemap-759bf.firebaseapp.com",
+  projectId: "datemap-759bf",
+  storageBucket: "datemap-759bf.firebasestorage.app",
+  messagingSenderId: "833273999923",
+  appId: "1:833273999923:web:2696d0363c223c6bbbe946"
+};
+let _fbDb = null;
+function initFirebase() {
+  if (_fbDb || !window.firebase) return;
   try {
-    // GitHub Pages 기준 상대경로 — Firebase 사용 안 하면 fallback
-    const apis = [
-      'http://127.0.0.1:9000/status/coin',
-      'http://127.0.0.1:9000/status/stock',
-    ];
-    let coin = null, stock = null;
-    try {
-      const r1 = await fetch(apis[0], {signal:AbortSignal.timeout(2500)});
-      if (r1.ok) coin = await r1.json();
-    } catch {}
-    try {
-      const r2 = await fetch(apis[1], {signal:AbortSignal.timeout(2500)});
-      if (r2.ok) stock = await r2.json();
-    } catch {}
-
-    // Firebase 모드 (외부 사이트)
-    if (!coin && !stock && window.firebase) {
-      // 추후 Firebase onSnapshot 추가 가능
-    }
-
-    if (coin || stock) renderMobile({coin, stock});
-  } catch (e) { console.error('fetch err', e); }
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CFG);
+    _fbDb = firebase.firestore();
+    // 실시간 구독 (코인 + 주식)
+    _fbDb.collection('trading_status').doc('coin').onSnapshot(snap => {
+      if (snap.exists) { _lastFb.coin = snap.data(); renderMobile(_lastFb); }
+    });
+    _fbDb.collection('trading_status').doc('stock').onSnapshot(snap => {
+      if (snap.exists) { _lastFb.stock = snap.data(); renderMobile(_lastFb); }
+    });
+    console.log('[mobile] Firebase 실시간 구독 시작');
+  } catch (e) { console.error('Firebase init err', e); }
 }
+const _lastFb = {coin:null, stock:null};
+
+async function fetchAndRender(){
+  // 1. 로컬: system_api 직접 fetch
+  if (IS_LOCAL) {
+    let coin = null, stock = null;
+    try { const r = await fetch('http://127.0.0.1:9000/status/coin', {signal:AbortSignal.timeout(2500)}); if (r.ok) coin = await r.json(); } catch {}
+    try { const r = await fetch('http://127.0.0.1:9000/status/stock', {signal:AbortSignal.timeout(2500)}); if (r.ok) stock = await r.json(); } catch {}
+    if (coin || stock) renderMobile({coin, stock});
+    return;
+  }
+  // 2. 외부: Firebase 구독 (자동, onSnapshot)
+  initFirebase();
+}
+
+function fmtPrice(v){
+  if (v == null) return '-';
+  if (Math.abs(v) >= 100000000) return (v/100000000).toFixed(2) + '억';
+  if (Math.abs(v) >= 10000) return (v/10000).toFixed(0) + '만';
+  return Math.round(v).toLocaleString();
+}
+function pnlClass(v){ return v > 0 ? 'pnl-up' : v < 0 ? 'pnl-down' : 'pnl-flat'; }
 
 function renderMobile(d){
   const c = d.coin || {}, s = d.stock || {};
@@ -936,15 +874,120 @@ function renderMobile(d){
   setText('m-total-pnl', fmtSign(todayPnl));
   setText('m-total-pnl-pct', (todayPct >= 0 ? '+' : '') + todayPct.toFixed(2) + '%');
   const pnlRow = document.getElementById('m-total-pnl-row');
-  if (pnlRow) {
-    pnlRow.classList.remove('pnl-up','pnl-down','pnl-flat');
-    pnlRow.classList.add(todayPnl > 0 ? 'pnl-up' : todayPnl < 0 ? 'pnl-down' : 'pnl-flat');
-  }
+  if (pnlRow) { pnlRow.classList.remove('pnl-up','pnl-down','pnl-flat'); pnlRow.classList.add(pnlClass(todayPnl)); }
 
   setText('m-coin-balance', fmtKRW(c.balance || 0) + '원');
-  setText('m-coin-pnl', (c.today_pnl >= 0 ? '+' : '') + fmtKRW(c.today_pnl || 0) + '원 오늘');
+  const cPnl = c.today_pnl || 0;
+  const cEl = document.getElementById('m-coin-pnl');
+  if (cEl) { cEl.textContent = (cPnl >= 0 ? '+' : '') + fmtKRW(cPnl) + '원 오늘'; cEl.className = 'bot-pnl ' + pnlClass(cPnl); }
   setText('m-stock-balance', fmtKRW(s.balance || 0) + '원');
-  setText('m-stock-pnl', (s.today_pnl >= 0 ? '+' : '') + fmtKRW(s.today_pnl || 0) + '원 오늘');
+  const sPnl = s.today_pnl || 0;
+  const sEl = document.getElementById('m-stock-pnl');
+  if (sEl) { sEl.textContent = (sPnl >= 0 ? '+' : '') + fmtKRW(sPnl) + '원 오늘'; sEl.className = 'bot-pnl ' + pnlClass(sPnl); }
+
+  // 봇 가동 상태
+  ['coin','stock'].forEach((bot, i) => {
+    const data = i === 0 ? c : s;
+    const stEl = document.getElementById(`m-${bot}-status`);
+    if (stEl) {
+      const running = (data.bot_mode === 'running');
+      stEl.className = 'bot-status ' + (running ? 'running' : 'stopped');
+      stEl.innerHTML = `<span class="status-dot"></span><span>${running ? '운영중' : '정지'}</span>`;
+    }
+  });
+
+  // 시장 (macro)
+  const macro = c.macro || s.macro || {};
+  const mkts = [
+    {key:'btc', name:'BTC', src: macro.btc},
+    {key:'kospi', name:'KOSPI', src: macro.kospi},
+    {key:'nasdaq', name:'NASDAQ', src: macro.nasdaq},
+  ];
+  const mGrid = document.getElementById('m-market-grid');
+  if (mGrid) {
+    mGrid.innerHTML = mkts.map(m => {
+      const v = m.src?.value, ch = m.src?.chg_pct;
+      return `<div class="market-cell">
+        <div class="market-name">${m.name}</div>
+        <div class="market-value">${fmtPrice(v)}</div>
+        <div class="market-change ${pnlClass(ch || 0)}">${ch != null ? (ch>=0?'+':'') + ch.toFixed(2) + '%' : '-'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // 보유 종목 (양봇 합산)
+  const cPos = c.current_positions || c.positions || [];
+  const sPos = s.positions || [];
+  const allPos = [
+    ...cPos.map(p => ({...p, _bot:'coin', _sym: p.coin, _name: p.coin})),
+    ...sPos.map(p => ({...p, _bot:'stock', _sym: p.stock, _name: p.stock_name || p.stock})),
+  ];
+  setText('m-holdings-count', `· ${allPos.length}건`);
+  const hList = document.getElementById('m-holdings-list');
+  if (hList) {
+    if (allPos.length === 0) {
+      hList.innerHTML = '<div class="item"><div class="item-body"><div class="item-name" style="color:var(--text-3)">보유 없음</div></div></div>';
+    } else {
+      hList.innerHTML = allPos.map(p => {
+        const sym = p._sym || '-';
+        const name = p._name || sym;
+        const persona = p.persona || p.profile || '-';
+        const cur = p.current_price || 0;
+        const avg = +(p.entry_price || p.avg_price || 0);
+        let pnl = p.pnl_pct;
+        if (pnl == null) pnl = avg > 0 && cur > 0 ? ((cur-avg)/avg*100) : 0;
+        const inv = p.notional_krw || p.krw_invested || (avg * (+p.amount || 0));
+        const amt = (+p.amount || 0).toFixed(p._bot === 'coin' ? 4 : 0);
+        const iconCls = p._bot === 'coin' ? 'eth' : 'usd';
+        const sign = pnl >= 0 ? '+' : '';
+        return `<div class="item" onclick="openBotSheet('${p._bot}')">
+          <div class="item-icon ${iconCls}">${sym.replace('KRW-','').slice(0,4)}</div>
+          <div class="item-body">
+            <div class="item-name">${name}</div>
+            <div class="item-sub">${fmtKRW(avg)}원 · ${amt}개 · ${persona}</div>
+          </div>
+          <div class="item-right">
+            <div class="item-amount">${fmtKRW(inv)}원</div>
+            <div class="item-change ${pnlClass(pnl)}">${sign}${pnl.toFixed(2)}%</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // 최근 거래 (양봇 합산, 최신순 10건)
+  const allTr = [
+    ...(c.recent_trades || []).map(t => ({...t, _bot:'coin', _sym: t.coin})),
+    ...(s.recent_trades || []).map(t => ({...t, _bot:'stock', _sym: t.stock_name || t.stock})),
+  ].sort((a,b) => (b.ts || b.created_at || '').localeCompare(a.ts || a.created_at || '')).slice(0, 10);
+  const tList = document.getElementById('m-trades-list');
+  if (tList) {
+    if (allTr.length === 0) {
+      tList.innerHTML = '<div class="item"><div class="item-body"><div class="item-name" style="color:var(--text-3)">거래 없음</div></div></div>';
+    } else {
+      tList.innerHTML = allTr.map(t => {
+        const isBuy = (t.side || '').toLowerCase().startsWith('b');
+        const time = (t.ts || t.created_at || '').slice(11, 16);
+        const sym = t._sym || '-';
+        const persona = t.persona || t.profile || '';
+        const pnl = t.pnl || 0;
+        const pct = t.pnl_pct != null ? (Math.abs(t.pnl_pct) < 1 ? t.pnl_pct * 100 : t.pnl_pct) : 0;
+        return `<div class="item">
+          <div class="item-icon ${isBuy ? 'buy' : 'sell'}">
+            <svg class="ico"><use href="#${isBuy ? 'i-plus' : 'i-minus'}"/></svg>
+          </div>
+          <div class="item-body">
+            <div class="item-name">${sym}</div>
+            <div class="item-sub">${time} · ${persona}</div>
+          </div>
+          <div class="item-right">
+            <div class="item-amount ${pnlClass(pnl)}">${pnl >= 0 ? '+' : ''}${fmtKRW(pnl)}원</div>
+            <div class="item-change ${pnlClass(pct)}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
 }
 
 // 30초 폴링
