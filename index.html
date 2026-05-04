@@ -44,7 +44,25 @@
     max-width: 420px;
     margin: 0 auto;
     min-height: 100vh;
-    padding-bottom: calc(100px + env(safe-area-inset-bottom));  /* 플로팅 탭바 + 홈바 */
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+
+  /* Master Spec v2 §8: 데스크탑 분기 (≥768px) — 좌우 2열 + 넓은 캔버스 */
+  @media (min-width: 768px) {
+    body {
+      max-width: 1100px;
+      padding: 16px 20px calc(120px + env(safe-area-inset-bottom));
+    }
+    .topbar { position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 12px 0; }
+    .main-card { font-size: 1.1em; }
+    .bot-row { grid-template-columns: 1fr 1fr; gap: 16px; }
+    /* 보유종목 / 최근거래 좌우 2열 */
+    .desktop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+    .market-grid { grid-template-columns: repeat(8, 1fr); }
+    .tabbar { max-width: 580px; }
+  }
+  @media (min-width: 1024px) {
+    body { max-width: 1280px; }
   }
 
   /* SVG 아이콘 베이스 */
@@ -626,25 +644,26 @@
   </div>
 </div>
 
-<!-- 보유 종목 -->
-<div class="section">
-  <div class="section-head">
-    <div class="section-title">보유 종목 <span id="m-holdings-count" style="color:var(--text-3);font-weight:500;font-size:12px"></span></div>
-    <div class="section-link">전체</div>
+<!-- 보유종목 + 최근거래: 데스크탑은 좌우 2열, 모바일은 세로 -->
+<div class="desktop-grid">
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">보유 종목 <span id="m-holdings-count" style="color:var(--text-3);font-weight:500;font-size:12px"></span></div>
+      <div class="section-link">전체</div>
+    </div>
+    <div id="m-holdings-list">
+      <div class="item"><div class="item-body"><div class="item-name" style="color:var(--text-3)">로딩...</div></div></div>
+    </div>
   </div>
-  <div id="m-holdings-list">
-    <div class="item"><div class="item-body"><div class="item-name" style="color:var(--text-3)">로딩...</div></div></div>
-  </div>
-</div>
 
-<!-- 최근 거래 -->
-<div class="section">
-  <div class="section-head">
-    <div class="section-title">최근 거래</div>
-    <div class="section-link">전체</div>
-  </div>
-  <div id="m-trades-list">
-    <div class="item"><div class="item-body"><div class="item-name" style="color:var(--text-3)">로딩...</div></div></div>
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">최근 거래</div>
+      <div class="section-link">전체</div>
+    </div>
+    <div id="m-trades-list">
+      <div class="item"><div class="item-body"><div class="item-name" style="color:var(--text-3)">로딩...</div></div></div>
+    </div>
   </div>
 </div>
 
@@ -1160,31 +1179,74 @@ function openAlertsSheet(){
   }).join('');
 }
 
-function openImproveSheet(){
+async function _fetchImproveSummary(market){
+  if (IS_LOCAL) {
+    try {
+      const r = await fetch(`${SYS_API}/api/improve/summary?market=${market}&days=1`, {signal:AbortSignal.timeout(3000)});
+      if (r.ok) return await r.json();
+    } catch {}
+  }
+  return null;
+}
+
+async function openImproveSheet(){
   openSheet('improve-sheet');
-  const c = STATE_CACHE.coin || {}, s = STATE_CACHE.stock || {};
-  const tunes = [...(c.tune_history || []), ...(s.tune_history || [])];
-  const meta = c.meta_diagnosis || s.meta_diagnosis || {};
-  const personas = [...(c.persona_stats || []), ...(s.persona_stats || [])];
-  let html = '<div style="font-size:13px;font-weight:700;margin-bottom:8px">🔬 메타진단</div>';
-  html += `<div style="background:var(--bg);padding:10px;border-radius:8px;font-size:11px;margin-bottom:12px">${meta.summary || '데이터 누적 중'}</div>`;
-  html += '<div style="font-size:13px;font-weight:700;margin-bottom:8px">🛠 자가개선 변경 로그</div>';
-  if (tunes.length === 0) {
-    html += '<div style="color:var(--text-3);font-size:12px;padding:12px;text-align:center">변경 없음</div>';
-  } else {
-    html += tunes.slice(0, 5).map(t => `<div style="padding:8px;background:var(--bg);border-radius:6px;margin-bottom:4px;font-size:11px">
-      <b>${t.param || t.pattern}</b>: ${t.old_value} → <span style="color:var(--blue)">${t.new_value}</span>
-    </div>`).join('');
-  }
-  html += '<div style="font-size:13px;font-weight:700;margin:12px 0 8px">🎭 페르소나별 성과</div>';
-  if (personas.length === 0) {
-    html += '<div style="color:var(--text-3);font-size:12px;padding:12px;text-align:center">데이터 없음</div>';
-  } else {
-    html += personas.map(p => `<div style="display:flex;justify-content:space-between;padding:8px;background:var(--bg);border-radius:6px;margin-bottom:4px;font-size:11px">
-      <span><b>${p.persona}</b> ${p.trades}건 (${p.winrate}%)</span>
-      <span class="${pnlClass(p.total_pnl)}" style="font-weight:700">${p.total_pnl >= 0 ? '+' : ''}${fmtKRW(p.total_pnl)}원</span>
-    </div>`).join('');
-  }
+  document.getElementById('improve-content').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-3);font-size:12px">불러오는 중...</div>';
+  const [coinSum, stockSum] = await Promise.all([_fetchImproveSummary('coin'), _fetchImproveSummary('kr')]);
+
+  const sec = (title, body) => `<div style="font-size:13px;font-weight:800;margin:14px 0 8px;color:var(--text-1)">${title}</div>${body}`;
+  const empty = (msg) => `<div style="color:var(--text-3);font-size:12px;padding:14px;text-align:center;background:var(--bg);border-radius:8px">${msg}</div>`;
+
+  const renderBot = (sum, label, icon) => {
+    if (!sum) return sec(`${icon} ${label}`, empty('데이터 없음 (system_api 응답 없음)'));
+    let h = '';
+    // 1. 거래 요약
+    h += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px">
+      <div style="background:var(--bg);padding:10px;border-radius:8px">
+        <div style="font-size:10px;color:var(--text-3)">청산/보유</div>
+        <div style="font-size:13px;font-weight:800">${sum.closed_count}건 / ${sum.holding_count}건</div>
+      </div>
+      <div style="background:var(--bg);padding:10px;border-radius:8px">
+        <div style="font-size:10px;color:var(--text-3)">실현 P&L (24h)</div>
+        <div class="${pnlClass(sum.realized_pnl)}" style="font-size:13px;font-weight:800">${sum.realized_pnl >= 0 ? '+' : ''}${fmtKRW(sum.realized_pnl)}원</div>
+      </div>
+    </div>`;
+    // 2. 페르소나별
+    if (sum.personas.length > 0) {
+      h += sum.personas.map(p => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:6px;margin-bottom:4px;font-size:11px">
+        <span><b>${p.persona}</b> · ${p.trades}건 · 승률 ${p.winrate}%</span>
+        <span class="${pnlClass(p.total_pnl)}" style="font-weight:700">${p.total_pnl >= 0 ? '+' : ''}${fmtKRW(p.total_pnl)}원</span>
+      </div>`).join('');
+    } else {
+      h += empty('페르소나별 거래 없음');
+    }
+    // 3. 룰 후보 (tune)
+    if (sum.tune_applied.length > 0 || sum.tune_rejected.length > 0) {
+      h += '<div style="font-size:11px;font-weight:700;margin:10px 0 6px;color:var(--text-2)">🔧 룰 후보</div>';
+      sum.tune_applied.forEach(t => h += `<div style="padding:8px 10px;background:var(--green-bg);border-radius:6px;margin-bottom:4px;font-size:11px;color:var(--text-1)">
+        ✅ <b>${t.param}</b>: ${t.old} → <b style="color:var(--green)">${t.new}</b>
+      </div>`);
+      sum.tune_rejected.forEach(t => h += `<div style="padding:8px 10px;background:var(--red-bg);border-radius:6px;margin-bottom:4px;font-size:11px">
+        ❌ <b>${t.rule}</b>: ${t.suggested} (백테스트 ${t.diff}%) · ${t.reason || ''}
+      </div>`);
+    }
+    // 4. 위원회 (Spec v2 §4)
+    const cm = sum.committee || {};
+    if (cm.calls > 0) {
+      h += `<div style="font-size:11px;font-weight:700;margin:10px 0 6px;color:var(--text-2)">🤝 위원회 (24h)</div>
+        <div style="background:var(--bg);padding:10px;border-radius:8px;font-size:11px;line-height:1.6">
+          호출 <b>${cm.calls}/20회</b> · HOLD <b style="color:var(--green)">${cm.hold}</b> · SELL <b style="color:var(--red)">${cm.sell}</b>
+          ${cm.transferred.length ? `<br>이전: ${[...new Set(cm.transferred)].join(', ')}` : ''}
+        </div>`;
+    }
+    return sec(`${icon} ${label}`, h);
+  };
+
+  let html = renderBot(coinSum, '코인봇 자가개선', '🪙');
+  html += renderBot(stockSum, '주식봇(KR) 자가개선', '📈');
+  html += `<div style="margin-top:16px;padding:10px;background:var(--blue-bg);border-radius:8px;font-size:11px;color:var(--blue);text-align:center">
+    Master Spec v2 §10 · 새벽 02:00 코인 / 17:55 KR / 04:55 US 자동 발동
+  </div>`;
   document.getElementById('improve-content').innerHTML = html;
 }
 

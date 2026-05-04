@@ -1410,16 +1410,18 @@ function rebalanceFrom(changed) {
     const newTotal = SLIDERS.reduce((a, s) => a + parseInt(document.getElementById(`slider-${s}`).value), 0);
     if (newTotal !== 100) {
       const cur = parseInt(document.getElementById(`slider-${changed}`).value);
-      document.getElementById(`slider-${changed}`).value = Math.max(5, Math.min(80, cur + (100 - newTotal)));
+      document.getElementById(`slider-${changed}`).value = Math.max(5, Math.min(60, cur + (100 - newTotal)));
     }
   }
   _adjusting = false;
   updateUI();
 }
 
+// Master Spec v2 §12: WEIGHT_PERSONA_RANGE [5, 60] — 절대룰
 SLIDERS.forEach(s => {
   const el = document.getElementById(`slider-${s}`);
-  el.max = 80;
+  el.max = 60;
+  el.min = 5;
   el.addEventListener('input', () => rebalanceFrom(s));
 });
 
@@ -1428,7 +1430,7 @@ document.querySelectorAll('.fine-btn').forEach(btn => {
     const persona = btn.dataset.persona;
     const delta = parseInt(btn.dataset.delta);
     const slider = document.getElementById(`slider-${persona}`);
-    const newVal = Math.max(5, Math.min(80, parseInt(slider.value) + delta));
+    const newVal = Math.max(5, Math.min(60, parseInt(slider.value) + delta));
     slider.value = newVal;
     rebalanceFrom(persona);
   });
