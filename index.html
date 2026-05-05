@@ -44,14 +44,21 @@
     max-width: 420px;
     margin: 0 auto;
     min-height: 100vh;
-    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    /* 좌우 16px 통일 padding (모든 섹션 라인 맞춤) — 사용자 요청 #2 */
+    padding: 0 16px calc(100px + env(safe-area-inset-bottom));
+  }
+  /* 모든 섹션이 좌우 padding 받도록 inline margin 무력화 */
+  body > .topbar, body > .main-card, body > .bot-row, body > .bot-status-row,
+  body > .section, body > .section-head, body > .market-grid, body > .quick-menu,
+  body > #m-bots-down-banner, body > .desktop-grid, body > #m-persona-cards {
+    margin-left: 0 !important; margin-right: 0 !important;
   }
 
   /* Master Spec v2 §8: 데스크탑 분기 (≥768px) — 좌우 2열 + 넓은 캔버스 */
   @media (min-width: 768px) {
     body {
       max-width: 1100px;
-      padding: 16px 20px calc(120px + env(safe-area-inset-bottom));
+      padding: 16px 20px calc(120px + env(safe-area-inset-bottom)) !important;
     }
     .topbar { position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 12px 0; }
     .main-card { font-size: 1.1em; }
@@ -632,20 +639,44 @@
   </div>
 </div>
 
-<!-- 봇 상태 행 (위계 2순위) -->
-<div class="bot-status-row">
-  <div class="bot-status-pill" onclick="openBotSheet('coin')">
-    <div class="bsp-left"><span class="bsp-dot stop" id="bsp-coin-dot"></span><svg class="ico" style="color:var(--yellow)"><use href="#i-coin"/></svg><span>코인봇</span></div>
-    <div style="display:flex;align-items:center;gap:5px">
-      <span id="bsp-coin-label" style="color:var(--text-3);font-size:11px">확인 중</span>
-      <span class="bsp-mode demo" id="bsp-coin-mode">DEMO</span>
+<!-- 봇 컨트롤 카드 (코인봇/주식봇 — 잔고+오늘PnL+DEMO/REAL 토글+컨트롤) -->
+<div class="bot-row" id="m-bot-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+  <div class="bot-card" id="m-coin-card" data-bot="coin">
+    <div class="bot-head">
+      <div class="bot-name">
+        <svg class="ico" style="color:var(--yellow)"><use href="#i-coin"/></svg>
+        코인봇
+      </div>
+      <div class="bot-status running" id="m-coin-status">
+        <span class="status-dot"></span><span>확인 중</span>
+      </div>
+    </div>
+    <div class="bot-amount" id="m-coin-balance"><span class="skel" style="width:90px;height:18px"></span></div>
+    <div class="bot-pnl" id="m-coin-pnl">-</div>
+    <div style="display:flex;gap:4px;margin-top:8px">
+      <button onclick="event.stopPropagation();toggleTradeQuick('coin')" id="m-coin-mode-btn"
+        style="flex:1;padding:8px 0;background:var(--blue-bg);color:var(--blue);border:none;border-radius:8px;font-weight:800;font-size:11px;cursor:pointer">DEMO</button>
+      <button onclick="event.stopPropagation();openBotSheet('coin')"
+        style="flex:1;padding:8px 0;background:var(--bg);color:var(--text-2);border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer">⚙ 컨트롤</button>
     </div>
   </div>
-  <div class="bot-status-pill" onclick="openBotSheet('stock')">
-    <div class="bsp-left"><span class="bsp-dot stop" id="bsp-stock-dot"></span><svg class="ico" style="color:var(--green)"><use href="#i-trending"/></svg><span>주식봇</span></div>
-    <div style="display:flex;align-items:center;gap:5px">
-      <span id="bsp-stock-label" style="color:var(--text-3);font-size:11px">확인 중</span>
-      <span class="bsp-mode demo" id="bsp-stock-mode">DEMO</span>
+  <div class="bot-card" id="m-stock-card" data-bot="stock">
+    <div class="bot-head">
+      <div class="bot-name">
+        <svg class="ico" style="color:var(--green)"><use href="#i-trending"/></svg>
+        주식봇
+      </div>
+      <div class="bot-status running" id="m-stock-status">
+        <span class="status-dot"></span><span>확인 중</span>
+      </div>
+    </div>
+    <div class="bot-amount" id="m-stock-balance"><span class="skel" style="width:90px;height:18px"></span></div>
+    <div class="bot-pnl" id="m-stock-pnl">-</div>
+    <div style="display:flex;gap:4px;margin-top:8px">
+      <button onclick="event.stopPropagation();toggleTradeQuick('stock')" id="m-stock-mode-btn"
+        style="flex:1;padding:8px 0;background:var(--blue-bg);color:var(--blue);border:none;border-radius:8px;font-weight:800;font-size:11px;cursor:pointer">DEMO</button>
+      <button onclick="event.stopPropagation();openBotSheet('stock')"
+        style="flex:1;padding:8px 0;background:var(--bg);color:var(--text-2);border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer">⚙ 컨트롤</button>
     </div>
   </div>
 </div>
@@ -1247,6 +1278,28 @@ async function ctrlBot(action){
     } else appAlert({kind:'error', title:'요청 실패', message:`HTTP ${r.status}`});
   } catch (e) { appAlert({kind:'error', title:'네트워크 오류', message:e.message}); }
 }
+async function toggleTradeQuick(bot){
+  // 홈 카드에서 직접 DEMO ↔ REAL 전환 (시트 안 열고 즉시)
+  const data = (bot === 'coin' ? STATE_CACHE.coin : STATE_CACHE.stock) || {};
+  const cur = (data.trade_mode || 'demo').toLowerCase();
+  const target = cur === 'demo' ? 'real' : 'demo';
+  if (target === 'real') {
+    const ok = await appConfirm({
+      title:'REAL 모드 전환', icon:'⚠️', danger:true,
+      message:`${bot === 'coin' ? '🪙 코인봇' : '📈 주식봇'} 실제 자금 매매 시작.\n진입/청산 모두 진짜 거래입니다.`,
+      primaryLabel:'REAL 전환',
+    });
+    if (!ok) return;
+  }
+  try {
+    const r = await fetch(`${BOT_APIS[bot]}/trade/${target}`, {method:'POST'});
+    if (r.ok) {
+      appAlert({kind: target==='real'?'warn':'success', title:`${target.toUpperCase()} 모드 전환됨`, autoCloseMs:1400});
+      setTimeout(fetchAndRender, 1500);
+    } else appAlert({kind:'error', title:'전환 실패', message:`HTTP ${r.status}`});
+  } catch (e) { appAlert({kind:'error', title:'네트워크 오류', message:e.message}); }
+}
+
 async function toggleTrade(){
   if (!_currentBot) return;
   const cur = document.getElementById('sheet-mode-name').textContent;
@@ -1703,27 +1756,43 @@ function renderMobile(d){
     }).join('');
   }
 
-  // 봇 가동 상태 (신규 bot-status-pill — 운영중 초록 / 정지 회색 / 에러 빨강)
+  // 봇 카드 (잔고/PnL/상태/DEMO·REAL 토글 — 인라인 컨트롤)
   ['coin','stock'].forEach((bot, i) => {
     const data = i === 0 ? c : s;
-    const dot = document.getElementById(`bsp-${bot}-dot`);
-    const lab = document.getElementById(`bsp-${bot}-label`);
-    const md  = document.getElementById(`bsp-${bot}-mode`);
-    if (!dot || !lab) return;
-    const live = data._live;
-    const mode = data.bot_mode;
-    let dotCls, label, color;
-    if (mode === 'running')        { dotCls='run';  label='운영중'; color='var(--green)'; }
-    else if (mode === 'soft_stop') { dotCls='run';  label='정리중'; color='var(--yellow)'; }
-    else if (mode === 'stopped')   { dotCls='stop'; label='정지';   color='var(--text-3)'; }
-    else if (live)                 { dotCls='run';  label='온라인'; color='var(--green)'; }
-    else                           { dotCls='err';  label='오프라인'; color='var(--red)'; }
-    dot.className = 'bsp-dot ' + dotCls;
-    lab.textContent = label; lab.style.color = color;
-    if (md) {
+    // 잔고
+    setText(`m-${bot}-balance`, fmtKRW(data.balance || 0) + '원');
+    // 오늘 PnL
+    const pnl = data.today_pnl || 0;
+    const pnlEl = document.getElementById(`m-${bot}-pnl`);
+    if (pnlEl) {
+      pnlEl.textContent = (pnl >= 0 ? '+' : '') + fmtKRW(pnl) + '원 오늘';
+      pnlEl.className = 'bot-pnl ' + pnlClass(pnl);
+    }
+    // 상태 dot
+    const stEl = document.getElementById(`m-${bot}-status`);
+    if (stEl) {
+      const live = data._live;
+      const mode = data.bot_mode;
+      let label, klass;
+      if (mode === 'running')        { label='운영중'; klass='running'; }
+      else if (mode === 'soft_stop') { label='정리중'; klass='running'; }
+      else if (mode === 'stopped')   { label='정지';   klass='stopped'; }
+      else if (live)                 { label='온라인'; klass='running'; }
+      else                           { label='오프라인'; klass='stopped'; }
+      stEl.className = 'bot-status ' + klass;
+      stEl.innerHTML = `<span class="status-dot"></span><span>${label}</span>`;
+    }
+    // DEMO/REAL 토글 버튼
+    const mb = document.getElementById(`m-${bot}-mode-btn`);
+    if (mb) {
       const trade = (data.trade_mode || 'demo').toLowerCase();
-      md.className = 'bsp-mode ' + trade;
-      md.textContent = trade.toUpperCase();
+      if (trade === 'real') {
+        mb.style.background = 'var(--red-bg)'; mb.style.color = 'var(--red)';
+        mb.textContent = 'REAL';
+      } else {
+        mb.style.background = 'var(--blue-bg)'; mb.style.color = 'var(--blue)';
+        mb.textContent = 'DEMO';
+      }
     }
   });
 
@@ -1762,21 +1831,20 @@ function renderMobile(d){
   ];
   const mGrid = document.getElementById('m-market-grid');
   if (mGrid) {
-    mGrid.innerHTML = mkts.map(m => {
+    // value null 셀은 완전히 제거 (빈공란 노출 X) — 사용자 요청 #3
+    const valid = mkts.filter(m => (m.src || {}).value != null);
+    mGrid.innerHTML = valid.map(m => {
       const src = m.src || {};
       const v = src.value, ch = src.chg_pct;
-      const isEmpty = v == null;
       const stale = src.stale ? '<span title="장 마감 / 마지막 종가" style="display:inline-block;width:5px;height:5px;background:var(--text-3);border-radius:50%;margin-left:3px;vertical-align:middle"></span>' : '';
-      const cellStyle = isEmpty ? 'opacity:0.45' : '';
-      const valTxt = v != null ? fmtPrice(v) : '—';
-      const chTxt = ch != null ? (ch>=0?'+':'') + (+ch).toFixed(2) + '%' : '대기';
-      const chCls = ch != null ? pnlClass(ch || 0) : '';
-      return `<div class="market-cell" style="${cellStyle}">
+      return `<div class="market-cell">
         <div class="market-name">${m.name}${stale}</div>
-        <div class="market-value">${valTxt}</div>
-        <div class="market-change ${chCls}" style="${isEmpty?'color:var(--text-3)':''}">${chTxt}</div>
+        <div class="market-value">${fmtPrice(v)}</div>
+        <div class="market-change ${pnlClass(ch || 0)}">${ch != null ? (ch>=0?'+':'') + (+ch).toFixed(2) + '%' : '-'}</div>
       </div>`;
     }).join('');
+    // 4의 배수에 맞춰 그리드 컬럼 동적 (모바일 4열 / 데스크 8열)
+    if (mGrid.style) mGrid.style.gridTemplateColumns = `repeat(${Math.min(valid.length, 4)}, 1fr)`;
   }
 
   window._POS_INDEX = {};  // 클릭 시 조회용
