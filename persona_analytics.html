@@ -1053,6 +1053,9 @@ function openPosDetail(p) {
 }
 
 async function paSell(sym, name) {
+  const btn = (typeof event !== 'undefined' && event.target) ? event.target.closest('button') : null;
+  if (btn && btn.disabled) return;
+  const orig = btn ? btn.innerHTML : '';
   const ok = await paConfirm({
     title: `${name} 판매`, icon: '💰', danger: true,
     message: '다음 사이클(60초 내) 시장가로 매도됩니다.\n취소할 수 없습니다.',
@@ -1063,6 +1066,12 @@ async function paSell(sym, name) {
     paAlert({kind:'warn', title:'외부 모드', message:'외부 호스트에서는 시뮬레이션 모드.\n로컬 사이트에서 판매 가능.', autoCloseMs: 2500});
     return;
   }
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ 판매 예정 (다음 사이클)';
+    btn.style.background = 'var(--text-4)';
+    btn.style.cursor = 'not-allowed';
+  }
   try {
     const bot = CUR_MARKET === 'coin' ? 'coin' : 'stock';
     const r = await fetch(`${API_BASE_PA}/api/positions/close`, {
@@ -1070,14 +1079,18 @@ async function paSell(sym, name) {
       body: JSON.stringify({bot, symbol: sym})
     });
     const d = await r.json();
-    if (d.ok) {
-      paAlert({kind:'success', title:'판매 예약 완료', message:`${name}\n다음 사이클에 매도됩니다.`, autoCloseMs:1800});
-      closePosSheet();
-      setTimeout(renderAll, 1500);
+    if (d.ok && d.scheduled > 0) {
+      paAlert({kind:'success', title:'✅ 판매 예약 완료',
+        message:`${name}\nDB pending_sell=1 등록\n다음 사이클(≤60s) 자동 매도`, autoCloseMs:1800});
+      setTimeout(() => { closePosSheet(); renderAll(); }, 1800);
     } else {
-      paAlert({kind:'error', title:'예약 실패', message: d.error || '알 수 없음'});
+      if (btn) { btn.disabled = false; btn.innerHTML = orig; btn.style.background = 'var(--red)'; btn.style.cursor = 'pointer'; }
+      paAlert({kind:'error', title:'예약 실패', message: d.scheduled === 0 ? '해당 종목 DB 못 찾음' : (d.error || '알 수 없음')});
     }
-  } catch (e) { paAlert({kind:'error', title:'네트워크 오류', message: e.message}); }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = orig; btn.style.background = 'var(--red)'; btn.style.cursor = 'pointer'; }
+    paAlert({kind:'error', title:'네트워크 오류', message: e.message});
+  }
 }
 
 // ─── (B) 페르소나 누적 매출 라인차트 ───

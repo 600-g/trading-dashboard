@@ -1160,26 +1160,43 @@ function openPositionSheet(bot, sym){
 }
 
 async function sellPosition(bot, sym, name){
+  // 즉시 버튼 disable + 라벨 변경 (중복 클릭 방지)
+  const btn = event && event.target ? event.target.closest('button') : null;
+  if (btn && btn.disabled) return;
+  const orig = btn ? btn.innerHTML : '';
   const ok = await appConfirm({
     title:`${name} 판매`, icon:'💰', danger:true,
     message:'다음 사이클(60초 내) 시장가로 매도됩니다.\n취소할 수 없습니다.',
     primaryLabel:'판매',
   });
   if (!ok) return;
+  if (btn) {
+    btn.disabled = true;
+    btn.style.background = 'var(--text-4)';
+    btn.style.cursor = 'not-allowed';
+    btn.innerHTML = '⏳ 판매 예정';
+  }
   try {
     const r = await fetch(`${SYS_API}/api/positions/close`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({bot, symbol: sym})
     });
     const d = await r.json();
-    if (d.ok) {
-      appAlert({kind:'success', title:'판매 예약 완료', message:`${name}\n다음 사이클에 매도됩니다.`, autoCloseMs:1600});
-      closeSheet('position-sheet');
-      setTimeout(fetchAndRender, 1500);
+    if (d.ok && d.scheduled > 0) {
+      appAlert({kind:'success', title:'✅ 판매 예약 완료',
+        message:`${name}\nDB pending_sell=1 등록됨\n다음 사이클(≤60s) 자동 매도`, autoCloseMs:1800});
+      // 버튼 그대로 disabled 유지 (cancel 안 함)
+      setTimeout(() => { closeSheet('position-sheet'); fetchAndRender(); }, 1800);
     } else {
-      appAlert({kind:'error', title:'예약 실패', message: d.error || '알 수 없는 오류'});
+      // 실패 시 원복
+      if (btn) { btn.disabled = false; btn.style.background = 'var(--red)'; btn.style.cursor = 'pointer'; btn.innerHTML = orig; }
+      appAlert({kind:'error', title:'예약 실패',
+        message: d.scheduled === 0 ? '해당 종목 DB에서 못 찾음' : (d.error || '알 수 없음')});
     }
-  } catch (e) { appAlert({kind:'error', title:'네트워크 오류', message:e.message}); }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.style.background = 'var(--red)'; btn.style.cursor = 'pointer'; btn.innerHTML = orig; }
+    appAlert({kind:'error', title:'네트워크 오류', message:e.message});
+  }
 }
 
 function switchBotSheet(bot){
@@ -1390,20 +1407,32 @@ async function refreshSheetPositions(){
   } catch (e) { console.error(e); }
 }
 async function closePos(symbol, name){
+  const btn = event && event.target ? event.target.closest('button') : null;
+  if (btn && btn.disabled) return;
+  const orig = btn ? btn.innerHTML : '';
   const ok = await appConfirm({
     title:`${name} 판매`, icon:'💰', danger:true,
     message:'다음 사이클(60초 내)에 시장가로 매도됩니다.', primaryLabel:'판매',
   });
   if (!ok) return;
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 예정'; btn.style.background = 'var(--text-4)'; btn.style.cursor = 'not-allowed'; }
   try {
     const r = await fetch(`${SYS_API}/api/positions/close`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({bot:_currentBot, symbol})
     });
     const d = await r.json();
-    if (d.ok) { appAlert({kind:'success', title:'판매 예약됨', message:name, autoCloseMs:1400}); refreshSheetPositions(); }
-    else appAlert({kind:'error', title:'예약 실패', message:d.error || '알 수 없음'});
-  } catch (e) { appAlert({kind:'error', title:'네트워크 오류', message:e.message}); }
+    if (d.ok && d.scheduled > 0) {
+      appAlert({kind:'success', title:'판매 예약됨', message:`${name}\nDB 등록 완료`, autoCloseMs:1500});
+      setTimeout(refreshSheetPositions, 800);
+    } else {
+      if (btn) { btn.disabled = false; btn.innerHTML = orig; btn.style.background = 'var(--red)'; btn.style.cursor = 'pointer'; }
+      appAlert({kind:'error', title:'예약 실패', message: d.scheduled === 0 ? '종목 못 찾음' : (d.error || '알 수 없음')});
+    }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = orig; btn.style.background = 'var(--red)'; btn.style.cursor = 'pointer'; }
+    appAlert({kind:'error', title:'네트워크 오류', message:e.message});
+  }
 }
 function fmtKRW(v){
   if (v == null || isNaN(v)) return '-';
@@ -1912,10 +1941,11 @@ function renderMobile(d){
         const sign = pnl >= 0 ? '+' : '';
         const key = `${p._bot}|${sym}`;
         window._POS_INDEX[key] = p;
-        return `<div class="item" onclick="openPositionSheet('${p._bot}','${sym.replace(/'/g, "\\'")}')">
+        const pendingBadge = p.pending_sell ? '<span style="display:inline-block;padding:1px 6px;background:var(--red-bg);color:var(--red);border-radius:4px;font-size:9px;font-weight:800;margin-left:4px">⏳ 판매 예정</span>' : '';
+        return `<div class="item" onclick="openPositionSheet('${p._bot}','${sym.replace(/'/g, "\\'")}')" ${p.pending_sell?'style="opacity:0.7"':''}>
           <div class="item-icon ${iconCls}">${sym.replace('KRW-','').slice(0,4)}</div>
           <div class="item-body">
-            <div class="item-name">${name}</div>
+            <div class="item-name">${name}${pendingBadge}</div>
             <div class="item-sub">${fmtKRW(avg)}원 · ${amt}개 · ${persona}</div>
           </div>
           <div class="item-right">
