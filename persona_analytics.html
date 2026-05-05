@@ -768,10 +768,48 @@ function fmtKRW(v) {
   return Math.round(v).toLocaleString();
 }
 
+// Firebase 초기화 (외부 호스트만)
+const _FB_CFG_PA = {
+  apiKey: "AIzaSyAF6096bC-Q04qWXh5MjVsuJGhYBy76agM",
+  authDomain: "datemap-759bf.firebaseapp.com",
+  projectId: "datemap-759bf",
+  storageBucket: "datemap-759bf.firebasestorage.app",
+  messagingSenderId: "833273999923",
+  appId: "1:833273999923:web:2696d0363c223c6bbbe946",
+};
+let _fbDbPA = null;
+async function _initFirebasePA() {
+  if (!USE_FB_PA || _fbDbPA) return _fbDbPA;
+  if (typeof firebase === 'undefined') {
+    await new Promise((res, rej) => {
+      let n = 0;
+      const t = setInterval(() => {
+        if (typeof firebase !== 'undefined') { clearInterval(t); res(); }
+        else if (++n > 50) { clearInterval(t); rej(new Error('firebase SDK 미로드')); }
+      }, 100);
+    });
+  }
+  if (!firebase.apps.length) firebase.initializeApp(_FB_CFG_PA);
+  _fbDbPA = firebase.firestore();
+  return _fbDbPA;
+}
+
 async function _fetchAnalytics(persona, market) {
   if (USE_FB_PA) {
-    // 외부 호스트 — Firestore status doc의 persona_stats만 사용 (제한적)
-    return null;
+    // 외부 호스트: Firestore status doc의 persona_analytics[market][persona] 사용
+    try {
+      const fs = await _initFirebasePA();
+      const bot = market === 'coin' ? 'coin' : 'stock';
+      const snap = await fs.collection('trading_status').doc(bot).get();
+      if (!snap.exists) return null;
+      const raw = snap.data();
+      const pa = (raw.persona_analytics || {})[market] || {};
+      const data = pa[persona];
+      return data || null;
+    } catch (e) {
+      console.warn('[analytics fb]', e);
+      return null;
+    }
   }
   try {
     const r = await fetch(`${API_BASE_PA}/api/personas/analytics/${encodeURIComponent(persona)}?market=${market}`,
@@ -815,14 +853,34 @@ async function renderAll() {
 
   const data = await _fetchAnalytics(CUR_PERSONA, CUR_MARKET);
   const cells = document.querySelectorAll('.persona-main .stat-cell');
+
+  // data 없으면 모든 동적 영역 일괄 비움 (디자인 더미 잔존 방지)
+  const _clearAll = (msg) => {
+    cells.forEach((cell, i) => {
+      const v = cell.querySelector('.stat-value');
+      const sub = cell.querySelector('.stat-sub');
+      if (v) { v.textContent = '-'; v.className = 'stat-value'; }
+      if (sub) sub.textContent = i === 0 ? msg : '';
+    });
+    const bars = document.querySelector('.mini-chart .mc-bars');
+    if (bars) bars.innerHTML = `<div style="color:var(--text-3);font-size:11px;width:100%;text-align:center;align-self:center">${msg}</div>`;
+    const dh = document.querySelector('.mini-chart .mc-head .stat-up, .mini-chart .mc-head span:last-child');
+    if (dh) { dh.textContent = '-'; dh.className = ''; }
+    document.querySelectorAll('.slot-mini .sm-row').forEach((r, i) => {
+      r.querySelector('.sm-bar').style.width = '0%';
+      r.querySelector('.sm-pct').textContent = '-';
+    });
+    const sects = document.querySelectorAll('.section');
+    if (sects[0]) { sects[0].querySelectorAll('.position-item').forEach(el => el.remove()); sects[0].querySelector('.s-count').textContent = '0개'; }
+    if (sects[1]) { const g = sects[1].querySelector('.watching-grid'); if (g) g.innerHTML = ''; sects[1].querySelector('.s-count').textContent = '0개'; }
+    if (sects[2]) { sects[2].querySelectorAll('.expected-item').forEach(el => el.remove()); sects[2].querySelector('.s-count').textContent = '0건'; }
+  };
+
   if (!data || data.error) {
-    if (cells[0]) {
-      cells[0].querySelector('.stat-value').textContent = '-';
-      cells[0].querySelector('.stat-sub').textContent = '데이터 없음';
-    }
-    document.querySelector('.mini-chart .mc-bars').innerHTML = '<div style="color:var(--text-3);font-size:11px;width:100%;text-align:center;align-self:center">데이터 없음</div>';
+    _clearAll(data?.error ? `오류: ${data.error}` : '데이터 없음');
     return;
   }
+  // total=0 등 빈 거래 케이스도 의심 — 그래도 표시는 진행 (실제 0건일 수 있음)
   const s = data.stats || {};
   // 2. stat 4셀
   if (cells[0]) {
