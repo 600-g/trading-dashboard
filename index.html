@@ -577,57 +577,32 @@
   </div>
 </div>
 
-<!-- 봇 2개 카드 — 클릭 시 컨트롤 시트 -->
-<div class="bot-row">
-  <div class="bot-card" onclick="openBotSheet('coin')">
-    <div class="bot-head">
-      <div class="bot-name">
-        <svg class="ico coin-ico"><use href="#i-coin"/></svg>
-        코인봇
-      </div>
-      <div class="bot-status running" id="m-coin-status">
-        <span class="status-dot"></span>
-        <span>운영중</span>
-      </div>
-    </div>
-    <div class="bot-amount" id="m-coin-balance">-</div>
-    <div class="bot-pnl" id="m-coin-pnl">-</div>
-    <div style="margin-top:6px;font-size:10px;color:var(--text-3);text-align:right">탭 → 컨트롤</div>
-  </div>
-  <div class="bot-card" onclick="openBotSheet('stock')">
-    <div class="bot-head">
-      <div class="bot-name">
-        <svg class="ico stock-ico"><use href="#i-trending"/></svg>
-        주식봇
-      </div>
-      <div class="bot-status running" id="m-stock-status">
-        <span class="status-dot"></span>
-        <span>운영중</span>
-      </div>
-    </div>
-    <div class="bot-amount" id="m-stock-balance">-</div>
-    <div class="bot-pnl" id="m-stock-pnl">-</div>
-    <div style="margin-top:6px;font-size:10px;color:var(--text-3);text-align:right">탭 → 컨트롤</div>
-  </div>
+<!-- 페르소나 4개 카드 (코인봇/주식봇 카드 → 하단 봇 메뉴와 중복이라 제거) -->
+<div class="section-head" style="margin-top:12px">
+  <div class="section-title">페르소나 <span style="color:var(--text-3);font-weight:500;font-size:12px">· 30일 성과</span></div>
+  <div class="section-link" onclick="window.location.href='persona_settings.html'" style="cursor:pointer">⚙ 비중</div>
+</div>
+<div id="m-persona-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+  <!-- JS로 채움: 단타맨/스윙맨/쿨마봇/존버맨 -->
 </div>
 
 <!-- 빠른 메뉴 -->
 <div class="quick-menu">
-  <div class="quick-item" onclick="openBotSheet('coin')">
-    <div class="quick-icon qi-blue"><svg class="ico"><use href="#i-activity"/></svg></div>
-    <div class="quick-label">코인봇</div>
+  <div class="quick-item" onclick="window.location.href='persona_analytics.html'">
+    <div class="quick-icon qi-purple"><svg class="ico"><use href="#i-activity"/></svg></div>
+    <div class="quick-label">페르소나 분석</div>
   </div>
-  <div class="quick-item" onclick="openBotSheet('stock')">
-    <div class="quick-icon qi-green"><svg class="ico"><use href="#i-wallet"/></svg></div>
-    <div class="quick-label">주식봇</div>
+  <div class="quick-item" onclick="window.location.href='persona_settings.html'">
+    <div class="quick-icon qi-yellow"><svg class="ico"><use href="#i-calendar"/></svg></div>
+    <div class="quick-label">비중 설정</div>
   </div>
   <div class="quick-item" onclick="openImproveSheet()">
     <div class="quick-icon qi-red"><svg class="ico"><use href="#i-cpu"/></svg></div>
     <div class="quick-label">자가개선</div>
   </div>
-  <div class="quick-item" onclick="window.location.href='persona_settings.html'">
-    <div class="quick-icon qi-yellow"><svg class="ico"><use href="#i-calendar"/></svg></div>
-    <div class="quick-label">페르소나</div>
+  <div class="quick-item" onclick="openCalendarSheet()">
+    <div class="quick-icon qi-blue"><svg class="ico"><use href="#i-bar-chart"/></svg></div>
+    <div class="quick-label">거래 달력</div>
   </div>
 </div>
 
@@ -1599,14 +1574,52 @@ function renderMobile(d){
   const pnlRow = document.getElementById('m-total-pnl-row');
   if (pnlRow) { pnlRow.classList.remove('pnl-up','pnl-down','pnl-flat'); pnlRow.classList.add(pnlClass(todayPnl)); }
 
-  setText('m-coin-balance', fmtKRW(c.balance || 0) + '원');
-  const cPnl = c.today_pnl || 0;
-  const cEl = document.getElementById('m-coin-pnl');
-  if (cEl) { cEl.textContent = (cPnl >= 0 ? '+' : '') + fmtKRW(cPnl) + '원 오늘'; cEl.className = 'bot-pnl ' + pnlClass(cPnl); }
-  setText('m-stock-balance', fmtKRW(s.balance || 0) + '원');
-  const sPnl = s.today_pnl || 0;
-  const sEl = document.getElementById('m-stock-pnl');
-  if (sEl) { sEl.textContent = (sPnl >= 0 ? '+' : '') + fmtKRW(sPnl) + '원 오늘'; sEl.className = 'bot-pnl ' + pnlClass(sPnl); }
+  // 봇 잔고/오늘손익은 main-card 메인 외에는 표시 안 함 (페르소나 카드로 대체)
+  // 하단 봇 시트 / refreshSheetSummary 가 동일 데이터 사용
+
+  // ─── 페르소나 4개 카드 (홈) ───
+  const PERSONA_LIST = [
+    {key:'단타맨', icon:'⚡', cls:'qi-blue',   color:'#3182F6'},
+    {key:'스윙맨', icon:'🛡', cls:'qi-green',  color:'#1B9856'},
+    {key:'쿨마봇', icon:'🚀', cls:'qi-purple', color:'#8B5CF6'},
+    {key:'존버맨', icon:'🌳', cls:'qi-yellow', color:'#F8AE3C'},
+  ];
+  const cStats = (c.persona_stats || []), sStats = (s.persona_stats || []);
+  const findStat = (name) => {
+    const all = [...cStats, ...sStats].filter(x => x.persona === name);
+    if (all.length === 0) return null;
+    return all.reduce((a, b) => ({
+      persona: name,
+      trades: (a.trades || 0) + (b.trades || 0),
+      wins: (a.wins || 0) + (b.wins || 0),
+      total_pnl: (a.total_pnl || 0) + (b.total_pnl || 0),
+    }));
+  };
+  const personaBox = document.getElementById('m-persona-cards');
+  if (personaBox) {
+    personaBox.innerHTML = PERSONA_LIST.map(p => {
+      const st = findStat(p.key);
+      const trades = st?.trades || 0;
+      const wins = st?.wins || 0;
+      const wr = trades > 0 ? Math.round(wins / trades * 100) : 0;
+      const pnl = st?.total_pnl || 0;
+      const sign = pnl >= 0 ? '+' : '';
+      const cls = pnl > 0 ? 'pnl-up' : pnl < 0 ? 'pnl-down' : 'pnl-flat';
+      const wrColor = trades === 0 ? 'var(--text-3)' : (wr >= 60 ? 'var(--green)' : wr >= 40 ? 'var(--yellow)' : 'var(--red)');
+      return `<div onclick="window.location.href='persona_analytics.html?persona=${encodeURIComponent(p.key)}'"
+        style="background:var(--surface);padding:12px;border-radius:14px;cursor:pointer;border:1px solid var(--line);transition:transform .12s">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:18px">${p.icon}</span>
+            <span style="font-weight:800;font-size:13px">${p.key}</span>
+          </div>
+          <span style="font-size:10px;color:${wrColor};font-weight:700">${trades>0?wr+'%':'-'}</span>
+        </div>
+        <div class="${cls}" style="font-size:14px;font-weight:800">${sign}${fmtKRW(pnl)}원</div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:2px">${trades}건 · 30일</div>
+      </div>`;
+    }).join('');
+  }
 
   // 봇 가동 상태 (live 우선, 없으면 heartbeat fallback)
   ['coin','stock'].forEach((bot, i) => {
