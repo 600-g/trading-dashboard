@@ -737,5 +737,247 @@ body {
   </div>
 </div>
 
+<script>
+// ─── 두근봇 데이터 바인딩 (디자인 변경 X, 컨텐츠만 동적) ───
+const _h = location.hostname;
+const IS_LOCAL_PA = location.protocol === 'file:' || _h === '127.0.0.1' || _h === 'localhost' || _h.startsWith('192.');
+const API_BASE_PA = IS_LOCAL_PA ? 'http://127.0.0.1:9000' : '';
+const USE_FB_PA = !IS_LOCAL_PA;
+
+const PERSONAS_META = {
+  '쿨마봇': {color:'#8B5CF6', desc:'정통 EP', icoCls:'pi-eth'},
+  '스윙맨': {color:'#1B9856', desc:'1~5일 스윙', icoCls:'pi-btc'},
+  '단타맨': {color:'#3182F6', desc:'당일 청산', icoCls:'pi-sol'},
+  '존버맨': {color:'#F8AE3C', desc:'안전 자산', icoCls:'pi-eth'},
+};
+const SYM_KO = {
+  'KRW-BTC':'비트코인','KRW-ETH':'이더리움','KRW-SOL':'솔라나','KRW-XRP':'리플',
+  'KRW-DOGE':'도지','KRW-ADA':'에이다','KRW-AVAX':'아발란체','KRW-NEAR':'니어',
+  'KRW-APT':'앱토스','KRW-SUI':'수이','KRW-ARB':'아비트럼','KRW-OP':'옵티미즘',
+};
+
+const params = new URLSearchParams(location.search);
+let CUR_PERSONA = params.get('persona') || '쿨마봇';
+let CUR_MARKET  = params.get('market')  || 'coin';
+
+function fmtKRW(v) {
+  if (!v && v !== 0) return '-';
+  const abs = Math.abs(v);
+  if (abs >= 100000000) return (v/100000000).toFixed(2) + '억';
+  if (abs >= 10000)     return (v/10000).toFixed(1) + '만';
+  return Math.round(v).toLocaleString();
+}
+
+async function _fetchAnalytics(persona, market) {
+  if (USE_FB_PA) {
+    // 외부 호스트 — Firestore status doc의 persona_stats만 사용 (제한적)
+    return null;
+  }
+  try {
+    const r = await fetch(`${API_BASE_PA}/api/personas/analytics/${encodeURIComponent(persona)}?market=${market}`,
+      {signal: AbortSignal.timeout(5000)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) {
+    console.warn('[analytics]', e);
+    return null;
+  }
+}
+
+function bindTabs() {
+  const tabs = document.querySelectorAll('.persona-tabs .p-tab');
+  const order = ['쿨마봇','스윙맨','단타맨','존버맨'];
+  tabs.forEach((tab, i) => {
+    const name = order[i];
+    tab.style.cursor = 'pointer';
+    tab.dataset.persona = name;
+    tab.classList.toggle('active', name === CUR_PERSONA);
+    tab.onclick = async () => {
+      CUR_PERSONA = name;
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.persona === name));
+      await renderAll();
+      const u = new URL(location.href); u.searchParams.set('persona', name);
+      history.replaceState({}, '', u.toString());
+    };
+  });
+}
+
+function setText(sel, val) { const el = document.querySelector(sel); if (el) el.textContent = val; }
+
+async function renderAll() {
+  const meta = PERSONAS_META[CUR_PERSONA] || PERSONAS_META['쿨마봇'];
+  // 1. 헤더 페르소나명/색상
+  const pmHead = document.querySelector('.persona-main .pm-head');
+  if (pmHead) {
+    pmHead.querySelector('.pm-name').innerHTML =
+      `<div class="pm-name-dot" style="background:${meta.color};"></div>${CUR_PERSONA} (${meta.desc})`;
+  }
+
+  const data = await _fetchAnalytics(CUR_PERSONA, CUR_MARKET);
+  const cells = document.querySelectorAll('.persona-main .stat-cell');
+  if (!data || data.error) {
+    if (cells[0]) {
+      cells[0].querySelector('.stat-value').textContent = '-';
+      cells[0].querySelector('.stat-sub').textContent = '데이터 없음';
+    }
+    document.querySelector('.mini-chart .mc-bars').innerHTML = '<div style="color:var(--text-3);font-size:11px;width:100%;text-align:center;align-self:center">데이터 없음</div>';
+    return;
+  }
+  const s = data.stats || {};
+  // 2. stat 4셀
+  if (cells[0]) {
+    cells[0].querySelector('.stat-value').textContent = (s.winrate || 0) + '%';
+    cells[0].querySelector('.stat-value').className = 'stat-value ' + (s.winrate >= 50 ? 'stat-up' : s.winrate < 40 ? 'stat-down' : '');
+    cells[0].querySelector('.stat-sub').textContent = `${s.total}건 (${s.wins}승 ${s.losses}패)`;
+  }
+  if (cells[1]) {
+    cells[1].querySelector('.stat-value').textContent = s.rr || '-';
+    cells[1].querySelector('.stat-sub').textContent = `평균익+${s.avg_win_pct}% / 평균손-${s.avg_loss_pct}%`;
+  }
+  if (cells[2]) {
+    const v = cells[2].querySelector('.stat-value');
+    v.textContent = (s.total_pnl >= 0 ? '+' : '') + fmtKRW(s.total_pnl) + '원';
+    v.className = 'stat-value ' + (s.total_pnl > 0 ? 'stat-up' : s.total_pnl < 0 ? 'stat-down' : '');
+    cells[2].querySelector('.stat-sub').textContent = `${s.total_pnl_pct >= 0 ? '+' : ''}${s.total_pnl_pct}% (시드 ${fmtKRW(data.slot.total)})`;
+  }
+  if (cells[3]) {
+    cells[3].querySelector('.stat-value').textContent = (s.avg_holding_days || 0) + '일';
+    cells[3].querySelector('.stat-sub').textContent = `최대 ${s.max_holding_days || 0}일`;
+  }
+
+  // 3. 14일 미니차트
+  const bars = document.querySelector('.mini-chart .mc-bars');
+  const dailyHead = document.querySelector('.mini-chart .mc-head .stat-up, .mini-chart .mc-head span:last-child');
+  if (bars) {
+    const arr = data.daily_pnl_14d || [];
+    if (arr.length === 0) {
+      bars.innerHTML = '<div style="color:var(--text-3);font-size:11px;width:100%;text-align:center;align-self:center">14일 거래 없음</div>';
+    } else {
+      const maxAbs = Math.max(...arr.map(d => Math.abs(d.pnl || 0)), 1);
+      bars.innerHTML = arr.map(d => {
+        const h = Math.max(8, Math.abs(d.pnl) / maxAbs * 100);
+        const cls = d.pnl >= 0 ? 'win' : 'loss';
+        return `<div class="mc-bar ${cls}" style="height:${h}%" title="${d.date}: ${d.pnl >= 0 ? '+' : ''}${fmtKRW(d.pnl)}원"></div>`;
+      }).join('');
+    }
+    if (dailyHead) {
+      const sumPnl = arr.reduce((a, x) => a + (x.pnl || 0), 0);
+      dailyHead.textContent = (sumPnl >= 0 ? '+' : '') + fmtKRW(sumPnl) + '원';
+      dailyHead.className = sumPnl >= 0 ? 'stat-up' : 'stat-down';
+    }
+  }
+
+  // 4. 슬롯 미니바
+  const slot = data.slot || {};
+  const smRows = document.querySelectorAll('.slot-mini .sm-row');
+  if (smRows[0]) {
+    smRows[0].querySelector('.sm-bar').style.width = (slot.usage_pct || 0) + '%';
+    smRows[0].querySelector('.sm-bar').style.background = meta.color;
+    smRows[0].querySelector('.sm-pct').textContent = fmtKRW(slot.used) + '원';
+  }
+  if (smRows[1]) {
+    smRows[1].querySelector('.sm-bar').style.width = Math.max(0, 100 - (slot.usage_pct || 0)) + '%';
+    smRows[1].querySelector('.sm-pct').textContent = fmtKRW(slot.available) + '원';
+  }
+
+  // 5. 보유 종목
+  const positions = data.positions || [];
+  const posSection = document.querySelectorAll('.section')[0];
+  if (posSection) {
+    posSection.querySelector('.s-count').textContent = `${positions.length}개`;
+    // 기존 position-item 모두 제거 후 다시 그리기
+    posSection.querySelectorAll('.position-item').forEach(el => el.remove());
+    if (positions.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:30px 0;text-align:center;color:var(--text-3);font-size:12px';
+      empty.textContent = '보유 종목 없음';
+      posSection.appendChild(empty);
+    } else {
+      positions.forEach(p => {
+        const sym = p.symbol || '-';
+        const shortSym = sym.replace('KRW-','').slice(0, 4);
+        const name = p.name || SYM_KO[sym] || sym.replace('KRW-','');
+        const days = p.holding_days || 0;
+        const heldStr = days >= 1 ? `${days.toFixed(1)}일 보유` : `${Math.round(days * 24)}시간 보유`;
+        const inv = p.invested || (p.entry_price * p.amount) || 0;
+        const item = document.createElement('div');
+        item.className = 'position-item';
+        item.innerHTML = `
+          <div class="pi-icon ${meta.icoCls}">${shortSym}</div>
+          <div class="pi-body">
+            <div class="pi-name">${name}</div>
+            <div class="pi-sub"><span>${fmtKRW(p.entry_price)}원 · ${(+p.amount||0).toFixed(p.amount < 1 ? 4 : 0)}개</span><span class="pi-time">${heldStr}</span></div>
+          </div>
+          <div class="pi-right">
+            <div class="pi-amount">${fmtKRW(inv)}원</div>
+          </div>`;
+        posSection.appendChild(item);
+      });
+    }
+  }
+
+  // 6. 검토 중 카테고리
+  const sections = document.querySelectorAll('.section');
+  const watchingSection = sections[1];
+  if (watchingSection) {
+    const cats = data.watching_categories || [];
+    watchingSection.querySelector('.s-count').textContent = `${cats.length}개 카테고리`;
+    const grid = watchingSection.querySelector('.watching-grid');
+    if (grid) {
+      if (cats.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1;padding:20px 0;text-align:center;color:var(--text-3);font-size:12px">카테고리 매핑 없음</div>';
+      } else {
+        grid.innerHTML = cats.map(c => `<div class="wg-item">
+          <div class="wg-cat">${c.category}</div>
+          <div class="wg-symbols">${(c.symbols || []).map(s => s.replace('KRW-','')).join(', ')}</div>
+          <div class="wg-score">${c.avg_score > 0 ? `평균 ${c.avg_score}점` : '관찰 중'}</div>
+        </div>`).join('');
+      }
+    }
+  }
+
+  // 7. 진입 예상
+  const expectedSection = sections[2];
+  if (expectedSection) {
+    const expected = data.expected_entries || [];
+    expectedSection.querySelector('.s-count').textContent = `${expected.length}건`;
+    expectedSection.querySelectorAll('.expected-item').forEach(el => el.remove());
+    if (expected.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:24px 0;text-align:center;color:var(--text-3);font-size:12px';
+      empty.textContent = '진입 예상 종목 없음 (자가개선 캐시 누적 후 활성)';
+      expectedSection.appendChild(empty);
+    } else {
+      expected.forEach(e => {
+        const tagsHTML = (e.tags || []).map(t => `<span class="ei-tag">${t}</span>`).join('') +
+                         (e.warnings || []).map(w => `<span class="ei-tag warn">${w}</span>`).join('');
+        const probCls = e.probability >= 70 ? 'stat-up' : '';
+        const item = document.createElement('div');
+        item.className = 'expected-item';
+        item.innerHTML = `
+          <div class="ei-left"><div>
+            <div class="ei-symbol">${(e.symbol || '').replace('KRW-','')}</div>
+            <div class="ei-reason">${tagsHTML}</div>
+          </div></div>
+          <div class="ei-right">
+            <div class="ei-prob ${probCls}">${e.probability || 0}%</div>
+            <div class="ei-time">${e.est_time || '-'}</div>
+          </div>`;
+        expectedSection.appendChild(item);
+      });
+    }
+  }
+}
+
+// 헤더 ← 뒤로 / 다운로드 / 공유 버튼
+document.addEventListener('DOMContentLoaded', () => {
+  const headerBtns = document.querySelectorAll('.header .h-btn');
+  if (headerBtns[0]) headerBtns[0].onclick = () => { history.length > 1 ? history.back() : (location.href = 'index.html'); };
+  if (headerBtns[0]) headerBtns[0].style.cursor = 'pointer';
+  bindTabs();
+  renderAll();
+});
+</script>
+
 </body>
 </html>
