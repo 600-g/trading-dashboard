@@ -1661,11 +1661,16 @@ function renderMobile(d){
     mGrid.innerHTML = mkts.map(m => {
       const src = m.src || {};
       const v = src.value, ch = src.chg_pct;
+      const isEmpty = v == null;
       const stale = src.stale ? '<span title="장 마감 / 마지막 종가" style="display:inline-block;width:5px;height:5px;background:var(--text-3);border-radius:50%;margin-left:3px;vertical-align:middle"></span>' : '';
-      return `<div class="market-cell">
+      const cellStyle = isEmpty ? 'opacity:0.45' : '';
+      const valTxt = v != null ? fmtPrice(v) : '—';
+      const chTxt = ch != null ? (ch>=0?'+':'') + (+ch).toFixed(2) + '%' : '대기';
+      const chCls = ch != null ? pnlClass(ch || 0) : '';
+      return `<div class="market-cell" style="${cellStyle}">
         <div class="market-name">${m.name}${stale}</div>
-        <div class="market-value">${v != null ? fmtPrice(v) : '-'}</div>
-        <div class="market-change ${pnlClass(ch || 0)}">${ch != null ? (ch>=0?'+':'') + (+ch).toFixed(2) + '%' : '-'}</div>
+        <div class="market-value">${valTxt}</div>
+        <div class="market-change ${chCls}" style="${isEmpty?'color:var(--text-3)':''}">${chTxt}</div>
       </div>`;
     }).join('');
   }

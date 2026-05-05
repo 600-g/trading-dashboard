@@ -737,6 +737,32 @@ body {
   </div>
 </div>
 
+<!-- 페르소나 비교 라인차트 + 기간 필터 -->
+<div class="section" id="cmp-section" style="margin: 0 16px 12px;">
+  <div class="s-head">
+    <div class="s-title">페르소나별 누적 매출</div>
+    <div style="display:flex;gap:4px">
+      <button class="cmp-range" data-d="7"  style="padding:4px 10px;border:1px solid var(--line);background:var(--surface);border-radius:6px;font-size:11px;cursor:pointer">7일</button>
+      <button class="cmp-range active" data-d="30" style="padding:4px 10px;border:1px solid var(--text-1);background:var(--text-1);color:#fff;border-radius:6px;font-size:11px;cursor:pointer">30일</button>
+      <button class="cmp-range" data-d="90" style="padding:4px 10px;border:1px solid var(--line);background:var(--surface);border-radius:6px;font-size:11px;cursor:pointer">90일</button>
+    </div>
+  </div>
+  <svg id="cmp-svg" viewBox="0 0 320 140" style="width:100%;height:140px;display:block;background:var(--bg);border-radius:8px"></svg>
+  <div id="cmp-legend" style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;flex-wrap:wrap;gap:6px"></div>
+</div>
+
+<!-- 종목 상세 시트 (보유 클릭 시) -->
+<div id="pa-position-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:999;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closePosSheet()">
+  <div style="background:var(--surface);width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:14px 18px max(18px,env(safe-area-inset-bottom));max-height:90vh;overflow-y:auto">
+    <div style="text-align:center;margin-bottom:8px"><div style="width:36px;height:4px;background:var(--text-4);border-radius:2px;margin:0 auto"></div></div>
+    <div id="pa-pos-content"></div>
+    <button onclick="closePosSheet()" style="width:100%;padding:12px;background:var(--bg);color:var(--text-2);border:none;border-radius:10px;font-weight:700;font-size:13px;margin-top:14px;cursor:pointer">닫기</button>
+  </div>
+</div>
+
+<!-- 커스텀 다이얼로그 (확인/알림) -->
+<div id="pa-dialog" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;padding:20px"></div>
+
 <script>
 // ─── 두근봇 데이터 바인딩 (디자인 변경 X, 컨텐츠만 동적) ───
 const _h = location.hostname;
@@ -960,6 +986,7 @@ async function renderAll() {
         const inv = p.invested || (p.entry_price * p.amount) || 0;
         const item = document.createElement('div');
         item.className = 'position-item';
+        item.style.cursor = 'pointer';
         item.innerHTML = `
           <div class="pi-icon ${meta.icoCls}">${shortSym}</div>
           <div class="pi-body">
@@ -968,7 +995,9 @@ async function renderAll() {
           </div>
           <div class="pi-right">
             <div class="pi-amount">${fmtKRW(inv)}원</div>
+            <div style="font-size:9px;color:var(--text-3);margin-top:2px">탭 → 상세</div>
           </div>`;
+        item.addEventListener('click', () => openPosDetail(p));
         posSection.appendChild(item);
       });
     }
@@ -1027,13 +1056,211 @@ async function renderAll() {
   }
 }
 
+// ─── (A) 종목 상세 시트 — Master Spec v2 §1 페르소나별 시간 캡 표시 + 판매 ───
+const PERSONA_CAP = {
+  '단타맨': {h:4,    label:'당일 청산 (4시간 캡)'},
+  '스윙맨': {h:120,  label:'1~5일 스윙 (5일 캡)'},
+  '쿨마봇': {h:720,  label:'EP 라이딩 (30일 캡)'},
+  '존버맨': {h:336,  label:'안전 자산 (14일 캡)'},
+};
+
+function closePosSheet(){ document.getElementById('pa-position-sheet').style.display = 'none'; }
+
+function paConfirm(opts){
+  return new Promise(resolve => {
+    const r = document.getElementById('pa-dialog');
+    const danger = !!opts.danger;
+    const accent = danger ? 'var(--red)' : 'var(--blue)';
+    r.innerHTML = `<div style="background:var(--surface);border-radius:18px;width:100%;max-width:340px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.35)">
+      <div style="padding:22px;text-align:center">
+        <div style="font-size:34px;margin-bottom:10px">${opts.icon || '❓'}</div>
+        <div style="font-size:16px;font-weight:800;margin-bottom:6px">${opts.title || ''}</div>
+        <div style="font-size:13px;color:var(--text-2);line-height:1.55;white-space:pre-wrap">${opts.message || ''}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)">
+        <button id="_d_c" style="padding:14px;background:var(--surface);border:none;font-weight:700;color:var(--text-2);cursor:pointer">취소</button>
+        <button id="_d_o" style="padding:14px;background:var(--surface);border:none;font-weight:800;color:${accent};cursor:pointer">${opts.primaryLabel || '확인'}</button>
+      </div></div>`;
+    r.style.display = 'flex';
+    r.querySelector('#_d_o').onclick = () => { r.style.display='none'; resolve(true); };
+    r.querySelector('#_d_c').onclick = () => { r.style.display='none'; resolve(false); };
+  });
+}
+function paAlert(opts){
+  const r = document.getElementById('pa-dialog');
+  const accent = ({success:'var(--green)',error:'var(--red)',warn:'var(--yellow)',info:'var(--blue)'}[opts.kind || 'info']);
+  const icon = opts.icon || ({success:'✅',error:'❌',warn:'⚠️',info:'ℹ️'}[opts.kind || 'info']);
+  r.innerHTML = `<div style="background:var(--surface);border-radius:18px;width:100%;max-width:340px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.35)">
+    <div style="padding:22px;text-align:center">
+      <div style="font-size:34px;margin-bottom:10px">${icon}</div>
+      <div style="font-size:16px;font-weight:800;margin-bottom:6px">${opts.title || ''}</div>
+      <div style="font-size:13px;color:var(--text-2);line-height:1.55;white-space:pre-wrap">${opts.message || ''}</div>
+    </div>
+    <button id="_a_o" style="width:100%;padding:14px;background:var(--surface);border:none;border-top:1px solid var(--line);font-weight:800;color:${accent};cursor:pointer">확인</button></div>`;
+  r.style.display = 'flex';
+  r.querySelector('#_a_o').onclick = () => r.style.display = 'none';
+  if (opts.autoCloseMs) setTimeout(() => r.style.display = 'none', opts.autoCloseMs);
+}
+
+function openPosDetail(p) {
+  const persona = CUR_PERSONA;
+  const cap = PERSONA_CAP[persona];
+  const sym = p.symbol || '-';
+  const name = p.name || SYM_KO[sym] || sym.replace('KRW-','');
+  const entryPrice = p.entry_price || 0;
+  const amount = +p.amount || 0;
+  const inv = p.invested || (entryPrice * amount);
+  const days = p.holding_days || 0;
+  const heldStr = days >= 1 ? `${Math.floor(days)}일 ${Math.round((days % 1) * 24)}시간` : `${Math.round(days * 24)}시간`;
+  // 매입일자 추정
+  const entryAt = days > 0 ? new Date(Date.now() - days * 86400000) : null;
+  const entryStr = entryAt ? `${entryAt.getFullYear()}-${String(entryAt.getMonth()+1).padStart(2,'0')}-${String(entryAt.getDate()).padStart(2,'0')} ${String(entryAt.getHours()).padStart(2,'0')}:${String(entryAt.getMinutes()).padStart(2,'0')}` : '-';
+  // 판매 예정
+  let plannedExit = '미정 (모멘텀 기반)';
+  if (cap && entryAt) {
+    const ex = new Date(entryAt.getTime() + cap.h * 3600000);
+    plannedExit = `${ex.getFullYear()}-${String(ex.getMonth()+1).padStart(2,'0')}-${String(ex.getDate()).padStart(2,'0')} ${String(ex.getHours()).padStart(2,'0')}:${String(ex.getMinutes()).padStart(2,'0')}`;
+  }
+  document.getElementById('pa-pos-content').innerHTML = `
+    <div style="margin:8px 0 14px">
+      <div style="font-size:18px;font-weight:800">${name}</div>
+      <div style="font-size:11px;color:var(--text-3)">${CUR_MARKET === 'coin' ? '🪙' : '📈'} ${persona}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+      <div style="background:var(--bg);padding:10px;border-radius:8px"><div style="font-size:10px;color:var(--text-3)">매입 단가</div><div style="font-size:13px;font-weight:800">${fmtKRW(entryPrice)}원</div></div>
+      <div style="background:var(--bg);padding:10px;border-radius:8px"><div style="font-size:10px;color:var(--text-3)">투자금</div><div style="font-size:13px;font-weight:800">${fmtKRW(inv)}원</div></div>
+      <div style="background:var(--bg);padding:10px;border-radius:8px"><div style="font-size:10px;color:var(--text-3)">수량</div><div style="font-size:13px;font-weight:800">${amount.toFixed(amount < 1 ? 4 : 0)}${CUR_MARKET==='coin'?'':'주'}</div></div>
+      <div style="background:var(--bg);padding:10px;border-radius:8px"><div style="font-size:10px;color:var(--text-3)">보유 기간</div><div style="font-size:13px;font-weight:800">${heldStr}</div></div>
+    </div>
+    <div style="background:var(--bg);padding:12px;border-radius:10px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--text-3)">📅 매입일자</span><b>${entryStr}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--text-3)">🎯 판매 예정</span><b style="color:var(--blue)">${plannedExit}</b></div>
+      ${cap ? `<div style="font-size:10px;color:var(--text-3);margin-top:4px">※ ${cap.label}</div>` : ''}
+    </div>
+    <div style="background:var(--bg);padding:12px;border-radius:10px;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:4px">📊 분석 (Master Spec v2)</div>
+      <div style="font-size:13px;font-weight:700;line-height:1.5">${persona} 룰셋 적용 중 — 모멘텀 + 시간캡 기반 자동 판매</div>
+    </div>
+    <button onclick="paSell('${sym.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}')"
+      style="width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">💰 판매하기</button>
+  `;
+  document.getElementById('pa-position-sheet').style.display = 'flex';
+}
+
+async function paSell(sym, name) {
+  const ok = await paConfirm({
+    title: `${name} 판매`, icon: '💰', danger: true,
+    message: '다음 사이클(60초 내) 시장가로 매도됩니다.\n취소할 수 없습니다.',
+    primaryLabel: '판매',
+  });
+  if (!ok) return;
+  if (USE_FB_PA) {
+    paAlert({kind:'warn', title:'외부 모드', message:'외부 호스트에서는 시뮬레이션 모드.\n로컬 사이트에서 판매 가능.', autoCloseMs: 2500});
+    return;
+  }
+  try {
+    const bot = CUR_MARKET === 'coin' ? 'coin' : 'stock';
+    const r = await fetch(`${API_BASE_PA}/api/positions/close`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({bot, symbol: sym})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      paAlert({kind:'success', title:'판매 예약 완료', message:`${name}\n다음 사이클에 매도됩니다.`, autoCloseMs:1800});
+      closePosSheet();
+      setTimeout(renderAll, 1500);
+    } else {
+      paAlert({kind:'error', title:'예약 실패', message: d.error || '알 수 없음'});
+    }
+  } catch (e) { paAlert({kind:'error', title:'네트워크 오류', message: e.message}); }
+}
+
+// ─── (B) 페르소나 누적 매출 라인차트 ───
+const PERSONA_COLORS = {'쿨마봇':'#8B5CF6','스윙맨':'#1B9856','단타맨':'#3182F6','존버맨':'#F8AE3C'};
+
+async function renderComparison(days) {
+  const svg = document.getElementById('cmp-svg');
+  const legend = document.getElementById('cmp-legend');
+  if (!svg) return;
+  let data = null;
+  if (USE_FB_PA) {
+    // 외부: Firestore에는 시리즈 없음 → 미니차트로 대체 안내
+    svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#8B95A1" font-size="11">로컬 사이트에서만 표시</text>';
+    legend.innerHTML = '';
+    return;
+  }
+  try {
+    const r = await fetch(`${API_BASE_PA}/api/personas/comparison?market=${CUR_MARKET}&days=${days}`,
+      {signal: AbortSignal.timeout(5000)});
+    if (r.ok) data = await r.json();
+  } catch (e) { console.warn('[cmp]', e); }
+  if (!data || !data.dates || data.dates.length === 0) {
+    svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#8B95A1" font-size="11">데이터 없음</text>';
+    legend.innerHTML = '';
+    return;
+  }
+  const W = 320, H = 140, PAD = 8, PADL = 30;
+  const allVals = Object.values(data.series).flat();
+  const minV = Math.min(0, ...allVals);
+  const maxV = Math.max(0, ...allVals);
+  const range = (maxV - minV) || 1;
+  const xStep = (W - PADL - PAD) / Math.max(1, data.dates.length - 1);
+  const y = v => H - PAD - ((v - minV) / range) * (H - 2 * PAD);
+  // 0 라인
+  const zeroY = y(0);
+  let g = `<line x1="${PADL}" y1="${zeroY}" x2="${W - PAD}" y2="${zeroY}" stroke="#E5E8EB" stroke-dasharray="2,2"/>`;
+  // y축 라벨 (max/0/min)
+  g += `<text x="${PADL - 4}" y="${PAD + 4}" text-anchor="end" font-size="9" fill="#8B95A1">${fmtKRW(maxV)}</text>`;
+  g += `<text x="${PADL - 4}" y="${zeroY + 3}" text-anchor="end" font-size="9" fill="#8B95A1">0</text>`;
+  if (minV < 0) g += `<text x="${PADL - 4}" y="${H - PAD}" text-anchor="end" font-size="9" fill="#8B95A1">${fmtKRW(minV)}</text>`;
+  // 4 라인
+  Object.entries(data.series).forEach(([persona, arr]) => {
+    const color = PERSONA_COLORS[persona] || '#8B95A1';
+    const pts = arr.map((v, i) => `${PADL + i * xStep},${y(v)}`).join(' ');
+    g += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+    // 끝점
+    const last = arr[arr.length - 1];
+    g += `<circle cx="${PADL + (arr.length - 1) * xStep}" cy="${y(last)}" r="3" fill="${color}"/>`;
+  });
+  svg.innerHTML = g;
+  // legend
+  legend.innerHTML = Object.entries(data.series).map(([p, arr]) => {
+    const last = arr[arr.length - 1];
+    const sign = last >= 0 ? '+' : '';
+    return `<div style="display:flex;align-items:center;gap:4px">
+      <span style="width:10px;height:3px;background:${PERSONA_COLORS[p]};display:inline-block;border-radius:2px"></span>
+      <span style="font-weight:700">${p}</span>
+      <span style="color:${last >= 0 ? 'var(--red)' : 'var(--blue)'};font-weight:700">${sign}${fmtKRW(last)}원</span>
+    </div>`;
+  }).join('');
+}
+
+function bindCmpRange() {
+  document.querySelectorAll('.cmp-range').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.cmp-range').forEach(b => {
+        b.classList.remove('active');
+        b.style.background = 'var(--surface)';
+        b.style.color = 'var(--text-1)';
+        b.style.borderColor = 'var(--line)';
+      });
+      btn.classList.add('active');
+      btn.style.background = 'var(--text-1)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = 'var(--text-1)';
+      renderComparison(parseInt(btn.dataset.d));
+    };
+  });
+}
+
 // 헤더 ← 뒤로 / 다운로드 / 공유 버튼
 document.addEventListener('DOMContentLoaded', () => {
   const headerBtns = document.querySelectorAll('.header .h-btn');
-  if (headerBtns[0]) headerBtns[0].onclick = () => { history.length > 1 ? history.back() : (location.href = 'index.html'); };
-  if (headerBtns[0]) headerBtns[0].style.cursor = 'pointer';
+  if (headerBtns[0]) { headerBtns[0].onclick = () => { history.length > 1 ? history.back() : (location.href = 'index.html'); }; headerBtns[0].style.cursor = 'pointer'; }
   bindTabs();
+  bindCmpRange();
   renderAll();
+  renderComparison(30);
 });
 </script>
 
