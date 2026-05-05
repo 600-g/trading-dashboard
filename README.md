@@ -114,6 +114,7 @@ nohup ./venv/bin/python -m uvicorn system_api:app --host 127.0.0.1 --port 9000 \
 | `페르소나_설정_통합가이드.md` | persona_settings.html 사양 |
 | `페르소나_통합분석_명세서.md` | persona_analytics.html + analytics endpoint 사양 |
 | `전체_리포트_내보내기_명세서.md` | full-report ZIP/MD/JSON export 사양 |
+| `외부봇_분리흡수_명세서.md` | 외부 봇 룰 흡수 (스윙맨 메인 합병 + 존버맨 v2) |
 
 봇 본체 사양은 `~/Desktop/주식 자동봇/MASTER_SPEC_v2.md` (4 페르소나, Phase 1~4) + `~/Desktop/주식 자동봇/MOBILE_UX_SPEC.md` (모바일 분기 명세).
 
@@ -124,9 +125,11 @@ nohup ./venv/bin/python -m uvicorn system_api:app --host 127.0.0.1 --port 9000 \
 | 페르소나 | 역할 | 시간 캡 | 손절 |
 |---|---|---:|---:|
 | 단타맨 ⚡ | 당일 청산 회전 | 4h | -1.0% |
-| 스윙맨 🛡 | 1~5일 한방 스윙 | 5d | -1.5% |
+| 스윙맨 🛡 | 1~5일 스윙 (외부봇 5신호 합병 v2) | 5d | -1.5% |
 | 쿨마봇 🚀 | Qullamaggie 정통 EP | 30d | low_of_day |
-| 존버맨 🌳 | 안전 자산 천천히 | 14d | -2.0% |
+| 존버맨 🌳 | 안전 자산 천천히 (Step 2 예정 v2) | 14d | -2.0% |
+
+**스윙맨 v2** (외부봇_분리흡수_명세서 §1, 적용됨): 필수 3신호(RSI 65→70 / MACD 골든 / 20일 신고가 또는 Breakout) + 가산 4신호(ADR 2.5%+ / 거래량 2배+ / 급등 +3% / 30·60일 신고가). `core/scorer.py:calc_swingman_score()` 양봇 동일 인터페이스.
 
 **기본 비중** (시장별 분리): 쿨마봇 35% / 스윙맨 30% / 단타맨 25% / 존버맨 10%
 **일 변경 한도**: 3회 / 페르소나 5~60% / 합계 100% 강제 (절대룰)
