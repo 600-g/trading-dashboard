@@ -707,32 +707,41 @@ body {
   </div>
 </div>
 
+<!-- 전체 분석 리포트 (Claude 분석용) -->
 <div class="export-section">
-  <div class="export-title">내보내기 / 공유</div>
+  <div class="export-title">📊 전체 분석 리포트</div>
+  <div style="font-size:11px;color:var(--text-3);margin-bottom:10px">
+    기간:
+    <select id="export-period" style="padding:3px 8px;border:1px solid var(--line);border-radius:6px;font-size:11px;background:var(--surface);margin-left:4px">
+      <option value="7">최근 7일</option>
+      <option value="30" selected>최근 30일</option>
+      <option value="90">최근 90일</option>
+      <option value="9999">전체</option>
+    </select>
+  </div>
+  <button onclick="exportFullReport('zip')" style="width:100%;padding:14px;background:var(--text-1);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px">
+    📦 ZIP 다운로드 (Claude 업로드용)
+  </button>
+  <div style="font-size:11px;color:var(--text-3);text-align:center;margin-bottom:14px;line-height:1.5">
+    💡 ZIP 받아서 Claude.ai에 업로드 →<br>페르소나/룰/시장 종합 분석 자동
+  </div>
+  <div style="font-size:11px;color:var(--text-3);text-align:center;margin-bottom:8px">또는 개별 다운로드</div>
   <div class="export-grid">
-    <button class="export-btn">
-      <div class="export-icon" style="background: var(--green-bg); color: var(--green);">
-        <svg><use href="#i-csv"/></svg>
-      </div>
-      <div class="export-label">CSV 다운로드</div>
+    <button class="export-btn" onclick="exportFullReport('md')">
+      <div class="export-icon" style="background: var(--purple-bg); color: var(--purple);"><svg><use href="#i-text"/></svg></div>
+      <div class="export-label">MD 리포트</div>
     </button>
-    <button class="export-btn">
-      <div class="export-icon" style="background: var(--blue-bg); color: var(--blue);">
-        <svg><use href="#i-image"/></svg>
-      </div>
-      <div class="export-label">이미지 저장</div>
+    <button class="export-btn" onclick="exportFullReport('json')">
+      <div class="export-icon" style="background: var(--blue-bg); color: var(--blue);"><svg><use href="#i-csv"/></svg></div>
+      <div class="export-label">JSON 데이터</div>
     </button>
-    <button class="export-btn">
-      <div class="export-icon" style="background: var(--purple-bg); color: var(--purple);">
-        <svg><use href="#i-text"/></svg>
-      </div>
+    <button class="export-btn" onclick="exportPersonaCSV()">
+      <div class="export-icon" style="background: var(--green-bg); color: var(--green);"><svg><use href="#i-csv"/></svg></div>
+      <div class="export-label">CSV (현재 페르소나)</div>
+    </button>
+    <button class="export-btn" onclick="copyPersonaText()">
+      <div class="export-icon" style="background: var(--yellow-bg); color: #b8860b;"><svg><use href="#i-text"/></svg></div>
       <div class="export-label">텍스트 복사</div>
-    </button>
-    <button class="export-btn">
-      <div class="export-icon" style="background: var(--yellow-bg); color: #b8860b;">
-        <svg><use href="#i-link"/></svg>
-      </div>
-      <div class="export-label">공유 링크</div>
     </button>
   </div>
 </div>
@@ -1253,10 +1262,68 @@ function bindCmpRange() {
   });
 }
 
+// ─── (Step 3+4) export 함수 ───
+function exportFullReport(format) {
+  const days = document.getElementById('export-period').value;
+  if (USE_FB_PA) {
+    paAlert({kind:'warn', title:'외부 모드', message:'외부 호스트에서는 ZIP/MD/JSON 다운로드 불가.\n로컬 사이트(127.0.0.1) 또는 LAN에서 다운로드 가능.', autoCloseMs:3500});
+    return;
+  }
+  const url = `${API_BASE_PA}/api/export/full-report?market=${CUR_MARKET}&days=${days}&format=${format}`;
+  window.location.href = url;
+  paAlert({kind:'success', title:'다운로드 시작', message:`${format.toUpperCase()} 생성 중`, autoCloseMs:1400});
+}
+
+function exportPersonaCSV() {
+  if (USE_FB_PA) {
+    paAlert({kind:'warn', title:'외부 모드', message:'CSV 다운로드는 로컬 사이트에서만 가능.', autoCloseMs:2500});
+    return;
+  }
+  const url = `${API_BASE_PA}/api/personas/${encodeURIComponent(CUR_PERSONA)}/export/csv?market=${CUR_MARKET}`;
+  window.location.href = url;
+  paAlert({kind:'success', title:'CSV 다운로드', message:`${CUR_PERSONA} 거래 내역`, autoCloseMs:1400});
+}
+
+async function copyPersonaText() {
+  if (USE_FB_PA) {
+    paAlert({kind:'warn', title:'외부 모드', message:'텍스트 복사는 로컬 사이트에서만.', autoCloseMs:2500});
+    return;
+  }
+  try {
+    const r = await fetch(`${API_BASE_PA}/api/personas/${encodeURIComponent(CUR_PERSONA)}/export/text?market=${CUR_MARKET}`);
+    const d = await r.json();
+    if (d.text) {
+      await navigator.clipboard.writeText(d.text);
+      paAlert({kind:'success', title:'클립보드 복사 완료', message:'채팅에 붙여넣기 가능', autoCloseMs:1600});
+    } else {
+      paAlert({kind:'error', title:'복사 실패', message: d.error || '데이터 없음'});
+    }
+  } catch (e) { paAlert({kind:'error', title:'네트워크 오류', message: e.message}); }
+}
+
+async function createShareLink() {
+  if (USE_FB_PA) {
+    paAlert({kind:'warn', title:'외부 모드', message:'공유 링크는 로컬 사이트에서만.', autoCloseMs:2500});
+    return;
+  }
+  try {
+    const r = await fetch(`${API_BASE_PA}/api/personas/${encodeURIComponent(CUR_PERSONA)}/export/link?market=${CUR_MARKET}`);
+    const d = await r.json();
+    if (d.url) {
+      await navigator.clipboard.writeText(d.url);
+      paAlert({kind:'success', title:'공유 링크 복사됨', message:`24시간 유효\n${d.url}`, autoCloseMs:3000});
+    } else {
+      paAlert({kind:'error', title:'생성 실패', message: d.error || '알 수 없음'});
+    }
+  } catch (e) { paAlert({kind:'error', title:'네트워크 오류', message: e.message}); }
+}
+
 // 헤더 ← 뒤로 / 다운로드 / 공유 버튼
 document.addEventListener('DOMContentLoaded', () => {
   const headerBtns = document.querySelectorAll('.header .h-btn');
   if (headerBtns[0]) { headerBtns[0].onclick = () => { history.length > 1 ? history.back() : (location.href = 'index.html'); }; headerBtns[0].style.cursor = 'pointer'; }
+  if (headerBtns[1]) { headerBtns[1].onclick = createShareLink; headerBtns[1].style.cursor = 'pointer'; headerBtns[1].title = '공유 링크'; }
+  if (headerBtns[2]) { headerBtns[2].onclick = () => exportFullReport('zip'); headerBtns[2].style.cursor = 'pointer'; headerBtns[2].title = '전체 리포트 ZIP'; }
   bindTabs();
   bindCmpRange();
   renderAll();
