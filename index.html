@@ -54,22 +54,17 @@
     margin-left: 0 !important; margin-right: 0 !important;
   }
 
-  /* Master Spec v2 §8: 데스크탑 분기 (≥768px) — 좌우 2열 + 넓은 캔버스 */
+  /* 데스크탑/태블릿도 모바일과 동일한 좁은 폭 (사용자 요청: 얇게) */
   @media (min-width: 768px) {
     body {
-      max-width: 1100px;
-      padding: 16px 20px calc(120px + env(safe-area-inset-bottom)) !important;
+      max-width: 480px;
+      padding: 16px 16px calc(110px + env(safe-area-inset-bottom)) !important;
     }
-    .topbar { position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 12px 0; }
-    .main-card { font-size: 1.1em; }
-    .bot-row { grid-template-columns: 1fr 1fr; gap: 16px; }
-    /* 보유종목 / 최근거래 좌우 2열 */
-    .desktop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-    .market-grid { grid-template-columns: repeat(8, 1fr); }
-    .tabbar { max-width: 580px; }
-  }
-  @media (min-width: 1024px) {
-    body { max-width: 1280px; }
+    .topbar { position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 12px 0; margin-top: -16px; }
+    /* 보유/최근거래 세로 (1열) — 좁은 폭이므로 데스크 2열 무력화 */
+    .desktop-grid { display: block; }
+    .desktop-grid > .section { margin-bottom: 12px; }
+    .tabbar { max-width: 460px; }
   }
 
   /* 스켈레톤 로딩 */
@@ -725,10 +720,11 @@
     <div class="section-title">시장</div>
     <div class="section-link" onclick="fetchAndRender()" style="cursor:pointer">↻ 새로고침</div>
   </div>
-  <div class="market-grid" id="m-market-grid" onclick="fetchAndRender()" style="cursor:pointer"
-    <div class="market-cell"><div class="market-name">BTC</div><div class="market-value">-</div><div class="market-change">-</div></div>
-    <div class="market-cell"><div class="market-name">KOSPI</div><div class="market-value">-</div><div class="market-change">-</div></div>
-    <div class="market-cell"><div class="market-name">NASDAQ</div><div class="market-value">-</div><div class="market-change">-</div></div>
+  <div class="market-grid" id="m-market-grid" onclick="fetchAndRender()" style="cursor:pointer">
+    <div class="market-cell"><span class="skel" style="width:50px;height:32px;display:block"></span></div>
+    <div class="market-cell"><span class="skel" style="width:50px;height:32px;display:block"></span></div>
+    <div class="market-cell"><span class="skel" style="width:50px;height:32px;display:block"></span></div>
+    <div class="market-cell"><span class="skel" style="width:50px;height:32px;display:block"></span></div>
   </div>
 </div>
 
@@ -1831,20 +1827,28 @@ function renderMobile(d){
   ];
   const mGrid = document.getElementById('m-market-grid');
   if (mGrid) {
-    // value null 셀은 완전히 제거 (빈공란 노출 X) — 사용자 요청 #3
-    const valid = mkts.filter(m => (m.src || {}).value != null);
-    mGrid.innerHTML = valid.map(m => {
-      const src = m.src || {};
-      const v = src.value, ch = src.chg_pct;
-      const stale = src.stale ? '<span title="장 마감 / 마지막 종가" style="display:inline-block;width:5px;height:5px;background:var(--text-3);border-radius:50%;margin-left:3px;vertical-align:middle"></span>' : '';
-      return `<div class="market-cell">
-        <div class="market-name">${m.name}${stale}</div>
-        <div class="market-value">${fmtPrice(v)}</div>
-        <div class="market-change ${pnlClass(ch || 0)}">${ch != null ? (ch>=0?'+':'') + (+ch).toFixed(2) + '%' : '-'}</div>
-      </div>`;
-    }).join('');
-    // 4의 배수에 맞춰 그리드 컬럼 동적 (모바일 4열 / 데스크 8열)
-    if (mGrid.style) mGrid.style.gridTemplateColumns = `repeat(${Math.min(valid.length, 4)}, 1fr)`;
+    // value AND chg_pct 둘 다 있는 셀만 노출 — '-' 잔여 제거
+    const valid = mkts.filter(m => {
+      const s = m.src || {};
+      return s.value != null && s.chg_pct != null;
+    });
+    if (valid.length === 0) {
+      mGrid.innerHTML = '<div style="grid-column:1/-1;padding:20px 0;text-align:center;color:var(--text-3);font-size:12px">시장 데이터 로딩 중...</div>';
+      mGrid.style.gridTemplateColumns = '1fr';
+    } else {
+      mGrid.innerHTML = valid.map(m => {
+        const src = m.src || {};
+        const v = src.value, ch = src.chg_pct;
+        const stale = src.stale ? '<span title="장 마감 / 마지막 종가" style="display:inline-block;width:5px;height:5px;background:var(--text-3);border-radius:50%;margin-left:3px;vertical-align:middle"></span>' : '';
+        return `<div class="market-cell">
+          <div class="market-name">${m.name}${stale}</div>
+          <div class="market-value">${fmtPrice(v)}</div>
+          <div class="market-change ${pnlClass(ch || 0)}">${(ch>=0?'+':'') + (+ch).toFixed(2)}%</div>
+        </div>`;
+      }).join('');
+      // 셀 수에 맞춰 그리드 컬럼 동적 (max 4열 — 모바일/데스크 동일)
+      mGrid.style.gridTemplateColumns = `repeat(${Math.min(valid.length, 4)}, 1fr)`;
+    }
   }
 
   window._POS_INDEX = {};  // 클릭 시 조회용
