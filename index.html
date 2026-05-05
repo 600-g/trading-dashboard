@@ -65,6 +65,60 @@
     body { max-width: 1280px; }
   }
 
+  /* 스켈레톤 로딩 */
+  @keyframes skel { 0%{background-position:-200px 0} 100%{background-position:200px 0} }
+  .skel {
+    background: linear-gradient(90deg, var(--line) 0px, #f0f3f6 40px, var(--line) 80px);
+    background-size: 600px;
+    animation: skel 1.4s ease-in-out infinite;
+    border-radius: 6px;
+    color: transparent !important;
+    display: inline-block;
+    min-width: 40px;
+  }
+  .empty-state {
+    padding: 20px 12px;
+    text-align: center;
+    color: var(--text-3);
+    font-size: 12px;
+  }
+  .updated-tag {
+    font-size: 10px;
+    color: var(--text-3);
+    font-weight: 500;
+  }
+  /* 봇 상태 행 */
+  .bot-status-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .bot-status-pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .bot-status-pill .bsp-left { display:flex; align-items:center; gap:6px; }
+  .bsp-dot { width:8px; height:8px; border-radius:50%; }
+  .bsp-dot.run  { background: var(--green); box-shadow: 0 0 0 3px var(--green-bg); }
+  .bsp-dot.stop { background: var(--text-3); }
+  .bsp-dot.err  { background: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
+  .bsp-mode { font-size:9px; padding:2px 6px; border-radius:4px; font-weight:800; }
+  .bsp-mode.demo { background: var(--blue-bg); color: var(--blue); }
+  .bsp-mode.real { background: var(--red-bg); color: var(--red); }
+
+  /* 메인 카드 강화 */
+  .main-card .main-amount { font-size: 32px; line-height: 1.1; letter-spacing: -1px; }
+  @media (min-width: 768px) { .main-card .main-amount { font-size: 38px; } }
+
   /* SVG 아이콘 베이스 */
   .ico {
     width: 1em;
@@ -555,6 +609,7 @@
   <div class="logo" onclick="location.reload()">
     <svg class="ico"><use href="#i-chart"/></svg>
     두근 트레이딩
+    <span class="updated-tag" id="m-updated-tag" style="margin-left:6px"></span>
   </div>
   <div class="header-icons">
     <div class="icon-btn" onclick="openAlertsSheet()">
@@ -567,23 +622,45 @@
   </div>
 </div>
 
-<!-- 메인 자산 카드 -->
+<!-- 메인 자산 카드 (위계 1순위) -->
 <div class="main-card">
   <div class="main-label">총 자산</div>
-  <div class="main-amount" id="m-total-balance">-</div>
+  <div class="main-amount" id="m-total-balance"><span class="skel" style="width:160px;height:32px"></span></div>
   <div class="main-pnl" id="m-total-pnl-row">
     <span id="m-total-pnl">-</span>
     <span class="pnl-pct" id="m-total-pnl-pct"></span>
   </div>
 </div>
 
-<!-- 페르소나 4개 카드 (코인봇/주식봇 카드 → 하단 봇 메뉴와 중복이라 제거) -->
-<div class="section-head" style="margin-top:12px">
-  <div class="section-title">페르소나 <span style="color:var(--text-3);font-weight:500;font-size:12px">· 30일 성과</span></div>
+<!-- 봇 상태 행 (위계 2순위) -->
+<div class="bot-status-row">
+  <div class="bot-status-pill" onclick="openBotSheet('coin')">
+    <div class="bsp-left"><span class="bsp-dot stop" id="bsp-coin-dot"></span><svg class="ico" style="color:var(--yellow)"><use href="#i-coin"/></svg><span>코인봇</span></div>
+    <div style="display:flex;align-items:center;gap:5px">
+      <span id="bsp-coin-label" style="color:var(--text-3);font-size:11px">확인 중</span>
+      <span class="bsp-mode demo" id="bsp-coin-mode">DEMO</span>
+    </div>
+  </div>
+  <div class="bot-status-pill" onclick="openBotSheet('stock')">
+    <div class="bsp-left"><span class="bsp-dot stop" id="bsp-stock-dot"></span><svg class="ico" style="color:var(--green)"><use href="#i-trending"/></svg><span>주식봇</span></div>
+    <div style="display:flex;align-items:center;gap:5px">
+      <span id="bsp-stock-label" style="color:var(--text-3);font-size:11px">확인 중</span>
+      <span class="bsp-mode demo" id="bsp-stock-mode">DEMO</span>
+    </div>
+  </div>
+</div>
+
+<!-- 페르소나 4개 카드 (위계 3순위) -->
+<div class="section-head" style="margin-top:4px">
+  <div class="section-title">페르소나 <span class="updated-tag" id="m-personas-updated">· 30일 성과</span></div>
   <div class="section-link" onclick="window.location.href='persona_settings.html'" style="cursor:pointer">⚙ 비중</div>
 </div>
 <div id="m-persona-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
   <!-- JS로 채움: 단타맨/스윙맨/쿨마봇/존버맨 -->
+  <div style="background:var(--surface);padding:12px;border-radius:14px;border:1px solid var(--line)"><span class="skel" style="width:60px;height:14px"></span><br><span class="skel" style="width:80px;height:18px;margin-top:8px"></span></div>
+  <div style="background:var(--surface);padding:12px;border-radius:14px;border:1px solid var(--line)"><span class="skel" style="width:60px;height:14px"></span><br><span class="skel" style="width:80px;height:18px;margin-top:8px"></span></div>
+  <div style="background:var(--surface);padding:12px;border-radius:14px;border:1px solid var(--line)"><span class="skel" style="width:60px;height:14px"></span><br><span class="skel" style="width:80px;height:18px;margin-top:8px"></span></div>
+  <div style="background:var(--surface);padding:12px;border-radius:14px;border:1px solid var(--line)"><span class="skel" style="width:60px;height:14px"></span><br><span class="skel" style="width:80px;height:18px;margin-top:8px"></span></div>
 </div>
 
 <!-- 빠른 메뉴 -->
@@ -604,6 +681,11 @@
     <div class="quick-icon qi-blue"><svg class="ico"><use href="#i-bar-chart"/></svg></div>
     <div class="quick-label">거래 달력</div>
   </div>
+</div>
+
+<!-- 모든 봇 정지 시 안내 (JS로 표시) -->
+<div id="m-bots-down-banner" style="display:none;background:var(--red-bg);color:var(--red);padding:12px;border-radius:10px;margin-bottom:12px;font-size:12px;font-weight:700;text-align:center">
+  ⚠️ 모든 봇이 정지되어 있습니다 — 하단 [봇] 메뉴에서 시작
 </div>
 
 <!-- 시장 한눈에 -->
@@ -1621,25 +1703,47 @@ function renderMobile(d){
     }).join('');
   }
 
-  // 봇 가동 상태 (live 우선, 없으면 heartbeat fallback)
+  // 봇 가동 상태 (신규 bot-status-pill — 운영중 초록 / 정지 회색 / 에러 빨강)
   ['coin','stock'].forEach((bot, i) => {
     const data = i === 0 ? c : s;
-    const stEl = document.getElementById(`m-${bot}-status`);
-    if (!stEl) return;
+    const dot = document.getElementById(`bsp-${bot}-dot`);
+    const lab = document.getElementById(`bsp-${bot}-label`);
+    const md  = document.getElementById(`bsp-${bot}-mode`);
+    if (!dot || !lab) return;
     const live = data._live;
     const mode = data.bot_mode;
-    let label, klass;
-    if (mode === 'running')        { label = '온라인'; klass = 'running'; }
-    else if (mode === 'soft_stop') { label = '정리중'; klass = 'running'; }
-    else if (mode === 'stopped')   { label = '정지';   klass = 'stopped'; }
-    else if (live)                 { label = '온라인'; klass = 'running'; }
-    else                           { label = '오프라인'; klass = 'stopped'; }
-    const trade = (data.trade_mode || 'demo').toUpperCase();
-    const badgeColor = trade === 'REAL' ? 'var(--red)' : 'var(--blue)';
-    stEl.className = 'bot-status ' + klass;
-    stEl.innerHTML = `<span class="status-dot"></span><span>${label}</span>
-      <span style="margin-left:4px;padding:1px 5px;background:${badgeColor};color:#fff;border-radius:4px;font-size:9px;font-weight:800">${trade}</span>`;
+    let dotCls, label, color;
+    if (mode === 'running')        { dotCls='run';  label='운영중'; color='var(--green)'; }
+    else if (mode === 'soft_stop') { dotCls='run';  label='정리중'; color='var(--yellow)'; }
+    else if (mode === 'stopped')   { dotCls='stop'; label='정지';   color='var(--text-3)'; }
+    else if (live)                 { dotCls='run';  label='온라인'; color='var(--green)'; }
+    else                           { dotCls='err';  label='오프라인'; color='var(--red)'; }
+    dot.className = 'bsp-dot ' + dotCls;
+    lab.textContent = label; lab.style.color = color;
+    if (md) {
+      const trade = (data.trade_mode || 'demo').toLowerCase();
+      md.className = 'bsp-mode ' + trade;
+      md.textContent = trade.toUpperCase();
+    }
   });
+
+  // 모든 봇 정지 배너
+  const bothStopped = (c.bot_mode === 'stopped' || !c._live) && (s.bot_mode === 'stopped' || !s._live);
+  const banner = document.getElementById('m-bots-down-banner');
+  if (banner) banner.style.display = bothStopped ? 'block' : 'none';
+
+  // 마지막 갱신 시각 (헤더)
+  const upTag = document.getElementById('m-updated-tag');
+  if (upTag) {
+    const ts = c.updated_at || s.updated_at || new Date().toISOString();
+    const dt = new Date(ts);
+    const ago = Math.max(0, Math.floor((Date.now() - dt.getTime()) / 1000));
+    let agoStr;
+    if (ago < 60)        agoStr = `${ago}초 전`;
+    else if (ago < 3600) agoStr = `${Math.floor(ago/60)}분 전`;
+    else                 agoStr = `${Math.floor(ago/3600)}시간 전`;
+    upTag.textContent = `· ${agoStr}`;
+  }
 
   // 시장 (주식봇 macro + 코인봇 btc_market 통합)
   const macro = s.macro || c.macro || {};
