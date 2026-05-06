@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="build-ts" content="20260507-0017">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>페르소나 통합 대시보드</title>
@@ -111,6 +115,32 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
+}
+
+/* 서브마켓 탭 (stock 모드 전용 - 전체/KR/US) */
+.submarket-tabs {
+  display: none;
+  gap: 4px;
+  padding: 0 16px 10px;
+}
+.submarket-tabs.show { display: flex; }
+.sm-tab {
+  flex: 1;
+  padding: 7px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.sm-tab.active {
+  background: var(--text-1);
+  color: var(--surface);
+  border-color: var(--text-1);
 }
 
 /* 페르소나 메인 카드 */
@@ -478,6 +508,18 @@ body {
     <symbol id="i-text" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></symbol>
     <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
     <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+    <symbol id="i-bar-chart" viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5h4a2 2 0 0 1 0 4h-4v-4z"/><path d="M9.5 13.5h4.5a2 2 0 0 1 0 4h-4.5v-4z"/></symbol>
+    <symbol id="i-trending" viewBox="0 0 24 24"><path d="M22 7l-9 9-4-4-7 7"/><path d="M16 7h6v6"/></symbol>
+    <symbol id="i-money" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></symbol>
+    <symbol id="i-package" viewBox="0 0 24 24"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 4 12.7V17H8v-2.3A7 7 0 0 1 12 2z"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+    <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14M5 2h14M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22M17 2v4.172a2 2 0 0 1-.586 1.414L12 12 7.586 7.586A2 2 0 0 1 7 6.172V2"/></symbol>
+    <symbol id="i-mask" viewBox="0 0 24 24"><path d="M3 11a9 9 0 0 1 18 0v4a3 3 0 0 1-3 3h-1a3 3 0 0 1-3-3v-1a3 3 0 0 1 3-3h4M3 11v4a3 3 0 0 0 3 3h1a3 3 0 0 0 3-3v-1a3 3 0 0 0-3-3H3"/></symbol>
+    <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2" ry="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></symbol>
   </defs>
 </svg>
 
@@ -507,6 +549,13 @@ body {
     <div class="p-dot" style="background: #F8AE3C;"></div>
     존버맨
   </div>
+</div>
+
+<!-- 주식봇 시장 분리 (KR/US) — coin 모드에서는 숨김 -->
+<div class="submarket-tabs" id="submarket-tabs">
+  <div class="sm-tab" data-sub="stock">전체</div>
+  <div class="sm-tab" data-sub="kr">🇰🇷 KR</div>
+  <div class="sm-tab" data-sub="us">🇺🇸 US</div>
 </div>
 
 <div class="persona-main">
@@ -603,9 +652,44 @@ body {
   </div>
 </div>
 
+<!-- 종목별 승패 -->
+<div class="section" id="per-stock-section">
+  <div class="s-head">
+    <div class="s-title">종목별 승패</div>
+    <div class="s-count" id="ps-count">-</div>
+  </div>
+  <div id="ps-body" style="padding:0 16px 12px"></div>
+</div>
+
+<!-- 거래 기록 (모든 SELL) -->
+<div class="section" id="recent-trades-section">
+  <div class="s-head">
+    <div class="s-title">거래 기록 (최근 50건)</div>
+    <div class="s-count" id="rt-count">-</div>
+  </div>
+  <div id="rt-body" style="padding:0 16px 12px;max-height:360px;overflow-y:auto"></div>
+</div>
+
+<!-- 자가개선 상태 -->
+<div class="section" id="auto-tune-section">
+  <div class="s-head">
+    <div class="s-title" style="display:inline-flex;align-items:center;gap:6px">
+      <svg width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-wrench"/></svg>
+      자가개선 상태
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <span class="s-count" id="at-weight">-</span>
+      <a id="at-edit-link" href="persona_settings.html" style="font-size:11px;color:var(--blue);text-decoration:none;padding:4px 8px;background:var(--blue-bg);border-radius:6px;font-weight:700">조정 →</a>
+    </div>
+  </div>
+  <div id="at-body" style="padding:0 16px 14px;font-size:12px;color:var(--text-2);line-height:1.6">
+    <div style="color:var(--text-3);text-align:center;padding:14px 0">불러오는 중...</div>
+  </div>
+</div>
+
 <!-- 전체 분석 리포트 (Claude 분석용) -->
 <div class="export-section">
-  <div class="export-title">📊 전체 분석 리포트</div>
+  <div class="export-title"><svg width="14" height="14" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2"><use href="#i-bar-chart"/></svg> 전체 분석 리포트</div>
   <div style="font-size:11px;color:var(--text-3);margin-bottom:10px">
     기간:
     <select id="export-period" style="padding:3px 8px;border:1px solid var(--line);border-radius:6px;font-size:11px;background:var(--surface);margin-left:4px">
@@ -615,11 +699,13 @@ body {
       <option value="9999">전체</option>
     </select>
   </div>
-  <button onclick="exportFullReport('zip')" style="width:100%;padding:14px;background:var(--text-1);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px">
-    📦 ZIP 다운로드 (Claude 업로드용)
+  <button onclick="exportFullReport('zip')" style="width:100%;padding:14px;background:var(--text-1);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px;display:inline-flex;align-items:center;justify-content:center;gap:6px">
+    <svg width="16" height="16" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-package"/></svg>
+    ZIP 다운로드 (Claude 업로드용)
   </button>
-  <div style="font-size:11px;color:var(--text-3);text-align:center;margin-bottom:14px;line-height:1.5">
-    💡 ZIP 받아서 Claude.ai에 업로드 →<br>페르소나/룰/시장 종합 분석 자동
+  <div style="font-size:11px;color:var(--text-3);text-align:center;margin-bottom:14px;line-height:1.5;display:flex;align-items:center;justify-content:center;gap:5px">
+    <svg width="12" height="12" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-bulb"/></svg>
+    <span>ZIP 받아서 Claude.ai에 업로드 → 페르소나/룰/시장 종합 분석 자동</span>
   </div>
   <div style="font-size:11px;color:var(--text-3);text-align:center;margin-bottom:8px">또는 개별 다운로드</div>
   <div class="export-grid">
@@ -690,6 +776,12 @@ const SYM_KO = {
 const params = new URLSearchParams(location.search);
 let CUR_PERSONA = params.get('persona') || '쿨마봇';
 let CUR_MARKET  = params.get('market')  || 'coin';
+// stock 모드 한정 서브마켓: 'stock' (KR+US 합산) | 'kr' | 'us'
+// URL 의 market=kr|us 면 그대로 반영, market=stock 면 'stock' 디폴트
+let CUR_SUBMARKET = (CUR_MARKET === 'kr' || CUR_MARKET === 'us') ? CUR_MARKET
+                  : (CUR_MARKET === 'stock' ? 'stock' : null);
+// CUR_MARKET 정규화: kr/us 도 결국 stock 그룹
+if (CUR_MARKET === 'kr' || CUR_MARKET === 'us') CUR_MARKET = 'stock';
 
 function fmtKRW(v) {
   if (!v && v !== 0) return '-';
@@ -725,16 +817,23 @@ async function _initFirebasePA() {
   return _fbDbPA;
 }
 
+// stock 모드일 때는 CUR_SUBMARKET 으로 ('stock' | 'kr' | 'us') 라우팅
+function _resolveMarketKey() {
+  if (CUR_MARKET !== 'stock') return CUR_MARKET;
+  return CUR_SUBMARKET || 'stock';
+}
+
 async function _fetchAnalytics(persona, market) {
+  const mkey = _resolveMarketKey();
   if (USE_FB_PA) {
-    // 외부 호스트: Firestore status doc의 persona_analytics[market][persona] 사용
+    // 외부 호스트: Firestore status doc의 persona_analytics[mkey][persona] 사용
     try {
       const fs = await _initFirebasePA();
       const bot = market === 'coin' ? 'coin' : 'stock';
       const snap = await fs.collection('trading_status').doc(bot).get();
       if (!snap.exists) return null;
       const raw = snap.data();
-      const pa = (raw.persona_analytics || {})[market] || {};
+      const pa = (raw.persona_analytics || {})[mkey] || {};
       const data = pa[persona];
       return data || null;
     } catch (e) {
@@ -743,14 +842,35 @@ async function _fetchAnalytics(persona, market) {
     }
   }
   try {
-    const r = await fetch(`${API_BASE_PA}/api/personas/analytics/${encodeURIComponent(persona)}?market=${market}`,
-      {signal: AbortSignal.timeout(5000)});
+    const r = await fetch(`${API_BASE_PA}/api/personas/analytics/${encodeURIComponent(persona)}?market=${mkey}&_t=${Date.now()}`,
+      {signal: AbortSignal.timeout(5000), cache: 'no-store'});
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
   } catch (e) {
     console.warn('[analytics]', e);
     return null;
   }
+}
+
+function bindSubmarketTabs() {
+  const wrap = document.getElementById('submarket-tabs');
+  if (!wrap) return;
+  // stock 모드일 때만 표시
+  if (CUR_MARKET !== 'stock') { wrap.classList.remove('show'); return; }
+  wrap.classList.add('show');
+  if (!CUR_SUBMARKET) CUR_SUBMARKET = 'stock';
+  const tabs = wrap.querySelectorAll('.sm-tab');
+  tabs.forEach(t => {
+    t.classList.toggle('active', t.dataset.sub === CUR_SUBMARKET);
+    t.onclick = async () => {
+      CUR_SUBMARKET = t.dataset.sub;
+      tabs.forEach(x => x.classList.toggle('active', x.dataset.sub === CUR_SUBMARKET));
+      await renderAll();
+      const u = new URL(location.href);
+      u.searchParams.set('market', CUR_SUBMARKET === 'stock' ? 'stock' : CUR_SUBMARKET);
+      history.replaceState({}, '', u.toString());
+    };
+  });
 }
 
 function bindTabs() {
@@ -804,6 +924,16 @@ async function renderAll() {
     const sects = document.querySelectorAll('.section');
     if (sects[0]) { sects[0].querySelectorAll('.position-item').forEach(el => el.remove()); sects[0].querySelector('.s-count').textContent = '0개'; }
     if (sects[1]) { const g = sects[1].querySelector('.watching-grid'); if (g) g.innerHTML = ''; sects[1].querySelector('.s-count').textContent = '0개'; }
+    // 신규 섹션 비움
+    const psBody = document.getElementById('ps-body'); const psCount = document.getElementById('ps-count');
+    if (psBody) psBody.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:24px 0;font-size:12px">${msg}</div>`;
+    if (psCount) psCount.textContent = '-';
+    const rtBody = document.getElementById('rt-body'); const rtCount = document.getElementById('rt-count');
+    if (rtBody) rtBody.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:24px 0;font-size:12px">${msg}</div>`;
+    if (rtCount) rtCount.textContent = '-';
+    const atBody = document.getElementById('at-body'); const atW = document.getElementById('at-weight');
+    if (atBody) atBody.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:14px 0;font-size:11px">${msg}</div>`;
+    if (atW) atW.textContent = '-';
     if (sects[2]) { sects[2].querySelectorAll('.expected-item').forEach(el => el.remove()); sects[2].querySelector('.s-count').textContent = '0건'; }
   };
 
@@ -959,6 +1089,110 @@ async function renderAll() {
       });
     }
   }
+
+  // 8a. 종목별 승패
+  const psBody = document.getElementById('ps-body');
+  const psCount = document.getElementById('ps-count');
+  const psList = data.per_stock || [];
+  if (psCount) psCount.textContent = `${psList.length}종목`;
+  if (psBody) {
+    if (psList.length === 0) {
+      psBody.innerHTML = '<div style="color:var(--text-3);text-align:center;padding:24px 0;font-size:12px">청산 거래 없음</div>';
+    } else {
+      psBody.innerHTML = psList.map(s => {
+        const pnlCls = s.total_pnl > 0 ? 'stat-up' : (s.total_pnl < 0 ? 'stat-down' : '');
+        const wrCls = s.winrate >= 60 ? 'stat-up' : (s.winrate < 40 ? 'stat-down' : '');
+        const sym = (s.symbol || '').replace('KRW-','');
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:13px">${sym}</div>
+            <div style="font-size:11px;color:var(--text-3)">${s.trades}건 (${s.wins}승 ${s.losses}패) <span class="${wrCls}" style="font-weight:700">${s.winrate}%</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="${pnlCls}" style="font-weight:800;font-size:14px">${fmtKRW(s.total_pnl)}</div>
+            <div style="font-size:10px;color:var(--text-3)">${(s.last_ts||'').slice(5,16).replace('T',' ')}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // 8b. 거래 기록 (모든 SELL 1건마다)
+  const rtBody = document.getElementById('rt-body');
+  const rtCount = document.getElementById('rt-count');
+  const rtList = data.recent_trades || [];
+  if (rtCount) rtCount.textContent = `${rtList.length}건`;
+  if (rtBody) {
+    if (rtList.length === 0) {
+      rtBody.innerHTML = '<div style="color:var(--text-3);text-align:center;padding:24px 0;font-size:12px">최근 30일 거래 없음</div>';
+    } else {
+      rtBody.innerHTML = rtList.map(t => {
+        const sym = (t.symbol || '').replace('KRW-','');
+        const wlBg = t.win ? 'background:rgba(220,53,69,0.12);color:#dc3545' : 'background:rgba(49,130,246,0.12);color:#3182F6';
+        const wlText = t.win ? '승' : '패';
+        const pnlCls = t.pnl > 0 ? 'stat-up' : 'stat-down';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+              <span style="${wlBg};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:800">${wlText}</span>
+              <span style="font-weight:700;font-size:12px">${sym}</span>
+            </div>
+            <div style="font-size:10px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(t.ts||'').slice(5,16).replace('T',' ')} · ${t.reason||''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:8px">
+            <div class="${pnlCls}" style="font-weight:800;font-size:13px">${fmtKRW(t.pnl)}</div>
+            <div class="${pnlCls}" style="font-size:10px">${t.pnl_pct >= 0 ? '+' : ''}${t.pnl_pct}%</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // 9. 자가개선 상태
+  const at = data.auto_tune || {};
+  const atWeight = document.getElementById('at-weight');
+  const atBody = document.getElementById('at-body');
+  if (atWeight) atWeight.textContent = (at.current_weight_pct != null) ? `비중 ${at.current_weight_pct}%` : '비중 -';
+  // 비중 조정 링크 — 시장 + 페르소나 focus 전달
+  const editLink = document.getElementById('at-edit-link');
+  if (editLink) {
+    const mkey = _resolveMarketKey();
+    editLink.href = `persona_settings.html?market=${mkey}&focus=${encodeURIComponent(CUR_PERSONA)}`;
+  }
+  if (atBody) {
+    const recentTune = (at.recent_tune || []).slice(0, 3);
+    const learned = at.learned_thresholds || {};
+    const wChanges = (at.weight_changes || []).slice(0, 3);
+    let h = '';
+    // 비중 변경 이력
+    if (wChanges.length > 0) {
+      h += '<div style="font-size:11px;font-weight:700;color:var(--text-3);margin-bottom:4px">비중 변경 이력</div>';
+      wChanges.forEach(w => {
+        const t = (w.applied_at || '').slice(5, 16).replace('T', ' ');
+        const pct = w.weight_pct != null ? `${w.weight_pct}%` : '-';
+        h += `<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:var(--text-3)">${t}</span><b>${pct}</b></div>`;
+      });
+    }
+    // 학습된 임계값
+    const lkeys = Object.keys(learned);
+    if (lkeys.length > 0) {
+      h += '<div style="font-size:11px;font-weight:700;color:var(--text-3);margin:10px 0 4px">학습된 시장 임계값</div>';
+      lkeys.forEach(k => {
+        const mode = k.replace('learned_threshold_', '').replace('learned_', '');
+        h += `<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:var(--text-3)">${mode}</span><b>${learned[k]}</b></div>`;
+      });
+    }
+    // 최근 룰 튜닝
+    if (recentTune.length > 0) {
+      h += '<div style="font-size:11px;font-weight:700;color:var(--text-3);margin:10px 0 4px">최근 룰 튜닝</div>';
+      recentTune.forEach(r => {
+        const t = (r.at || '').slice(5, 16).replace('T', ' ');
+        h += `<div style="font-size:11px;margin-bottom:2px"><span style="color:var(--text-3)">${t}</span> · <b>${r.param}</b>: ${r.old} → ${r.new}</div>`;
+      });
+    }
+    if (!h) h = '<div style="color:var(--text-3);text-align:center;padding:14px 0;font-size:11px">아직 학습 데이터 누적 중 (30거래+ 부터 활성)</div>';
+    atBody.innerHTML = h;
+  }
 }
 
 // ─── (A) 종목 상세 시트 — Master Spec v2 §1 페르소나별 시간 캡 표시 + 판매 ───
@@ -1029,7 +1263,7 @@ function openPosDetail(p) {
   document.getElementById('pa-pos-content').innerHTML = `
     <div style="margin:8px 0 14px">
       <div style="font-size:18px;font-weight:800">${name}</div>
-      <div style="font-size:11px;color:var(--text-3)">${CUR_MARKET === 'coin' ? '🪙' : '📈'} ${persona}</div>
+      <div style="font-size:11px;color:var(--text-3);display:inline-flex;align-items:center;gap:4px"><svg width="11" height="11" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#${CUR_MARKET === 'coin' ? 'i-coin' : 'i-trending'}"/></svg> ${persona}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
       <div style="background:var(--bg);padding:10px;border-radius:8px"><div style="font-size:10px;color:var(--text-3)">매입 단가</div><div style="font-size:13px;font-weight:800">${fmtKRW(entryPrice)}원</div></div>
@@ -1038,12 +1272,12 @@ function openPosDetail(p) {
       <div style="background:var(--bg);padding:10px;border-radius:8px"><div style="font-size:10px;color:var(--text-3)">보유 기간</div><div style="font-size:13px;font-weight:800">${heldStr}</div></div>
     </div>
     <div style="background:var(--bg);padding:12px;border-radius:10px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--text-3)">📅 매입일자</span><b>${entryStr}</b></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--text-3)">🎯 판매 예정</span><b style="color:var(--blue)">${plannedExit}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--text-3);display:inline-flex;align-items:center;gap:4px"><svg width="11" height="11" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-calendar"/></svg> 매입일자</span><b>${entryStr}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--text-3);display:inline-flex;align-items:center;gap:4px"><svg width="11" height="11" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-target"/></svg> 판매 예정</span><b style="color:var(--blue)">${plannedExit}</b></div>
       ${cap ? `<div style="font-size:10px;color:var(--text-3);margin-top:4px">※ ${cap.label}</div>` : ''}
     </div>
     <div style="background:var(--bg);padding:12px;border-radius:10px;margin-bottom:10px">
-      <div style="font-size:11px;color:var(--text-3);margin-bottom:4px">📊 분석 (Master Spec v2)</div>
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;display:flex;align-items:center;gap:4px"><svg width="11" height="11" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-bar-chart"/></svg> 분석 (Master Spec v2)</div>
       <div style="font-size:13px;font-weight:700;line-height:1.5">${persona} 룰셋 적용 중 — 모멘텀 + 시간캡 기반 자동 판매</div>
     </div>
     <button onclick="paSell('${sym.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}')"
@@ -1108,8 +1342,8 @@ async function renderComparison(days) {
     return;
   }
   try {
-    const r = await fetch(`${API_BASE_PA}/api/personas/comparison?market=${CUR_MARKET}&days=${days}`,
-      {signal: AbortSignal.timeout(5000)});
+    const r = await fetch(`${API_BASE_PA}/api/personas/comparison?market=${_resolveMarketKey()}&days=${days}&_t=${Date.now()}`,
+      {signal: AbortSignal.timeout(5000), cache: 'no-store'});
     if (r.ok) data = await r.json();
   } catch (e) { console.warn('[cmp]', e); }
   if (!data || !data.dates || data.dates.length === 0) {
@@ -1234,6 +1468,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (headerBtns[1]) { headerBtns[1].onclick = createShareLink; headerBtns[1].style.cursor = 'pointer'; headerBtns[1].title = '공유 링크'; }
   if (headerBtns[2]) { headerBtns[2].onclick = () => exportFullReport('zip'); headerBtns[2].style.cursor = 'pointer'; headerBtns[2].title = '전체 리포트 ZIP'; }
   bindTabs();
+  bindSubmarketTabs();
   bindCmpRange();
   renderAll();
   renderComparison(30);

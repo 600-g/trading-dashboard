@@ -649,6 +649,7 @@ body {
   </div>
   <div class="header-title">페르소나 비중 <span id="header-market-tag" style="font-size:10px;background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:6px;margin-left:6px;font-weight:700;vertical-align:middle">COIN</span></div>
   <div class="header-sub">
+    <a id="link-to-analytics" href="persona_analytics.html" style="font-size:11px;color:var(--blue);text-decoration:none;padding:4px 8px;background:var(--blue-bg);border-radius:6px;font-weight:700;margin-right:6px">분석 →</a>
     <span id="data-status">실데이터</span>
     <div class="refresh-btn" id="btn-refresh" title="데이터 새로고침">
       <svg fill="none" stroke-width="2" viewBox="0 0 24 24">
@@ -1747,8 +1748,20 @@ function showToast(msg, type) {
 }
 
 (async function init() {
-  // 딥링크: ?tab=coin|kr|us → 시작 탭 자동 선택
-  const urlTab = new URLSearchParams(location.search).get('tab');
+  // 딥링크: ?tab=coin|kr|us 또는 ?market=coin|kr|us|stock → 시작 탭 자동 선택
+  const _qs = new URLSearchParams(location.search);
+  let urlTab = _qs.get('tab') || _qs.get('market');
+  if (urlTab === 'stock') urlTab = 'kr';  // stock 합산은 kr 으로 매핑
+  // 분석으로 돌아가기 링크 시장 + 페르소나 focus 보존
+  const focusPersona = _qs.get('focus');
+  const linkAna = document.getElementById('link-to-analytics');
+  if (linkAna) {
+    const m = urlTab || 'coin';
+    const params = new URLSearchParams();
+    params.set('market', m === 'kr' || m === 'us' ? m : 'coin');
+    if (focusPersona) params.set('persona', focusPersona);
+    linkAna.href = `persona_analytics.html?${params.toString()}`;
+  }
   if (urlTab && ['coin','kr','us'].includes(urlTab)) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     const tab = document.querySelector(`.tab-btn[data-tab="${urlTab}"]`);

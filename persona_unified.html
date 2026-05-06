@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>통합 페르소나 관리</title>
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+:root {
+  --bg: #F2F4F6;
+  --surface: #FFFFFF;
+  --line: #E5E8EB;
+  --text-1: #191F28;
+  --text-2: #4E5968;
+  --text-3: #8B95A1;
+  --text-4: #B0B8C1;
+  --blue: #3182F6;
+  --blue-bg: #E8F3FF;
+  --red: #F04452;
+  --red-bg: #FFE9EA;
+  --green: #1B9856;
+  --green-bg: #E5F5EC;
+  --yellow: #F8AE3C;
+  --yellow-bg: #FFF4D6;
+  --purple: #8B5CF6;
+  --purple-bg: #F0EBFF;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-weight: 500;
+  line-height: 1.4;
+  max-width: 420px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: 30px;
+}
+
+.preview-label {
+  background: #FFE9EA;
+  color: var(--red);
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.scroll-hint {
+  background: var(--blue-bg);
+  color: var(--blue);
+  padding: 6px 16px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 화면 구분선 */
+.screen-divider {
+  margin: 30px 0;
+  padding: 12px 16px;
+  background: var(--text-1);
+  color: var(--surface);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--bg);
+}
+.h-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+.h-actions {
+  display: flex;
+  gap: 4px;
+}
+.h-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-2);
+}
+.h-btn:active { background: var(--line); }
+.h-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+/* 시장 토글 */
+.market-toggle {
+  margin: 0 16px 12px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 4px;
+  display: flex;
+  gap: 2px;
+}
+.mt-btn {
+  flex: 1;
+  padding: 12px 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  cursor: pointer;
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  transition: all 0.15s;
+}
+.mt-btn.active {
+  background: var(--text-1);
+  color: var(--surface);
+}
+.mt-pnl {
+  font-size: 10px;
+  font-weight: 800;
+}
+.mt-btn.active .mt-pnl { color: rgba(255,255,255,0.85); }
+.mt-btn:not(.active) .mt-pnl.up { color: var(--red); }
+.mt-btn:not(.active) .mt-pnl.down { color: var(--blue); }
+
+/* 메인 KPI */
+.main-kpi {
+  margin: 0 16px 12px;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 18px;
+}
+.kpi-label {
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.kpi-value {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 4px;
+}
+.kpi-sub {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.kpi-sub strong {
+  font-weight: 700;
+}
+
+/* 시장별 미니 분리 */
+.market-split {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.ms-cell {
+  text-align: center;
+}
+.ms-name {
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.ms-pnl {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.ms-pos {
+  font-size: 9px;
+  color: var(--text-3);
+}
+
+/* 페르소나 랭킹 */
+.ranking-card {
+  margin: 0 16px 12px;
+  background: var(--surface);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.rc-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.rc-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rc-title {
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rc-sub {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.rank-row {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.rank-row:last-child { border-bottom: none; }
+.rank-row:active { background: var(--bg); }
+
+.rank-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+  background: var(--bg);
+  color: var(--text-2);
+}
+.rank-1 { background: linear-gradient(135deg, #FFD75A, #F8AE3C); color: white; }
+.rank-2 { background: linear-gradient(135deg, #D4D8DD, #B0B8C1); color: white; }
+.rank-3 { background: linear-gradient(135deg, #C9A07F, #A67E5A); color: white; }
+
+.rank-info { flex: 1; min-width: 0; }
+.rank-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.rank-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.rank-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+.rank-fixed-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--purple-bg);
+  color: var(--purple);
+  margin-left: 4px;
+}
+
+.rank-mini-row {
+  display: flex;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+.rank-mini-row > span { white-space: nowrap; }
+
+.rank-pnl-area {
+  text-align: right;
+  flex-shrink: 0;
+}
+.rank-pnl {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+.rank-trades {
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+.stat-up { color: var(--red); }
+.stat-down { color: var(--blue); }
+
+/* tap arrow */
+.tap-arrow {
+  color: var(--text-4);
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* 안내 */
+.note-box {
+  margin: 0 16px 12px;
+  background: var(--blue-bg);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 11px;
+  color: var(--blue);
+  line-height: 1.5;
+}
+.note-box strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+/* 자가개선 미니 */
+.tune-mini {
+  margin: 0 16px 12px;
+  background: var(--surface);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.tm-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tm-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+.tm-counts {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+}
+.tm-count {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 700;
+}
+.tm-count.adopt { color: var(--green); }
+.tm-count.reject { color: var(--text-3); }
+
+.tm-tap {
+  padding: 14px 18px;
+  font-size: 12px;
+  color: var(--blue);
+  text-align: center;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg);
+}
+
+/* 빠른 액션 */
+.quick-actions {
+  margin: 0 16px 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.qa-btn {
+  background: var(--surface);
+  border: none;
+  padding: 14px 8px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.qa-btn:active { transform: scale(0.97); }
+.qa-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qa-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+.qa-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+/* === 페르소나 상세 팝업 (Bottom Sheet) === */
+.detail-sheet {
+  margin: 16px;
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+}
+.ds-handle {
+  height: 4px;
+  width: 36px;
+  background: var(--line);
+  border-radius: 2px;
+  margin: 8px auto;
+}
+
+.ds-head {
+  padding: 8px 18px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ds-title {
+  font-size: 17px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ds-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.ds-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-3);
+}
+
+/* 상세: 시장별 탭 */
+.market-sub-tabs {
+  margin: 12px 18px 0;
+  display: flex;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 3px;
+}
+.mst-btn {
+  flex: 1;
+  padding: 8px 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  cursor: pointer;
+  border-radius: 8px;
+}
+.mst-btn.active {
+  background: var(--surface);
+  color: var(--text-1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* 상세 KPI */
+.detail-stats {
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.ds-cell {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.ds-cell-label {
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.ds-cell-value {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+.ds-cell-sub {
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* 상세: 섹션 */
+.ds-section {
+  border-bottom: 1px solid var(--line);
+}
+.ds-section-head {
+  padding: 12px 18px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dss-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.dss-sub {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* 보유 종목 */
+.position-item {
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.position-item + .position-item {
+  border-top: 1px solid var(--line);
+}
+.pi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.pi-eth { background: rgba(98, 126, 234, 0.15); color: #627EEA; }
+.pi-btc { background: rgba(247, 147, 26, 0.15); color: #F7931A; }
+.pi-sol { background: rgba(20, 241, 149, 0.15); color: #14F195; }
+.pi-body { flex: 1; min-width: 0; }
+.pi-name {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.pi-sub {
+  font-size: 10px;
+  color: var(--text-3);
+}
+.pi-right { text-align: right; flex-shrink: 0; }
+.pi-amount { font-size: 13px; font-weight: 700; }
+.pi-pnl { font-size: 11px; font-weight: 600; }
+
+/* 진입 예상 */
+.expected-item {
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.expected-item + .expected-item {
+  border-top: 1px solid var(--line);
+}
+.ei-symbol {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.ei-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.ei-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+.ei-prob {
+  font-size: 13px;
+  font-weight: 800;
+  text-align: right;
+}
+.ei-time {
+  font-size: 10px;
+  color: var(--text-3);
+  text-align: right;
+}
+
+/* 손익 분포 차트 */
+.pnl-distribution {
+  padding: 12px 18px 16px;
+}
+.pd-bars {
+  display: flex;
+  align-items: end;
+  gap: 3px;
+  height: 50px;
+}
+.pd-bar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  position: relative;
+}
+.pd-bar.win { background: var(--red); }
+.pd-bar.loss { background: var(--blue); opacity: 0.6; }
+.pd-x {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 9px;
+  color: var(--text-3);
+}
+
+/* 액션 버튼 */
+.ds-actions {
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.ds-btn {
+  background: var(--bg);
+  border: none;
+  padding: 11px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+  cursor: pointer;
+}
+.ds-btn:active { transform: scale(0.97); }
+.ds-btn.primary {
+  background: var(--text-1);
+  color: var(--surface);
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute;">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  </defs>
+</svg>
+
+<div class="preview-label">📌 통합 페르소나 관리 미리보기</div>
+<div class="scroll-hint">↓ 메인 화면 + 상세 팝업 (계속 스크롤)</div>
+
+<!-- ============ 메인 화면 ============ -->
+<div class="header">
+  <div class="h-btn"><svg><use href="#i-back"/></svg></div>
+  <div class="h-title">페르소나 관리</div>
+  <div class="h-actions">
+    <div class="h-btn"><svg><use href="#i-share"/></svg></div>
+  </div>
+</div>
+
+<!-- 시장 토글 (1번만) -->
+<div class="market-toggle">
+  <div class="mt-btn">
+    <span>전체</span>
+    <span class="mt-pnl up">+1,028k</span>
+  </div>
+  <div class="mt-btn active">
+    <span>코인</span>
+    <span class="mt-pnl">+138k</span>
+  </div>
+  <div class="mt-btn">
+    <span>주식 KR</span>
+    <span class="mt-pnl up">+560k</span>
+  </div>
+  <div class="mt-btn">
+    <span>주식 US</span>
+    <span class="mt-pnl up">+330k</span>
+  </div>
+</div>
+
+<!-- 메인 KPI (선택된 시장 기준) -->
+<div class="main-kpi">
+  <div class="kpi-label">코인 시장 30일 수익</div>
+  <div class="kpi-value stat-up">+138,400원</div>
+  <div class="kpi-sub">시드 200만 · 수익률 <strong class="stat-up">+6.92%</strong></div>
+  
+  <!-- 페르소나 합산 (시장 안에서) -->
+  <div class="market-split">
+    <div class="ms-cell">
+      <div class="ms-name">실현</div>
+      <div class="ms-pnl stat-up">+125k</div>
+      <div class="ms-pos">청산 963건</div>
+    </div>
+    <div class="ms-cell">
+      <div class="ms-name">미실현</div>
+      <div class="ms-pnl stat-up">+13k</div>
+      <div class="ms-pos">보유 5건</div>
+    </div>
+    <div class="ms-cell">
+      <div class="ms-name">예상</div>
+      <div class="ms-pnl">+8k</div>
+      <div class="ms-pos">검토 3건</div>
+    </div>
+  </div>
+</div>
+
+<!-- 페르소나 랭킹 -->
+<div class="ranking-card">
+  <div class="rc-head">
+    <div class="rc-title-group">
+      <div class="rc-title">🏆 페르소나 경쟁 (코인)</div>
+      <div class="rc-sub">탭하면 시장별 상세</div>
+    </div>
+  </div>
+  
+  <div class="rank-row">
+    <div class="rank-num rank-1">1</div>
+    <div class="rank-info">
+      <div class="rank-name-row">
+        <div class="rank-dot" style="background: #8B5CF6;"></div>
+        <div class="rank-name">쿨마봇</div>
+        <span class="rank-fixed-tag">고정</span>
+      </div>
+      <div class="rank-mini-row">
+        <span>승률 72%</span>
+        <span>·</span>
+        <span>보유 3건</span>
+        <span>·</span>
+        <span>비중 35%</span>
+      </div>
+    </div>
+    <div class="rank-pnl-area">
+      <div class="rank-pnl stat-up">+89,200</div>
+      <div class="rank-trades">23건 <span class="tap-arrow">›</span></div>
+    </div>
+  </div>
+  
+  <div class="rank-row">
+    <div class="rank-num rank-2">2</div>
+    <div class="rank-info">
+      <div class="rank-name-row">
+        <div class="rank-dot" style="background: #1B9856;"></div>
+        <div class="rank-name">스윙맨</div>
+      </div>
+      <div class="rank-mini-row">
+        <span>승률 58%</span>
+        <span>·</span>
+        <span>보유 2건</span>
+        <span>·</span>
+        <span style="color:var(--green);font-weight:600">비중 32% ▲2</span>
+      </div>
+    </div>
+    <div class="rank-pnl-area">
+      <div class="rank-pnl stat-up">+58,400</div>
+      <div class="rank-trades">45건 <span class="tap-arrow">›</span></div>
+    </div>
+  </div>
+  
+  <div class="rank-row">
+    <div class="rank-num rank-3">3</div>
+    <div class="rank-info">
+      <div class="rank-name-row">
+        <div class="rank-dot" style="background: #3182F6;"></div>
+        <div class="rank-name">단타맨</div>
+      </div>
+      <div class="rank-mini-row">
+        <span>승률 51%</span>
+        <span>·</span>
+        <span>보유 5건</span>
+        <span>·</span>
+        <span style="color:var(--red);font-weight:600">비중 23% ▼2</span>
+      </div>
+    </div>
+    <div class="rank-pnl-area">
+      <div class="rank-pnl stat-up">+31,200</div>
+      <div class="rank-trades">892건 <span class="tap-arrow">›</span></div>
+    </div>
+  </div>
+  
+  <div class="rank-row">
+    <div class="rank-num">4</div>
+    <div class="rank-info">
+      <div class="rank-name-row">
+        <div class="rank-dot" style="background: #F8AE3C;"></div>
+        <div class="rank-name">존버맨</div>
+      </div>
+      <div class="rank-mini-row">
+        <span>승률 33%</span>
+        <span>·</span>
+        <span>보유 0건</span>
+        <span>·</span>
+        <span>비중 10%</span>
+      </div>
+    </div>
+    <div class="rank-pnl-area">
+      <div class="rank-pnl stat-down">-2,800</div>
+      <div class="rank-trades">3건 <span class="tap-arrow">›</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 자가개선 요약 -->
+<div class="tune-mini">
+  <div class="tm-head">
+    <div class="tm-title">🤖 자가개선 (24시간)</div>
+    <div class="tm-counts">
+      <div class="tm-count adopt">✓ 2건</div>
+      <div class="tm-count reject">✗ 1건</div>
+    </div>
+  </div>
+  <div class="tm-tap">시장별 학습 이력 보기 ›</div>
+</div>
+
+<!-- 빠른 액션 3개 -->
+<div class="quick-actions">
+  <button class="qa-btn">
+    <div class="qa-icon" style="background: var(--blue-bg); color: var(--blue);">
+      <svg><use href="#i-list"/></svg>
+    </div>
+    <div class="qa-label">전체 거래</div>
+  </button>
+  <button class="qa-btn">
+    <div class="qa-icon" style="background: var(--purple-bg); color: var(--purple);">
+      <svg><use href="#i-cpu"/></svg>
+    </div>
+    <div class="qa-label">학습 이력</div>
+  </button>
+  <button class="qa-btn">
+    <div class="qa-icon" style="background: var(--yellow-bg); color: #b8860b;">
+      <svg><use href="#i-download"/></svg>
+    </div>
+    <div class="qa-label">리포트</div>
+  </button>
+</div>
+
+<div class="note-box">
+  <strong>📌 메인 화면 원칙</strong>
+  • 시장 토글 1번 → 모든 데이터 그 시장 기준<br>
+  • 페르소나 클릭 → 상세 팝업 (시장별 탭)<br>
+  • 비중 자동 조정 (▲▼ 표시)<br>
+  • 쿨마봇 = "고정" 태그 (자가개선 X)
+</div>
+
+<!-- ============ 페르소나 상세 팝업 ============ -->
+<div class="screen-divider">↓ 페르소나 카드 클릭 시 (Bottom Sheet 팝업)</div>
+
+<div class="detail-sheet">
+  <div class="ds-handle"></div>
+  
+  <div class="ds-head">
+    <div class="ds-title">
+      <div class="ds-dot" style="background: #8B5CF6;"></div>
+      쿨마봇
+      <span class="rank-fixed-tag">고정</span>
+    </div>
+    <div class="ds-close">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </div>
+  </div>
+  
+  <!-- 시장별 탭 (이 페르소나가 활동하는 3개 시장) -->
+  <div class="market-sub-tabs">
+    <div class="mst-btn">전체</div>
+    <div class="mst-btn active">코인</div>
+    <div class="mst-btn">KR</div>
+    <div class="mst-btn">US</div>
+  </div>
+  
+  <!-- 상세 KPI -->
+  <div class="detail-stats">
+    <div class="ds-cell">
+      <div class="ds-cell-label">30일 수익</div>
+      <div class="ds-cell-value stat-up">+89,200</div>
+      <div class="ds-cell-sub">+12.7% (시드 70만)</div>
+    </div>
+    <div class="ds-cell">
+      <div class="ds-cell-label">승률</div>
+      <div class="ds-cell-value">72.3%</div>
+      <div class="ds-cell-sub">17승 6패 (23건)</div>
+    </div>
+    <div class="ds-cell">
+      <div class="ds-cell-label">손익비 R:R</div>
+      <div class="ds-cell-value">4.2</div>
+      <div class="ds-cell-sub">+8.5% / -2.0%</div>
+    </div>
+    <div class="ds-cell">
+      <div class="ds-cell-label">평균 보유</div>
+      <div class="ds-cell-value">8.2일</div>
+      <div class="ds-cell-sub">최대 23일</div>
+    </div>
+  </div>
+  
+  <!-- 14일 손익 분포 -->
+  <div class="ds-section">
+    <div class="ds-section-head">
+      <div class="dss-title">14일 일별 손익</div>
+      <div class="dss-sub stat-up">+12,300원</div>
+    </div>
+    <div class="pnl-distribution">
+      <div class="pd-bars">
+        <div class="pd-bar win" style="height: 30%;"></div>
+        <div class="pd-bar loss" style="height: 15%;"></div>
+        <div class="pd-bar win" style="height: 45%;"></div>
+        <div class="pd-bar win" style="height: 60%;"></div>
+        <div class="pd-bar win" style="height: 80%;"></div>
+        <div class="pd-bar loss" style="height: 25%;"></div>
+        <div class="pd-bar win" style="height: 50%;"></div>
+        <div class="pd-bar win" style="height: 95%;"></div>
+        <div class="pd-bar win" style="height: 70%;"></div>
+        <div class="pd-bar loss" style="height: 20%;"></div>
+        <div class="pd-bar win" style="height: 55%;"></div>
+        <div class="pd-bar win" style="height: 85%;"></div>
+        <div class="pd-bar win" style="height: 65%;"></div>
+        <div class="pd-bar win" style="height: 75%;"></div>
+      </div>
+      <div class="pd-x">
+        <span>2주 전</span>
+        <span>오늘</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 보유 종목 (이 페르소나의 코인 시장만) -->
+  <div class="ds-section">
+    <div class="ds-section-head">
+      <div class="dss-title">보유 종목 (코인)</div>
+      <div class="dss-sub">3건</div>
+    </div>
+    
+    <div class="position-item">
+      <div class="pi-icon pi-eth">ETH</div>
+      <div class="pi-body">
+        <div class="pi-name">이더리움</div>
+        <div class="pi-sub">3.39M · 5일 보유</div>
+      </div>
+      <div class="pi-right">
+        <div class="pi-amount">169,400</div>
+        <div class="pi-pnl stat-up">+1.2%</div>
+      </div>
+    </div>
+    
+    <div class="position-item">
+      <div class="pi-icon pi-btc">BTC</div>
+      <div class="pi-body">
+        <div class="pi-name">비트코인</div>
+        <div class="pi-sub">148M · 2일 보유</div>
+      </div>
+      <div class="pi-right">
+        <div class="pi-amount">148,500</div>
+        <div class="pi-pnl stat-up">+3.8%</div>
+      </div>
+    </div>
+    
+    <div class="position-item">
+      <div class="pi-icon pi-sol">SOL</div>
+      <div class="pi-body">
+        <div class="pi-name">솔라나</div>
+        <div class="pi-sub">22.5만 · 12시간 보유</div>
+      </div>
+      <div class="pi-right">
+        <div class="pi-amount">137,100</div>
+        <div class="pi-pnl stat-down">-1.4%</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 진입 예상 -->
+  <div class="ds-section">
+    <div class="ds-section-head">
+      <div class="dss-title">진입 예상 (코인)</div>
+      <div class="dss-sub">2건 검토</div>
+    </div>
+    
+    <div class="expected-item">
+      <div>
+        <div class="ei-symbol">ARB</div>
+        <div class="ei-tags">
+          <span class="ei-tag">EP갭+10%</span>
+          <span class="ei-tag">거래량3x</span>
+          <span class="ei-tag">신고가30</span>
+        </div>
+      </div>
+      <div>
+        <div class="ei-prob stat-up">82%</div>
+        <div class="ei-time">~2시간</div>
+      </div>
+    </div>
+    
+    <div class="expected-item">
+      <div>
+        <div class="ei-symbol">SUI</div>
+        <div class="ei-tags">
+          <span class="ei-tag">MACD골든</span>
+          <span class="ei-tag">catalyst</span>
+        </div>
+      </div>
+      <div>
+        <div class="ei-prob">68%</div>
+        <div class="ei-time">~6시간</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 액션 -->
+  <div class="ds-actions">
+    <button class="ds-btn">거래 내역</button>
+    <button class="ds-btn primary">학습 이력</button>
+  </div>
+</div>
+
+<div class="note-box">
+  <strong>📌 상세 팝업 원칙</strong>
+  • 페르소나당 1개 팝업<br>
+  • 시장별 탭 (전체/코인/KR/US)으로 같은 페르소나 시장별 비교<br>
+  • 시장별 보유/예상/손익 분포 명확히<br>
+  • 쿨마봇은 "고정" 태그 (비중 변경 X, 자가개선 X)<br>
+  • 다른 페르소나는 자동 비중 조정 표시
+</div>
+
+<script>
+// ─── 통합 페르소나 페이지 — 데이터 연결 (명세서 §2) ──────────────────────
+// HTML 본문은 100% 그대로. 모든 더미 숫자(예: '+89,200', '+138k') 는 placeholder.
+// fetch 결과로만 덮어쓰기. 실패 시 '-' 또는 '데이터 누적 중'.
+
+const API_BASE = (location.protocol === 'file:' || location.hostname === '127.0.0.1' || location.hostname === 'localhost' || location.hostname.startsWith('192.'))
+  ? 'http://127.0.0.1:9000' : '';
+const _f = (url) => fetch(API_BASE + url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(),
+  { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+
+let currentMarket = 'coin';
+let currentPersona = null;
+
+// 시장 토글 4개 (전체/코인/KR/US) — DOM 인덱스 매핑
+const MARKETS = ['total', 'coin', 'kr', 'us'];
+
+window.addEventListener('DOMContentLoaded', async () => {
+  setupMarketToggle();
+  setupRankingClicks();
+  setupSheetClose();
+  await loadAllData();
+});
+
+async function loadAllData() {
+  await Promise.all([
+    loadMarketsSummary(),
+    loadMarketKPI(),
+    loadRanking(),
+    loadTuneSummary(),
+  ]);
+}
+
+// ─── 1. 시장 토글 P&L ─────────────────────────────────
+async function loadMarketsSummary() {
+  try {
+    const r = await _f('/api/markets/summary');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const btns = document.querySelectorAll('.market-toggle .mt-btn');
+    btns.forEach((btn, i) => {
+      const m = MARKETS[i];
+      const pnl = (data[m] || {}).pnl_30d || 0;
+      const el = btn.querySelector('.mt-pnl');
+      if (el) {
+        el.textContent = formatPnl(pnl);
+        el.className = 'mt-pnl ' + (pnl > 0 ? 'up' : (pnl < 0 ? 'down' : ''));
+      }
+    });
+  } catch (e) {
+    console.error('[markets] 실패:', e);
+    document.querySelectorAll('.market-toggle .mt-pnl').forEach(el => el.textContent = '-');
+  }
+}
+
+// ─── 2. 메인 KPI (선택 시장) ─────────────────────────────
+async function loadMarketKPI() {
+  const kpi = document.querySelector('.main-kpi');
+  if (!kpi) return;
+  try {
+    const r = await _f(`/api/personas/market-kpi?market=${currentMarket}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const label = { coin: '코인', kr: '주식 KR', us: '주식 US', total: '전체' }[currentMarket] || currentMarket;
+    const labelEl = kpi.querySelector('.kpi-label'); if (labelEl) labelEl.textContent = `${label} 시장 30일 수익`;
+    const vEl = kpi.querySelector('.kpi-value');
+    if (vEl) {
+      vEl.textContent = formatPnlFull(data.total_pnl_30d);
+      vEl.className = 'kpi-value ' + (data.total_pnl_30d > 0 ? 'stat-up' : (data.total_pnl_30d < 0 ? 'stat-down' : ''));
+    }
+    const subEl = kpi.querySelector('.kpi-sub');
+    if (subEl) {
+      const pct = data.pnl_pct_30d || 0;
+      subEl.innerHTML = `시드 ${formatKRWShort(data.seed)} · 수익률 <strong class="${pct > 0 ? 'stat-up' : (pct < 0 ? 'stat-down' : '')}">${pct > 0 ? '+' : ''}${pct}%</strong>`;
+    }
+    const cells = kpi.querySelectorAll('.market-split .ms-cell');
+    const splits = [
+      { label: '실현',  pnl: data.realized_pnl,   count: data.realized_count, suffix: '청산' },
+      { label: '미실현', pnl: data.unrealized_pnl, count: data.holding_count,  suffix: '보유' },
+      { label: '예상',  pnl: data.expected_pnl,   count: data.expected_count, suffix: '검토' },
+    ];
+    cells.forEach((cell, i) => {
+      const s = splits[i]; if (!s) return;
+      const nameEl = cell.querySelector('.ms-name'); if (nameEl) nameEl.textContent = s.label;
+      const pEl = cell.querySelector('.ms-pnl');
+      if (pEl) {
+        pEl.textContent = formatPnlShort(s.pnl);
+        pEl.className = 'ms-pnl ' + (s.pnl > 0 ? 'stat-up' : (s.pnl < 0 ? 'stat-down' : ''));
+      }
+      const posEl = cell.querySelector('.ms-pos'); if (posEl) posEl.textContent = `${s.suffix} ${s.count}건`;
+    });
+  } catch (e) {
+    console.error('[market-kpi] 실패:', e);
+    const v = kpi.querySelector('.kpi-value'); if (v) v.textContent = '-';
+    const s = kpi.querySelector('.kpi-sub'); if (s) s.innerHTML = '데이터 누적 중';
+  }
+}
+
+// ─── 3. 페르소나 랭킹 ───────────────────────────────────
+async function loadRanking() {
+  try {
+    const r = await _f(`/api/personas/ranking?market=${currentMarket === 'total' ? 'coin' : currentMarket}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const personas = await r.json();
+    if (!Array.isArray(personas)) throw new Error('not array');
+    const rows = document.querySelectorAll('.ranking-card .rank-row');
+    personas.forEach((p, i) => {
+      if (i >= rows.length) return;
+      const row = rows[i];
+      row.dataset.persona = p.persona;
+      const numEl = row.querySelector('.rank-num');
+      if (numEl) {
+        numEl.textContent = i + 1;
+        numEl.className = 'rank-num' + ([1,2,3].includes(i+1) ? ` rank-${i+1}` : '');
+      }
+      const nameEl = row.querySelector('.rank-name'); if (nameEl) nameEl.textContent = p.persona;
+      const fixedTag = row.querySelector('.rank-fixed-tag');
+      if (fixedTag) fixedTag.style.display = p.is_fixed ? 'inline-block' : 'none';
+      const miniRow = row.querySelector('.rank-mini-row');
+      if (miniRow) {
+        const wStr = p.is_fixed
+          ? `비중 ${p.current_weight}%`
+          : (p.weight_change !== 0
+              ? `<span style="color:${p.weight_change > 0 ? 'var(--green)' : 'var(--red)'};font-weight:600">비중 ${p.recommended_weight}% ${p.weight_change > 0 ? '▲' : '▼'}${Math.abs(p.weight_change)}</span>`
+              : `비중 ${p.current_weight}%`);
+        miniRow.innerHTML = `<span>승률 ${p.winrate}%</span><span>·</span><span>보유 ${p.holding}건</span><span>·</span><span>${wStr}</span>`;
+      }
+      const pnlEl = row.querySelector('.rank-pnl');
+      if (pnlEl) {
+        pnlEl.textContent = formatPnl(p.pnl_30d);
+        pnlEl.className = 'rank-pnl ' + (p.pnl_30d > 0 ? 'stat-up' : (p.pnl_30d < 0 ? 'stat-down' : ''));
+      }
+      const trEl = row.querySelector('.rank-trades');
+      if (trEl) trEl.innerHTML = `${p.trades_30d}건 <span class="tap-arrow">›</span>`;
+    });
+  } catch (e) {
+    console.error('[ranking] 실패:', e);
+  }
+}
+
+// ─── 4. 자가개선 요약 ───────────────────────────────────
+async function loadTuneSummary() {
+  try {
+    const r = await _f(`/api/tune/summary?market=${currentMarket === 'total' ? 'coin' : currentMarket}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const a = document.querySelector('.tm-count.adopt');
+    const j = document.querySelector('.tm-count.reject');
+    if (a) a.textContent = `✓ ${data.adopted_24h}건`;
+    if (j) j.textContent = `✗ ${data.rejected_24h}건`;
+  } catch (e) {
+    console.error('[tune] 실패:', e);
+  }
+}
+
+// ─── 5. 페르소나 상세 팝업 ───────────────────────────────
+async function loadPersonaDetail(persona, market) {
+  const sheet = document.querySelector('.detail-sheet');
+  if (!sheet) return;
+  try {
+    const m = market === 'total' ? 'coin' : market;
+    const r = await _f(`/api/personas/detail/${encodeURIComponent(persona)}?market=${m}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    // 헤더 페르소나 점 + 이름
+    const dot = sheet.querySelector('.ds-title .ds-dot');
+    if (dot) dot.style.background = getPersonaColor(persona);
+    const titleEl = sheet.querySelector('.ds-title');
+    if (titleEl) {
+      // 텍스트 노드 중 페르소나명 위치를 찾아 교체. 못 찾으면 last-child 보정.
+      const txtNode = Array.from(titleEl.childNodes).find(n => n.nodeType === 3 && n.textContent.trim());
+      if (txtNode) txtNode.textContent = ` ${persona} `;
+      else titleEl.append(document.createTextNode(' ' + persona + ' '));
+    }
+    const fixedTag = sheet.querySelector('.ds-title .rank-fixed-tag');
+    if (fixedTag) fixedTag.style.display = data.is_fixed ? 'inline-block' : 'none';
+    // KPI 4셀
+    const cells = sheet.querySelectorAll('.detail-stats .ds-cell');
+    const s = data.stats || {};
+    if (cells[0]) {
+      cells[0].querySelector('.ds-cell-value').textContent = formatPnl(s.total_pnl);
+      cells[0].querySelector('.ds-cell-value').className = 'ds-cell-value ' + (s.total_pnl > 0 ? 'stat-up' : (s.total_pnl < 0 ? 'stat-down' : ''));
+      cells[0].querySelector('.ds-cell-sub').textContent = `${s.pnl_pct > 0 ? '+' : ''}${s.pnl_pct}% (시드 ${formatKRWShort(s.seed || 0)})`;
+    }
+    if (cells[1]) {
+      cells[1].querySelector('.ds-cell-value').textContent = `${s.winrate}%`;
+      cells[1].querySelector('.ds-cell-sub').textContent = `${s.wins}승 ${(s.total||0) - (s.wins||0)}패 (${s.total}건)`;
+    }
+    if (cells[2]) {
+      cells[2].querySelector('.ds-cell-value').textContent = s.rr || 0;
+      cells[2].querySelector('.ds-cell-sub').textContent = `+${s.avg_win_pct}% / -${s.avg_loss_pct}%`;
+    }
+    if (cells[3]) {
+      cells[3].querySelector('.ds-cell-value').textContent = `${s.avg_holding_days}일`;
+      cells[3].querySelector('.ds-cell-sub').textContent = `최대 ${s.max_holding_days}일`;
+    }
+    renderMiniChart(data.daily_pnl_14d || []);
+    renderPositions(data.positions || []);
+    renderExpected(data.expected || []);
+  } catch (e) {
+    console.error('[detail] 실패:', e);
+  }
+}
+
+function renderMiniChart(daily) {
+  const container = document.querySelector('.pnl-distribution .pd-bars');
+  if (!container) return;
+  const maxPnl = Math.max(...daily.map(d => Math.abs(d.pnl || 0)), 1);
+  container.innerHTML = '';
+  daily.forEach(d => {
+    const bar = document.createElement('div');
+    bar.className = 'pd-bar ' + ((d.pnl || 0) > 0 ? 'win' : 'loss');
+    bar.style.height = (Math.abs(d.pnl || 0) / maxPnl * 100) + '%';
+    container.appendChild(bar);
+  });
+  const total = daily.reduce((sum, d) => sum + (d.pnl || 0), 0);
+  const totalEl = document.querySelector('.detail-sheet .ds-section .dss-sub');
+  if (totalEl) {
+    totalEl.textContent = formatPnl(total);
+    totalEl.className = 'dss-sub ' + (total > 0 ? 'stat-up' : (total < 0 ? 'stat-down' : ''));
+  }
+}
+
+function renderPositions(positions) {
+  const sections = document.querySelectorAll('.detail-sheet .ds-section');
+  // 두 번째 섹션 = 보유 종목
+  const container = sections[1];
+  if (!container) return;
+  const list = container.querySelectorAll('.position-item');
+  if (positions.length === 0) {
+    list.forEach(item => item.style.display = 'none');
+    const cnt = container.querySelector('.dss-sub'); if (cnt) cnt.textContent = '0건';
+    return;
+  }
+  list.forEach((item, i) => {
+    if (i >= positions.length) { item.style.display = 'none'; return; }
+    item.style.display = 'flex';
+    const p = positions[i];
+    const nm = item.querySelector('.pi-name'); if (nm) nm.textContent = getCoinName(p.symbol);
+    const sub = item.querySelector('.pi-sub'); if (sub) sub.textContent = `${formatKRWShort(p.current_value || p.invested || 0)} · ${p.holding_time}`;
+    const am = item.querySelector('.pi-amount'); if (am) am.textContent = formatPnl(p.current_value || p.invested || 0);
+    const pe = item.querySelector('.pi-pnl');
+    if (pe) {
+      pe.textContent = `${(p.pnl_pct || 0) > 0 ? '+' : ''}${p.pnl_pct || 0}%`;
+      pe.className = 'pi-pnl ' + ((p.pnl_pct || 0) > 0 ? 'stat-up' : ((p.pnl_pct || 0) < 0 ? 'stat-down' : ''));
+    }
+  });
+  const cnt = container.querySelector('.dss-sub'); if (cnt) cnt.textContent = `${positions.length}건`;
+}
+
+function renderExpected(expected) {
+  const sections = document.querySelectorAll('.detail-sheet .ds-section');
+  const container = sections[2];
+  if (!container) return;
+  const items = container.querySelectorAll('.expected-item');
+  items.forEach((item, i) => {
+    if (i >= expected.length) { item.style.display = 'none'; return; }
+    item.style.display = 'flex';
+    const e = expected[i];
+    const sym = item.querySelector('.ei-symbol'); if (sym) sym.textContent = e.symbol;
+    const tagsEl = item.querySelector('.ei-tags');
+    if (tagsEl) tagsEl.innerHTML = (e.tags || []).map(t => `<span class="ei-tag">${t}</span>`).join('');
+    const probEl = item.querySelector('.ei-prob');
+    if (probEl) {
+      probEl.textContent = `${e.probability}%`;
+      probEl.className = 'ei-prob ' + ((e.probability || 0) >= 70 ? 'stat-up' : '');
+    }
+    const tEl = item.querySelector('.ei-time'); if (tEl) tEl.textContent = e.est_time || '-';
+  });
+  const cnt = container.querySelector('.dss-sub'); if (cnt) cnt.textContent = `${expected.length}건 검토`;
+}
+
+// ─── 시장 토글 ─────────────────────────────────────────
+function setupMarketToggle() {
+  const btns = document.querySelectorAll('.market-toggle .mt-btn');
+  btns.forEach((btn, i) => {
+    btn.dataset.market = MARKETS[i];
+    btn.addEventListener('click', async () => {
+      btns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMarket = btn.dataset.market;
+      await Promise.all([loadMarketKPI(), loadRanking(), loadTuneSummary()]);
+    });
+  });
+}
+
+// ─── 페르소나 클릭 → 팝업 ────────────────────────────────
+function setupRankingClicks() {
+  document.querySelectorAll('.ranking-card .rank-row').forEach(row => {
+    row.addEventListener('click', async () => {
+      const persona = row.dataset.persona;
+      if (!persona) return;
+      currentPersona = persona;
+      const sheet = document.querySelector('.detail-sheet');
+      if (sheet) sheet.style.display = 'block';
+      await loadPersonaDetail(persona, currentMarket);
+    });
+  });
+}
+
+function setupSheetClose() {
+  const sheet = document.querySelector('.detail-sheet');
+  if (!sheet) return;
+  const close = sheet.querySelector('.ds-close');
+  if (close) close.addEventListener('click', () => { sheet.style.display = 'none'; });
+  sheet.addEventListener('click', (ev) => {
+    if (ev.target === sheet) sheet.style.display = 'none';
+  });
+  sheet.style.display = 'none';
+}
+
+// ─── 헬퍼 ─────────────────────────────────────────────
+function formatPnl(v) {
+  if (!v) return '0';
+  const sign = v > 0 ? '+' : '';
+  if (Math.abs(v) >= 10000) return `${sign}${Math.round(v / 1000).toLocaleString()}k`;
+  return `${sign}${Math.round(v).toLocaleString()}`;
+}
+function formatPnlFull(v) {
+  if (!v) return '0원';
+  const sign = v > 0 ? '+' : '';
+  return `${sign}${Math.round(v).toLocaleString()}원`;
+}
+function formatPnlShort(v) {
+  if (!v) return '0';
+  const sign = v > 0 ? '+' : '';
+  if (Math.abs(v) >= 1000) return `${sign}${Math.round(v / 1000)}k`;
+  return `${sign}${Math.round(v)}`;
+}
+function formatKRWShort(v) {
+  if (!v && v !== 0) return '-';
+  if (v >= 100_000_000) return `${(v / 100_000_000).toFixed(1)}억`;
+  if (v >= 10_000) return `${Math.round(v / 10_000)}만`;
+  return v.toLocaleString();
+}
+function getPersonaColor(p) {
+  return ({'쿨마봇':'#8B5CF6','스윙맨':'#1B9856','단타맨':'#3182F6','존버맨':'#F8AE3C'})[p] || '#8B95A1';
+}
+function getCoinName(symbol) {
+  if (!symbol) return '-';
+  const s = symbol.replace('KRW-', '');
+  const map = { BTC:'비트코인', ETH:'이더리움', SOL:'솔라나', DOGE:'도지코인', XRP:'리플', ARB:'아비트럼', SUI:'수이' };
+  return map[s] || s;
+}
+</script>
+
+</body>
+</html>
