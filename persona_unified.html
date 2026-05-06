@@ -1051,8 +1051,10 @@ body {
 // HTML 본문은 100% 그대로. 모든 더미 숫자(예: '+89,200', '+138k') 는 placeholder.
 // fetch 결과로만 덮어쓰기. 실패 시 '-' 또는 '데이터 누적 중'.
 
-const API_BASE = (location.protocol === 'file:' || location.hostname === '127.0.0.1' || location.hostname === 'localhost' || location.hostname.startsWith('192.'))
-  ? 'http://127.0.0.1:9000' : '';
+// API_BASE: file://(로컬 파일) 만 절대 경로. 그 외 (127.0.0.1/192.x LAN/외부) 는 same-origin.
+// LAN 폰(192.x:9000) → /api/... 는 같은 system-api 로 정상. 외부 GitHub Pages 는 endpoint 없음 (Firestore fallback 필요).
+const API_BASE = (location.protocol === 'file:') ? 'http://127.0.0.1:9000' : '';
+const IS_EXTERNAL = !!location.hostname && location.hostname !== '127.0.0.1' && location.hostname !== 'localhost' && !location.hostname.startsWith('192.') && location.protocol !== 'file:';
 const _f = (url) => fetch(API_BASE + url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(),
   { cache: 'no-store', signal: AbortSignal.timeout(5000) });
 
