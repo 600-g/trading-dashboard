@@ -1052,10 +1052,11 @@ body {
 // fetch 결과로만 덮어쓰기. 실패 시 '-' 또는 '데이터 누적 중'.
 
 // API_BASE: file://(로컬 파일) 만 절대 경로. 그 외 (127.0.0.1/192.x LAN/외부) 는 same-origin.
-// LAN 폰(192.x:9000) → /api/... 는 같은 system-api 로 정상. 외부 GitHub Pages 는 endpoint 없음 (Firestore fallback 필요).
+// LAN 폰(192.x:9000) → /api/... 는 같은 system-api 로 정상.
+// api.600g.net/trading/persona_unified.html → /trading/api/... prefix 자동 부착 (두근컴퍼니 reverse proxy).
 const API_BASE = (location.protocol === 'file:') ? 'http://127.0.0.1:9000' : '';
-const IS_EXTERNAL = !!location.hostname && location.hostname !== '127.0.0.1' && location.hostname !== 'localhost' && !location.hostname.startsWith('192.') && location.protocol !== 'file:';
-const _f = (url) => fetch(API_BASE + url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(),
+const PATH_PREFIX = location.pathname.startsWith('/trading/') ? '/trading' : '';
+const _f = (url) => fetch(API_BASE + PATH_PREFIX + url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(),
   { cache: 'no-store', signal: AbortSignal.timeout(5000) });
 
 let currentMarket = 'coin';
