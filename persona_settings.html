@@ -871,11 +871,17 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 
 <script>
-// 환경 분기: 로컬(127.x/192.x/file://) → system_api 직접. 외부(github.io) → Firebase 명령
+// 환경 분기: file/127/192/api.600g.net/외부 모두 system_api 도달
 const _h = location.hostname;
 const IS_LOCAL = location.protocol === 'file:' || _h === '127.0.0.1' || _h === 'localhost' || _h.startsWith('192.');
-const API_BASE = IS_LOCAL ? 'http://127.0.0.1:9000' : '';
-const USE_FIREBASE = !IS_LOCAL;
+const _isCF = _h.endsWith('.600g.net');
+let _base = '', _prefix = '';
+if (location.protocol === 'file:') _base = 'http://127.0.0.1:9000';
+else if (IS_LOCAL) { _base = ''; _prefix = location.pathname.startsWith('/trading/') ? '/trading' : ''; }
+else if (_isCF) { _base = ''; _prefix = '/trading'; }
+else { _base = 'https://api.600g.net'; _prefix = '/trading'; }
+const API_BASE = _base + _prefix;
+const USE_FIREBASE = false;  // CF Tunnel 통해 모두 도달
 
 // Firebase 초기화 (외부 호스트만) — config inline (fetch 의존 제거)
 const _FB_CFG = {

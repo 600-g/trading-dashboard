@@ -758,8 +758,16 @@ body {
 // ─── 두근봇 데이터 바인딩 (디자인 변경 X, 컨텐츠만 동적) ───
 const _h = location.hostname;
 const IS_LOCAL_PA = location.protocol === 'file:' || _h === '127.0.0.1' || _h === 'localhost' || _h.startsWith('192.');
-const API_BASE_PA = IS_LOCAL_PA ? 'http://127.0.0.1:9000' : '';
-const USE_FB_PA = !IS_LOCAL_PA;
+const _isCF_PA = _h.endsWith('.600g.net');
+// API_BASE 자동 라우팅: file→127.0.0.1:9000, 로컬/LAN→same-origin, CF→/trading prefix, 외부→api.600g.net/trading
+let _base_pa = '', _prefix_pa = '';
+if (location.protocol === 'file:') _base_pa = 'http://127.0.0.1:9000';
+else if (IS_LOCAL_PA) { _base_pa = ''; _prefix_pa = location.pathname.startsWith('/trading/') ? '/trading' : ''; }
+else if (_isCF_PA) { _base_pa = ''; _prefix_pa = '/trading'; }
+else { _base_pa = 'https://api.600g.net'; _prefix_pa = '/trading'; }
+const API_BASE_PA = _base_pa + _prefix_pa;
+// CF Tunnel/외부에서도 API 직접 도달 가능 → Firestore fallback 비활성
+const USE_FB_PA = false;
 
 const PERSONAS_META = {
   '쿨마봇': {color:'#8B5CF6', desc:'정통 EP', icoCls:'pi-eth'},

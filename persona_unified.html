@@ -1051,11 +1051,30 @@ body {
 // HTML 본문은 100% 그대로. 모든 더미 숫자(예: '+89,200', '+138k') 는 placeholder.
 // fetch 결과로만 덮어쓰기. 실패 시 '-' 또는 '데이터 누적 중'.
 
-// API_BASE: file://(로컬 파일) 만 절대 경로. 그 외 (127.0.0.1/192.x LAN/외부) 는 same-origin.
-// LAN 폰(192.x:9000) → /api/... 는 같은 system-api 로 정상.
-// api.600g.net/trading/persona_unified.html → /trading/api/... prefix 자동 부착 (두근컴퍼니 reverse proxy).
-const API_BASE = (location.protocol === 'file:') ? 'http://127.0.0.1:9000' : '';
-const PATH_PREFIX = location.pathname.startsWith('/trading/') ? '/trading' : '';
+// API_BASE 자동 라우팅 — 어디서 봐도 endpoint 정상 도달 (CORS 허용됨)
+//   file://             → http://127.0.0.1:9000
+//   127.0.0.1/localhost/192.x  → same-origin (system-api :9000 직접)
+//   api.600g.net        → same-origin + PATH_PREFIX='/trading' (두근컴퍼니 proxy)
+//   그 외 (github.io 등) → https://api.600g.net + PATH_PREFIX='/trading' (CF Tunnel cross-origin)
+const _h = location.hostname;
+const _isFile = location.protocol === 'file:';
+const _isLocal = _h === '127.0.0.1' || _h === 'localhost' || _h.startsWith('192.');
+const _isCFTunnel = _h.endsWith('.600g.net');
+let API_BASE = '';
+let PATH_PREFIX = '';
+if (_isFile) {
+  API_BASE = 'http://127.0.0.1:9000';
+} else if (_isLocal) {
+  API_BASE = '';
+  PATH_PREFIX = location.pathname.startsWith('/trading/') ? '/trading' : '';
+} else if (_isCFTunnel) {
+  API_BASE = '';
+  PATH_PREFIX = '/trading';
+} else {
+  // github.io 같은 외부 호스트 → CF Tunnel 강제
+  API_BASE = 'https://api.600g.net';
+  PATH_PREFIX = '/trading';
+}
 const _f = (url) => fetch(API_BASE + PATH_PREFIX + url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(),
   { cache: 'no-store', signal: AbortSignal.timeout(5000) });
 

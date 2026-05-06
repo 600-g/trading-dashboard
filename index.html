@@ -938,8 +938,31 @@
 </div>
 
 <script>
-const SYS_API = 'http://127.0.0.1:9000';
-const BOT_APIS = {coin: 'http://127.0.0.1:9001', stock: 'http://127.0.0.1:9002'};
+// API base 자동 라우팅 — file/127/192/api.600g.net/외부 모두 작동
+(function _autoBase(){
+  const _h = location.hostname;
+  const _isFile = location.protocol === 'file:';
+  const _isLocal = _h === '127.0.0.1' || _h === 'localhost' || _h.startsWith('192.');
+  const _isCF = _h.endsWith('.600g.net');
+  let base = '', prefix = '';
+  if (_isFile) base = 'http://127.0.0.1:9000';
+  else if (_isLocal) {
+    base = '';
+    prefix = location.pathname.startsWith('/trading/') ? '/trading' : '';
+  } else if (_isCF) { base = ''; prefix = '/trading'; }
+  else { base = 'https://api.600g.net'; prefix = '/trading'; }
+  // /api/coin → CF Tunnel/proxy 경유 (포트 9001 직접 접근 불가)
+  // 단 file:// 또는 LAN/127 직접 접속 시 봇 API :9001/:9002 직접
+  window.SYS_API = base + prefix;
+  if (_isFile || (_isLocal && !prefix)) {
+    window.BOT_APIS = {coin: 'http://127.0.0.1:9001', stock: 'http://127.0.0.1:9002'};
+  } else {
+    // proxy 경유: /trading/api/{bot}/path 가 system-api 의 catch-all 통해 :9001/:9002 로 routing
+    window.BOT_APIS = {coin: base + prefix + '/api/coin', stock: base + prefix + '/api/stock'};
+  }
+})();
+const SYS_API = window.SYS_API;
+const BOT_APIS = window.BOT_APIS;
 let _currentBot = null;
 
 function openBotSheet(bot){
