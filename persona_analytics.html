@@ -702,38 +702,29 @@ body {
   </div>
 </div>
 
-<div class="section">
-  <div class="s-head">
-    <div class="s-title">보유 종목</div>
-    <div class="s-count">불러오는 중...</div>
-  </div>
-</div>
-
-<div class="section">
-  <div class="s-head">
-    <div class="s-title">검토 중 (카테고리)</div>
-    <div class="s-count">불러오는 중...</div>
-  </div>
-  <div class="watching-grid"></div>
-</div>
-
-<div class="section">
-  <div class="s-head">
-    <div class="s-title">진입 예상</div>
-    <div class="s-count">불러오는 중...</div>
-  </div>
-  <!-- 동적: expected-item JS로 채움 -->
-  <div style="display:none">
-    <div class="expected-item">
-      <div class="ei-left">
-        <div></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 모듈 진입 버튼 (3개) — 클릭 시 모달 시트 -->
+<!-- 모듈 진입 버튼 (6개) — 클릭 시 모달 시트, 메인은 미리보기만 -->
 <div class="module-buttons">
+  <div class="mb-btn" onclick="openModule('positions')">
+    <div class="mb-icon" style="background:var(--green-bg);color:var(--green)">
+      <svg width="18" height="18" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-wallet"/></svg>
+    </div>
+    <div class="mb-label">보유 종목</div>
+    <div class="mb-count" id="mbc-positions">-</div>
+  </div>
+  <div class="mb-btn" onclick="openModule('watching')">
+    <div class="mb-icon" style="background:var(--blue-bg);color:var(--blue)">
+      <svg width="18" height="18" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-target"/></svg>
+    </div>
+    <div class="mb-label">검토 중</div>
+    <div class="mb-count" id="mbc-watching">-</div>
+  </div>
+  <div class="mb-btn" onclick="openModule('expected')">
+    <div class="mb-icon" style="background:var(--yellow-bg);color:var(--yellow)">
+      <svg width="18" height="18" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-trending"/></svg>
+    </div>
+    <div class="mb-label">진입 예상</div>
+    <div class="mb-count" id="mbc-expected">-</div>
+  </div>
   <div class="mb-btn" onclick="openModule('stocks')">
     <div class="mb-icon" style="background:var(--blue-bg);color:var(--blue)">
       <svg width="18" height="18" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-bar-chart"/></svg>
@@ -754,6 +745,51 @@ body {
     </div>
     <div class="mb-label">자가개선</div>
     <div class="mb-count" id="mbc-tune">-</div>
+  </div>
+</div>
+
+<!-- 모달 시트: 보유 종목 -->
+<div class="module-sheet" id="ms-positions">
+  <div class="ms-body">
+    <div class="ms-handle"></div>
+    <div class="ms-head">
+      <div class="ms-title">
+        <svg width="16" height="16" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-wallet"/></svg>
+        보유 종목 <span id="pos-count" style="color:var(--text-3);font-weight:600;font-size:12px;margin-left:4px">-</span>
+      </div>
+      <div class="ms-close" onclick="closeModule('positions')">×</div>
+    </div>
+    <div id="pos-body"><div style="color:var(--text-3);text-align:center;padding:18px 0;font-size:12px">불러오는 중...</div></div>
+  </div>
+</div>
+
+<!-- 모달 시트: 검토 중 (카테고리) -->
+<div class="module-sheet" id="ms-watching">
+  <div class="ms-body">
+    <div class="ms-handle"></div>
+    <div class="ms-head">
+      <div class="ms-title">
+        <svg width="16" height="16" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-target"/></svg>
+        검토 중 (카테고리) <span id="wt-count" style="color:var(--text-3);font-weight:600;font-size:12px;margin-left:4px">-</span>
+      </div>
+      <div class="ms-close" onclick="closeModule('watching')">×</div>
+    </div>
+    <div id="wt-body" class="watching-grid"></div>
+  </div>
+</div>
+
+<!-- 모달 시트: 진입 예상 -->
+<div class="module-sheet" id="ms-expected">
+  <div class="ms-body">
+    <div class="ms-handle"></div>
+    <div class="ms-head">
+      <div class="ms-title">
+        <svg width="16" height="16" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-trending"/></svg>
+        진입 예상 <span id="exp-count" style="color:var(--text-3);font-weight:600;font-size:12px;margin-left:4px">-</span>
+      </div>
+      <div class="ms-close" onclick="closeModule('expected')">×</div>
+    </div>
+    <div id="exp-body"><div style="color:var(--text-3);text-align:center;padding:18px 0;font-size:12px">불러오는 중...</div></div>
   </div>
 </div>
 
@@ -1057,20 +1093,23 @@ async function renderAll() {
       r.querySelector('.sm-bar').style.width = '0%';
       r.querySelector('.sm-pct').textContent = '-';
     });
-    const sects = document.querySelectorAll('.section');
-    if (sects[0]) { sects[0].querySelectorAll('.position-item').forEach(el => el.remove()); sects[0].querySelector('.s-count').textContent = '0개'; }
-    if (sects[1]) { const g = sects[1].querySelector('.watching-grid'); if (g) g.innerHTML = ''; sects[1].querySelector('.s-count').textContent = '0개'; }
-    // 신규 섹션 비움
-    const psBody = document.getElementById('ps-body'); const psCount = document.getElementById('ps-count');
-    if (psBody) psBody.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:24px 0;font-size:12px">${msg}</div>`;
-    if (psCount) psCount.textContent = '-';
-    const rtBody = document.getElementById('rt-body'); const rtCount = document.getElementById('rt-count');
-    if (rtBody) rtBody.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:24px 0;font-size:12px">${msg}</div>`;
-    if (rtCount) rtCount.textContent = '-';
-    const atBody = document.getElementById('at-body'); const atW = document.getElementById('at-weight');
-    if (atBody) atBody.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:14px 0;font-size:11px">${msg}</div>`;
-    if (atW) atW.textContent = '-';
-    if (sects[2]) { sects[2].querySelectorAll('.expected-item').forEach(el => el.remove()); sects[2].querySelector('.s-count').textContent = '0건'; }
+    // 모달 시트 6개 비우기 + 미리보기 카운트 초기화
+    const _clearById = (bodyId, countId) => {
+      const b = document.getElementById(bodyId);
+      const c = document.getElementById(countId);
+      if (b) b.innerHTML = `<div style="color:var(--text-3);text-align:center;padding:24px 0;font-size:12px">${msg}</div>`;
+      if (c) c.textContent = '-';
+    };
+    _clearById('pos-body', 'pos-count');
+    _clearById('wt-body',  'wt-count');
+    _clearById('exp-body', 'exp-count');
+    _clearById('ps-body',  'ps-count');
+    _clearById('rt-body',  'rt-count');
+    _clearById('at-body',  'at-weight');
+    // 메인 미리보기 카운트
+    ['mbc-positions','mbc-watching','mbc-expected','mbc-stocks','mbc-trades','mbc-tune'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.textContent = '-';
+    });
   };
 
   if (!data || data.error) {
@@ -1135,18 +1174,23 @@ async function renderAll() {
     smRows[1].querySelector('.sm-pct').textContent = fmtKRW(slot.available) + '원';
   }
 
-  // 5. 보유 종목
+  // 5. 보유 종목 (모달 + 미리보기 카운트)
   const positions = data.positions || [];
-  const posSection = document.querySelectorAll('.section')[0];
-  if (posSection) {
-    posSection.querySelector('.s-count').textContent = `${positions.length}개`;
-    // 기존 position-item 모두 제거 후 다시 그리기
-    posSection.querySelectorAll('.position-item').forEach(el => el.remove());
+  const _mbcP = document.getElementById('mbc-positions');
+  if (_mbcP) {
+    if (positions.length === 0) _mbcP.textContent = '보유 없음';
+    else {
+      const totalInv = positions.reduce((s,p)=>s+(p.invested||(p.entry_price*p.amount)||0),0);
+      _mbcP.textContent = `${positions.length}건 · ${fmtKRW(totalInv)}원`;
+    }
+  }
+  const posBody = document.getElementById('pos-body');
+  const posCountEl = document.getElementById('pos-count');
+  if (posCountEl) posCountEl.textContent = `${positions.length}건`;
+  if (posBody) {
+    posBody.innerHTML = '';
     if (positions.length === 0) {
-      const empty = document.createElement('div');
-      empty.style.cssText = 'padding:30px 0;text-align:center;color:var(--text-3);font-size:12px';
-      empty.textContent = '보유 종목 없음';
-      posSection.appendChild(empty);
+      posBody.innerHTML = '<div style="padding:30px 0;text-align:center;color:var(--text-3);font-size:12px">보유 종목 없음</div>';
     } else {
       positions.forEach(p => {
         const sym = p.symbol || '-';
@@ -1169,42 +1213,41 @@ async function renderAll() {
             <div style="font-size:9px;color:var(--text-3);margin-top:2px">탭 → 상세</div>
           </div>`;
         item.addEventListener('click', () => openPosDetail(p));
-        posSection.appendChild(item);
+        posBody.appendChild(item);
       });
     }
   }
 
-  // 6. 검토 중 카테고리
-  const sections = document.querySelectorAll('.section');
-  const watchingSection = sections[1];
-  if (watchingSection) {
-    const cats = data.watching_categories || [];
-    watchingSection.querySelector('.s-count').textContent = `${cats.length}개 카테고리`;
-    const grid = watchingSection.querySelector('.watching-grid');
-    if (grid) {
-      if (cats.length === 0) {
-        grid.innerHTML = '<div style="grid-column:1/-1;padding:20px 0;text-align:center;color:var(--text-3);font-size:12px">카테고리 매핑 없음</div>';
-      } else {
-        grid.innerHTML = cats.map(c => `<div class="wg-item">
-          <div class="wg-cat">${c.category}</div>
-          <div class="wg-symbols">${(c.symbols || []).map(s => s.replace('KRW-','')).join(', ')}</div>
-          <div class="wg-score">${c.avg_score > 0 ? `평균 ${c.avg_score}점` : '관찰 중'}</div>
-        </div>`).join('');
-      }
+  // 6. 검토 중 카테고리 (모달 + 미리보기)
+  const cats = data.watching_categories || [];
+  const _mbcW = document.getElementById('mbc-watching');
+  if (_mbcW) _mbcW.textContent = cats.length === 0 ? '없음' : `${cats.length}개 카테고리`;
+  const wtBody = document.getElementById('wt-body');
+  const wtCountEl = document.getElementById('wt-count');
+  if (wtCountEl) wtCountEl.textContent = `${cats.length}개`;
+  if (wtBody) {
+    if (cats.length === 0) {
+      wtBody.innerHTML = '<div style="grid-column:1/-1;padding:20px 0;text-align:center;color:var(--text-3);font-size:12px">카테고리 매핑 없음</div>';
+    } else {
+      wtBody.innerHTML = cats.map(c => `<div class="wg-item">
+        <div class="wg-cat">${c.category}</div>
+        <div class="wg-symbols">${(c.symbols || []).map(s => s.replace('KRW-','')).join(', ')}</div>
+        <div class="wg-score">${c.avg_score > 0 ? `평균 ${c.avg_score}점` : '관찰 중'}</div>
+      </div>`).join('');
     }
   }
 
-  // 7. 진입 예상
-  const expectedSection = sections[2];
-  if (expectedSection) {
-    const expected = data.expected_entries || [];
-    expectedSection.querySelector('.s-count').textContent = `${expected.length}건`;
-    expectedSection.querySelectorAll('.expected-item').forEach(el => el.remove());
+  // 7. 진입 예상 (모달 + 미리보기)
+  const expected = data.expected_entries || [];
+  const _mbcE = document.getElementById('mbc-expected');
+  if (_mbcE) _mbcE.textContent = expected.length === 0 ? '학습 중' : `${expected.length}건 검토`;
+  const expBody = document.getElementById('exp-body');
+  const expCountEl = document.getElementById('exp-count');
+  if (expCountEl) expCountEl.textContent = `${expected.length}건`;
+  if (expBody) {
+    expBody.innerHTML = '';
     if (expected.length === 0) {
-      const empty = document.createElement('div');
-      empty.style.cssText = 'padding:24px 0;text-align:center;color:var(--text-3);font-size:12px';
-      empty.textContent = '진입 예상 종목 없음 (자가개선 캐시 누적 후 활성)';
-      expectedSection.appendChild(empty);
+      expBody.innerHTML = '<div style="padding:24px 0;text-align:center;color:var(--text-3);font-size:12px">진입 예상 종목 없음<br>(자가개선 캐시 누적 후 활성)</div>';
     } else {
       expected.forEach(e => {
         const tagsHTML = (e.tags || []).map(t => `<span class="ei-tag">${t}</span>`).join('') +
@@ -1221,7 +1264,7 @@ async function renderAll() {
             <div class="ei-prob ${probCls}">${e.probability || 0}%</div>
             <div class="ei-time">${e.est_time || '-'}</div>
           </div>`;
-        expectedSection.appendChild(item);
+        expBody.appendChild(item);
       });
     }
   }
