@@ -117,30 +117,109 @@ body {
   border-radius: 50%;
 }
 
-/* 서브마켓 탭 (stock 모드 전용 - 전체/KR/US) */
-.submarket-tabs {
-  display: none;
-  gap: 4px;
-  padding: 0 16px 10px;
-}
-.submarket-tabs.show { display: flex; }
-.sm-tab {
-  flex: 1;
-  padding: 7px 12px;
+/* 시장 토글 (코인/KR/US — 최상위) */
+.market-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px 10px;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  margin: 0 0 4px;
+}
+.m-tab {
+  flex: 1;
+  padding: 9px 8px;
+  background: var(--bg);
+  border: 1.5px solid transparent;
+  border-radius: 10px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-2);
   cursor: pointer;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   transition: all 0.15s;
 }
-.sm-tab.active {
+.m-tab.active {
   background: var(--text-1);
-  color: var(--surface);
+  color: #fff;
   border-color: var(--text-1);
+}
+
+/* 모달 시트 (종목별 승패/거래기록/자가개선) */
+.module-sheet {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 900;
+  align-items: flex-end;
+  justify-content: center;
+}
+.module-sheet.open { display: flex; }
+.module-sheet .ms-body {
+  background: var(--surface);
+  width: 100%;
+  max-width: 480px;
+  border-radius: 18px 18px 0 0;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 14px 16px max(18px, env(safe-area-inset-bottom));
+}
+.module-sheet .ms-handle {
+  width: 36px; height: 4px;
+  background: var(--text-4);
+  border-radius: 2px;
+  margin: 0 auto 10px;
+}
+.module-sheet .ms-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.module-sheet .ms-title {
+  font-size: 16px; font-weight: 800;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.module-sheet .ms-close {
+  font-size: 22px; color: var(--text-3);
+  cursor: pointer; padding: 4px 10px;
+  background: var(--bg); border-radius: 8px;
+}
+
+/* 모듈 진입 버튼 (3개) */
+.module-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 16px;
+}
+.mb-btn {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 8px;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.mb-btn:active { background: var(--bg); }
+.mb-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.mb-label {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-2);
+}
+.mb-count {
+  font-size: 10px; color: var(--text-3);
 }
 
 /* 페르소나 메인 카드 */
@@ -532,6 +611,13 @@ body {
   </div>
 </div>
 
+<!-- 시장 토글 — 코인/주식KR/주식US 별개 관리 -->
+<div class="market-tabs" id="market-tabs">
+  <div class="m-tab active" data-mkt="coin"><span style="font-size:14px">🪙</span> 코인</div>
+  <div class="m-tab" data-mkt="kr"><span style="font-size:14px">🇰🇷</span> 주식 KR</div>
+  <div class="m-tab" data-mkt="us"><span style="font-size:14px">🇺🇸</span> 주식 US</div>
+</div>
+
 <div class="persona-tabs">
   <div class="p-tab active">
     <div class="p-dot" style="background: #8B5CF6;"></div>
@@ -551,12 +637,6 @@ body {
   </div>
 </div>
 
-<!-- 주식봇 시장 분리 (KR/US) — coin 모드에서는 숨김 -->
-<div class="submarket-tabs" id="submarket-tabs">
-  <div class="sm-tab" data-sub="stock">전체</div>
-  <div class="sm-tab" data-sub="kr">🇰🇷 KR</div>
-  <div class="sm-tab" data-sub="us">🇺🇸 US</div>
-</div>
 
 <div class="persona-main">
   <div class="pm-head">
@@ -652,38 +732,78 @@ body {
   </div>
 </div>
 
-<!-- 종목별 승패 -->
-<div class="section" id="per-stock-section">
-  <div class="s-head">
-    <div class="s-title">종목별 승패</div>
-    <div class="s-count" id="ps-count">-</div>
+<!-- 모듈 진입 버튼 (3개) — 클릭 시 모달 시트 -->
+<div class="module-buttons">
+  <div class="mb-btn" onclick="openModule('stocks')">
+    <div class="mb-icon" style="background:var(--blue-bg);color:var(--blue)">
+      <svg width="18" height="18" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-bar-chart"/></svg>
+    </div>
+    <div class="mb-label">종목별 승패</div>
+    <div class="mb-count" id="mbc-stocks">-</div>
   </div>
-  <div id="ps-body" style="padding:0 16px 12px"></div>
+  <div class="mb-btn" onclick="openModule('trades')">
+    <div class="mb-icon" style="background:var(--purple-bg);color:var(--purple)">
+      <svg width="18" height="18" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-clock"/></svg>
+    </div>
+    <div class="mb-label">거래 기록</div>
+    <div class="mb-count" id="mbc-trades">-</div>
+  </div>
+  <div class="mb-btn" onclick="openModule('tune')">
+    <div class="mb-icon" style="background:var(--yellow-bg);color:var(--yellow)">
+      <svg width="18" height="18" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-wrench"/></svg>
+    </div>
+    <div class="mb-label">자가개선</div>
+    <div class="mb-count" id="mbc-tune">-</div>
+  </div>
 </div>
 
-<!-- 거래 기록 (모든 SELL) -->
-<div class="section" id="recent-trades-section">
-  <div class="s-head">
-    <div class="s-title">거래 기록 (최근 50건)</div>
-    <div class="s-count" id="rt-count">-</div>
+<!-- 모달 시트: 종목별 승패 -->
+<div class="module-sheet" id="ms-stocks">
+  <div class="ms-body">
+    <div class="ms-handle"></div>
+    <div class="ms-head">
+      <div class="ms-title">
+        <svg width="16" height="16" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-bar-chart"/></svg>
+        종목별 승패 <span id="ps-count" style="color:var(--text-3);font-weight:600;font-size:12px;margin-left:4px">-</span>
+      </div>
+      <div class="ms-close" onclick="closeModule('stocks')">×</div>
+    </div>
+    <div id="ps-body"></div>
   </div>
-  <div id="rt-body" style="padding:0 16px 12px;max-height:360px;overflow-y:auto"></div>
 </div>
 
-<!-- 자가개선 상태 -->
-<div class="section" id="auto-tune-section">
-  <div class="s-head">
-    <div class="s-title" style="display:inline-flex;align-items:center;gap:6px">
-      <svg width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-wrench"/></svg>
-      자가개선 상태
+<!-- 모달 시트: 거래 기록 -->
+<div class="module-sheet" id="ms-trades">
+  <div class="ms-body">
+    <div class="ms-handle"></div>
+    <div class="ms-head">
+      <div class="ms-title">
+        <svg width="16" height="16" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-clock"/></svg>
+        거래 기록 (최근 50건) <span id="rt-count" style="color:var(--text-3);font-weight:600;font-size:12px;margin-left:4px">-</span>
+      </div>
+      <div class="ms-close" onclick="closeModule('trades')">×</div>
     </div>
-    <div style="display:flex;gap:6px;align-items:center">
-      <span class="s-count" id="at-weight">-</span>
-      <a id="at-edit-link" href="persona_settings.html" style="font-size:11px;color:var(--blue);text-decoration:none;padding:4px 8px;background:var(--blue-bg);border-radius:6px;font-weight:700">조정 →</a>
-    </div>
+    <div id="rt-body"></div>
   </div>
-  <div id="at-body" style="padding:0 16px 14px;font-size:12px;color:var(--text-2);line-height:1.6">
-    <div style="color:var(--text-3);text-align:center;padding:14px 0">불러오는 중...</div>
+</div>
+
+<!-- 모달 시트: 자가개선 -->
+<div class="module-sheet" id="ms-tune">
+  <div class="ms-body">
+    <div class="ms-handle"></div>
+    <div class="ms-head">
+      <div class="ms-title">
+        <svg width="16" height="16" style="stroke:currentColor;fill:none;stroke-width:2"><use href="#i-wrench"/></svg>
+        자가개선 상태 <span id="at-weight" style="color:var(--text-3);font-weight:600;font-size:12px;margin-left:4px">-</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <a id="at-edit-link" href="persona_settings.html" style="font-size:11px;color:var(--blue);text-decoration:none;padding:5px 10px;background:var(--blue-bg);border-radius:6px;font-weight:700">조정 →</a>
+        <div class="ms-close" onclick="closeModule('tune')">×</div>
+      </div>
+    </div>
+    <div id="at-body" style="font-size:12px;color:var(--text-2);line-height:1.6">
+      <div style="color:var(--text-3);text-align:center;padding:14px 0">불러오는 중...</div>
+    </div>
   </div>
 </div>
 
@@ -783,13 +903,10 @@ const SYM_KO = {
 
 const params = new URLSearchParams(location.search);
 let CUR_PERSONA = params.get('persona') || '쿨마봇';
+// 시장 토글 — 코인/주식KR/주식US 별개 관리 (서브마켓 개념 폐기)
 let CUR_MARKET  = params.get('market')  || 'coin';
-// stock 모드 한정 서브마켓: 'stock' (KR+US 합산) | 'kr' | 'us'
-// URL 의 market=kr|us 면 그대로 반영, market=stock 면 'stock' 디폴트
-let CUR_SUBMARKET = (CUR_MARKET === 'kr' || CUR_MARKET === 'us') ? CUR_MARKET
-                  : (CUR_MARKET === 'stock' ? 'stock' : null);
-// CUR_MARKET 정규화: kr/us 도 결국 stock 그룹
-if (CUR_MARKET === 'kr' || CUR_MARKET === 'us') CUR_MARKET = 'stock';
+if (!['coin','kr','us'].includes(CUR_MARKET)) CUR_MARKET = 'coin';
+let CUR_SUBMARKET = null;  // deprecated
 
 function fmtKRW(v) {
   if (!v && v !== 0) return '-';
@@ -825,11 +942,8 @@ async function _initFirebasePA() {
   return _fbDbPA;
 }
 
-// stock 모드일 때는 CUR_SUBMARKET 으로 ('stock' | 'kr' | 'us') 라우팅
-function _resolveMarketKey() {
-  if (CUR_MARKET !== 'stock') return CUR_MARKET;
-  return CUR_SUBMARKET || 'stock';
-}
+// 시장 키 결정 — 단순히 CUR_MARKET 그대로 (coin|kr|us)
+function _resolveMarketKey() { return CUR_MARKET; }
 
 async function _fetchAnalytics(persona, market) {
   const mkey = _resolveMarketKey();
@@ -860,24 +974,38 @@ async function _fetchAnalytics(persona, market) {
   }
 }
 
-function bindSubmarketTabs() {
-  const wrap = document.getElementById('submarket-tabs');
-  if (!wrap) return;
-  // stock 모드일 때만 표시
-  if (CUR_MARKET !== 'stock') { wrap.classList.remove('show'); return; }
-  wrap.classList.add('show');
-  if (!CUR_SUBMARKET) CUR_SUBMARKET = 'stock';
-  const tabs = wrap.querySelectorAll('.sm-tab');
+// 시장 토글 바인딩 [코인 / KR / US]
+function bindMarketTabs() {
+  const tabs = document.querySelectorAll('.market-tabs .m-tab');
   tabs.forEach(t => {
-    t.classList.toggle('active', t.dataset.sub === CUR_SUBMARKET);
+    t.classList.toggle('active', t.dataset.mkt === CUR_MARKET);
     t.onclick = async () => {
-      CUR_SUBMARKET = t.dataset.sub;
-      tabs.forEach(x => x.classList.toggle('active', x.dataset.sub === CUR_SUBMARKET));
-      await renderAll();
+      CUR_MARKET = t.dataset.mkt;
+      tabs.forEach(x => x.classList.toggle('active', x.dataset.mkt === CUR_MARKET));
       const u = new URL(location.href);
-      u.searchParams.set('market', CUR_SUBMARKET === 'stock' ? 'stock' : CUR_SUBMARKET);
+      u.searchParams.set('market', CUR_MARKET);
       history.replaceState({}, '', u.toString());
+      await renderAll();
+      await renderComparison(30);
     };
+  });
+}
+
+// 모달 시트 open/close
+function openModule(name) {
+  const sheet = document.getElementById('ms-' + name);
+  if (sheet) sheet.classList.add('open');
+}
+function closeModule(name) {
+  const sheet = document.getElementById('ms-' + name);
+  if (sheet) sheet.classList.remove('open');
+}
+function bindModuleSheets() {
+  // backdrop 클릭으로 닫기
+  document.querySelectorAll('.module-sheet').forEach(s => {
+    s.addEventListener('click', (ev) => {
+      if (ev.target === s) s.classList.remove('open');
+    });
   });
 }
 
@@ -1103,6 +1231,7 @@ async function renderAll() {
   const psCount = document.getElementById('ps-count');
   const psList = data.per_stock || [];
   if (psCount) psCount.textContent = `${psList.length}종목`;
+  const _mbcS = document.getElementById('mbc-stocks'); if (_mbcS) _mbcS.textContent = `${psList.length}종목`;
   if (psBody) {
     if (psList.length === 0) {
       psBody.innerHTML = '<div style="color:var(--text-3);text-align:center;padding:24px 0;font-size:12px">청산 거래 없음</div>';
@@ -1130,6 +1259,7 @@ async function renderAll() {
   const rtCount = document.getElementById('rt-count');
   const rtList = data.recent_trades || [];
   if (rtCount) rtCount.textContent = `${rtList.length}건`;
+  const _mbcT = document.getElementById('mbc-trades'); if (_mbcT) _mbcT.textContent = `${rtList.length}건`;
   if (rtBody) {
     if (rtList.length === 0) {
       rtBody.innerHTML = '<div style="color:var(--text-3);text-align:center;padding:24px 0;font-size:12px">최근 30일 거래 없음</div>';
@@ -1161,6 +1291,7 @@ async function renderAll() {
   const atWeight = document.getElementById('at-weight');
   const atBody = document.getElementById('at-body');
   if (atWeight) atWeight.textContent = (at.current_weight_pct != null) ? `비중 ${at.current_weight_pct}%` : '비중 -';
+  const _mbcU = document.getElementById('mbc-tune'); if (_mbcU) _mbcU.textContent = (at.current_weight_pct != null) ? `비중 ${at.current_weight_pct}%` : '학습 중';
   // 비중 조정 링크 — 시장 + 페르소나 focus 전달
   const editLink = document.getElementById('at-edit-link');
   if (editLink) {
@@ -1476,7 +1607,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (headerBtns[1]) { headerBtns[1].onclick = createShareLink; headerBtns[1].style.cursor = 'pointer'; headerBtns[1].title = '공유 링크'; }
   if (headerBtns[2]) { headerBtns[2].onclick = () => exportFullReport('zip'); headerBtns[2].style.cursor = 'pointer'; headerBtns[2].title = '전체 리포트 ZIP'; }
   bindTabs();
-  bindSubmarketTabs();
+  bindMarketTabs();
+  bindModuleSheets();
   bindCmpRange();
   renderAll();
   renderComparison(30);
