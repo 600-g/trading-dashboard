@@ -1227,13 +1227,17 @@ async function renderAll() {
   if (wtCountEl) wtCountEl.textContent = `${cats.length}개`;
   if (wtBody) {
     if (cats.length === 0) {
-      wtBody.innerHTML = '<div style="grid-column:1/-1;padding:20px 0;text-align:center;color:var(--text-3);font-size:12px">카테고리 매핑 없음</div>';
+      wtBody.innerHTML = '<div style="grid-column:1/-1;padding:20px 0;text-align:center;color:var(--text-3);font-size:12px">이 페르소나는 현재 검토 중인 카테고리가 없습니다</div>';
     } else {
-      wtBody.innerHTML = cats.map(c => `<div class="wg-item">
-        <div class="wg-cat">${c.category}</div>
-        <div class="wg-symbols">${(c.symbols || []).map(s => s.replace('KRW-','')).join(', ')}</div>
-        <div class="wg-score">${c.avg_score > 0 ? `평균 ${c.avg_score}점` : '관찰 중'}</div>
-      </div>`).join('');
+      wtBody.innerHTML = cats.map(c => {
+        // names 우선 (종목명), 없으면 symbols 코드
+        const names = (c.names && c.names.length) ? c.names : (c.symbols || []).map(s => s.replace('KRW-',''));
+        return `<div class="wg-item">
+          <div class="wg-cat">${c.category}</div>
+          <div class="wg-symbols">${names.join(', ')}</div>
+          <div class="wg-score">${c.avg_score > 0 ? `평균 ${c.avg_score}점` : '관찰 중'}</div>
+        </div>`;
+      }).join('');
     }
   }
 
