@@ -1000,12 +1000,13 @@ async function renderCalendar(){
   const grid = document.getElementById('cal-grid');
   grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-3);font-size:12px">불러오는 중...</div>';
   let data = {days: {}, tunes: {}};
-  if (IS_LOCAL) {
-    try {
-      const r = await fetch(`${SYS_API}/api/calendar?market=${mkt}&days=60`, {signal:AbortSignal.timeout(4000)});
-      if (r.ok) data = await r.json();
-    } catch (e) { console.warn('calendar fetch', e); }
-  } else if (_fbDb) {
+  // SYS_API 자동 라우팅 (file/127/192/api.600g.net/외부 모두 도달)
+  let _fetched = false;
+  try {
+    const r = await fetch(`${SYS_API}/api/calendar?market=${mkt}&days=60&_t=${Date.now()}`, {signal:AbortSignal.timeout(5000), cache:'no-store'});
+    if (r.ok) { data = await r.json(); _fetched = true; }
+  } catch (e) { console.warn('calendar fetch', e); }
+  if (!_fetched && _fbDb) {
     // Firebase: status doc의 daily_pnl_7d만 사용 (제한적)
     const c = STATE_CACHE.coin || {}, s = STATE_CACHE.stock || {};
     const merge = (arr, tag) => (arr || []).forEach(d => {
