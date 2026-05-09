@@ -29,7 +29,11 @@
   } else if (_isLocal) {
     base = '';
     prefix = location.pathname.startsWith('/trading/') ? '/trading' : '';
+  } else if (_h === 'trading.600g.net') {
+    // 별도 도메인 — root 직접, prefix 없음
+    base = ''; prefix = '';
   } else if (_isCF) {
+    // api.600g.net 등 두근컴퍼니 도메인 — /trading prefix
     base = ''; prefix = '/trading';
   } else {
     base = 'https://api.600g.net'; prefix = '/trading';
