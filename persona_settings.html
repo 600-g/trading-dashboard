@@ -870,18 +870,12 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 
+<script src="_api_base.js"></script>
 <script>
-// 환경 분기: file/127/192/api.600g.net/외부 모두 system_api 도달
-const _h = location.hostname;
-const IS_LOCAL = location.protocol === 'file:' || _h === '127.0.0.1' || _h === 'localhost' || _h.startsWith('192.');
-const _isCF = _h.endsWith('.600g.net');
-let _base = '', _prefix = '';
-if (location.protocol === 'file:') _base = 'http://127.0.0.1:9000';
-else if (IS_LOCAL) { _base = ''; _prefix = location.pathname.startsWith('/trading/') ? '/trading' : ''; }
-else if (_isCF) { _base = ''; _prefix = '/trading'; }
-else { _base = 'https://api.600g.net'; _prefix = '/trading'; }
-const API_BASE = _base + _prefix;
-const USE_FIREBASE = false;  // CF Tunnel 통해 모두 도달
+// API_BASE → _api_base.js
+const API_BASE = window.API_BASE;
+const IS_LOCAL = location.protocol === 'file:' || location.hostname === '127.0.0.1' || location.hostname === 'localhost' || location.hostname.startsWith('192.');
+const USE_FIREBASE = false;
 
 // Firebase 초기화 (외부 호스트만) — config inline (fetch 의존 제거)
 const _FB_CFG = {
