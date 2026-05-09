@@ -613,7 +613,7 @@ body {
 
 <!-- 시장 토글 — 코인/주식KR/주식US 별개 관리 -->
 <div class="market-tabs" id="market-tabs">
-  <div class="m-tab active" data-mkt="coin"><span style="font-size:14px">🪙</span> 코인</div>
+  <div class="m-tab active" data-mkt="coin"><span style="font-size:14px"><svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-coin"/></svg></span> 코인</div>
   <div class="m-tab" data-mkt="kr"><span style="font-size:14px">🇰🇷</span> 주식 KR</div>
   <div class="m-tab" data-mkt="us"><span style="font-size:14px">🇺🇸</span> 주식 US</div>
 </div>
@@ -1396,7 +1396,7 @@ function paConfirm(opts){
     const accent = danger ? 'var(--red)' : 'var(--blue)';
     r.innerHTML = `<div style="background:var(--surface);border-radius:18px;width:100%;max-width:340px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.35)">
       <div style="padding:22px;text-align:center">
-        <div style="font-size:34px;margin-bottom:10px">${opts.icon || '❓'}</div>
+        <div style="font-size:34px;margin-bottom:10px">${opts.icon || '<svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-help"/></svg>'}</div>
         <div style="font-size:16px;font-weight:800;margin-bottom:6px">${opts.title || ''}</div>
         <div style="font-size:13px;color:var(--text-2);line-height:1.55;white-space:pre-wrap">${opts.message || ''}</div>
       </div>
@@ -1465,7 +1465,7 @@ function openPosDetail(p) {
       <div style="font-size:13px;font-weight:700;line-height:1.5">${persona} 룰셋 적용 중 — 모멘텀 + 시간캡 기반 자동 판매</div>
     </div>
     <button onclick="paSell('${sym.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}')"
-      style="width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">💰 판매하기</button>
+      style="width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer"><svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-money"/></svg> 판매하기</button>
   `;
   document.getElementById('pa-position-sheet').style.display = 'flex';
 }
@@ -1475,7 +1475,7 @@ async function paSell(sym, name) {
   if (btn && btn.disabled) return;
   const orig = btn ? btn.innerHTML : '';
   const ok = await paConfirm({
-    title: `${name} 판매`, icon: '💰', danger: true,
+    title: `${name} 판매`, icon: '<svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-money"/></svg>', danger: true,
     message: '다음 사이클(60초 내) 시장가로 매도됩니다.\n취소할 수 없습니다.',
     primaryLabel: '판매',
   });

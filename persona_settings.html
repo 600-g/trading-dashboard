@@ -985,7 +985,7 @@ function appConfirm(opts){
     const danger = !!o.danger;
     const primary = o.primaryLabel || (danger ? '진행' : '확인');
     const cancel = o.cancelLabel || '취소';
-    const icon = o.icon || (danger ? '⚠️' : '❓');
+    const icon = o.icon || (danger ? '⚠️' : '<svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-help"/></svg>');
     const accent = danger ? 'var(--red)' : 'var(--blue)';
     r.innerHTML = `
       <div style="background:var(--surface);border-radius:18px;width:100%;max-width:340px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.35);animation:dlgIn .18s ease-out">
@@ -1620,7 +1620,7 @@ document.getElementById('btn-apply').addEventListener('click', async () => {
     return;
   }
   const ok = await appConfirm({
-    title:'페르소나 비중 변경', icon:'🎭',
+    title:'페르소나 비중 변경', icon:'<svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-mask"/></svg>',
     message: '다음 시장 진입부터 적용됩니다.\n\n' + diffLines.join('\n'),
     primaryLabel:'적용',
   });

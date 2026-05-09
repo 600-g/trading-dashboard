@@ -728,7 +728,7 @@ body {
 <div class="ranking-card">
   <div class="rc-head">
     <div class="rc-title-group">
-      <div class="rc-title">🏆 페르소나 경쟁 (코인)</div>
+      <div class="rc-title"><svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-award"/></svg> 페르소나 경쟁 (코인)</div>
       <div class="rc-sub">탭하면 시장별 상세</div>
     </div>
   </div>
@@ -822,10 +822,10 @@ body {
 <!-- 자가개선 요약 -->
 <div class="tune-mini">
   <div class="tm-head">
-    <div class="tm-title">🤖 자가개선 (24시간)</div>
+    <div class="tm-title"><svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-bot"/></svg> 자가개선 (24시간)</div>
     <div class="tm-counts">
-      <div class="tm-count adopt">✓ 2건</div>
-      <div class="tm-count reject">✗ 1건</div>
+      <div class="tm-count adopt"><svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-check"/></svg> 2건</div>
+      <div class="tm-count reject"><svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-x"/></svg> 1건</div>
     </div>
   </div>
   <div class="tm-tap">시장별 학습 이력 보기 ›</div>
@@ -1024,7 +1024,7 @@ body {
 </div>
 
 <div class="note-box">
-  <strong>📌 상세 팝업 원칙</strong>
+  <strong><svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-pin"/></svg> 상세 팝업 원칙</strong>
   • 페르소나당 1개 팝업<br>
   • 시장별 탭 (전체/코인/KR/US)으로 같은 페르소나 시장별 비교<br>
   • 시장별 보유/예상/손익 분포 명확히<br>
@@ -1179,8 +1179,8 @@ async function loadTuneSummary() {
     const data = await r.json();
     const a = document.querySelector('.tm-count.adopt');
     const j = document.querySelector('.tm-count.reject');
-    if (a) a.textContent = `✓ ${data.adopted_24h}건`;
-    if (j) j.textContent = `✗ ${data.rejected_24h}건`;
+    if (a) a.textContent = `<svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-check"/></svg> ${data.adopted_24h}건`;
+    if (j) j.textContent = `<svg width="12" height="12" style="vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:2;display:inline-block"><use href="#i-x"/></svg> ${data.rejected_24h}건`;
   } catch (e) {
     console.error('[tune] 실패:', e);
   }
