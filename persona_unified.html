@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>통합 페르소나 관리</title>
+<meta name="theme-color" content="#3182F6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="두근트레이딩">
+<link rel="manifest" href="manifest.json">
+<title>두근 트레이딩 — 페르소나 관리</title>
 <style>
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
@@ -1372,5 +1377,58 @@ function getCoinName(symbol) {
 }
 </script>
 
+<script>
+// ─── 트레이딩 PWA — service worker 등록 + push 구독 (별도 origin) ───
+// 두근컴퍼니 알림과 OS 차원에서 분리.
+(async function _registerTradingPWA() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('sw.js');
+    if (Notification.permission !== 'granted') {
+      // 자동 권한 요청 X — 사용자가 알림 버튼 누를 때만
+      window.requestTradingNotifications = async () => {
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') return false;
+        return _subscribePush(reg);
+      };
+      return;
+    }
+    await _subscribePush(reg);
+  } catch (e) { console.warn('[PWA]', e); }
+
+  async function _subscribePush(reg) {
+    try {
+      // VAPID 공개키
+      const vk = await window.TradingAPI.fetch('/api/push/vapid-key');
+      if (!vk.ok) return false;
+      const { publicKey } = await vk.json();
+      if (!publicKey) return false;
+      // 기존 구독 있으면 재사용, 없으면 새로
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: _urlBase64ToUint8Array(publicKey),
+        });
+      }
+      // 트레이딩 전용 endpoint — 두근컴퍼니 hq topic 안 받음
+      await window.TradingAPI.fetch('/api/push/subscribe-trading', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub.toJSON() }),
+      });
+      console.log('[PWA] 트레이딩 push 구독 완료 (topics=["trading"])');
+      return true;
+    } catch (e) { console.warn('[push subscribe]', e); return false; }
+  }
+
+  function _urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  }
+})();
+</script>
 </body>
 </html>
