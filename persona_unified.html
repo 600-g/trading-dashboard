@@ -653,9 +653,17 @@ body {
   background: var(--text-1);
   color: var(--surface);
 }
+/* iOS 26~27 홈 화면 앱 상단 시스템 블러 차단 — 맨 위 불투명 띠(페이지 배경과 같은 색). 일반 브라우저에선 숨김 */
+.status-cover { display: none; }
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .status-cover { display: block; position: fixed; top: 0; left: 0; right: 0; width: 100%; height: max(6px, env(safe-area-inset-top)); background: var(--bg, #F2F4F6); z-index: 2147483000; pointer-events: none; }
+}
 </style>
 </head>
 <body>
+<!-- iOS 26~27 홈 화면 앱은 상태바 아래에 시스템 블러를 그린다(theme-color·status-bar-style 로는 못 막음).
+     맨 위에 화면 폭 전체·불투명·6px 이상인 고정 띠가 있으면 iOS 가 그 색으로 상태바를 칠하고 블러를 그리지 않는다 -->
+<div class="status-cover" aria-hidden="true"></div>
 
 <svg width="0" height="0" style="position:absolute;">
   <defs>
